@@ -1,0 +1,133 @@
+{
+  "theme": "dark",
+  "archetype": "5",
+  "archetype_name": "Jewel & Luxury (Dark Fantasy Narrative)",
+  "design_philosophy": {
+    "emotion": "Cinematic, mysterious, and authoritative. The dashboard should feel like a modern, high-tech Game Master's screen illuminated by candlelight. It blends dense data utility with narrative storytelling.",
+    "spacing_strategy": "Dense 'Control Room' grid for technical data (NPCs, User Mapping) mixed with generous 'Editorial' spacing for the transcription and script reading.",
+    "contrast_strategy": "Tactical Minimalism. Deep obsidian backgrounds with glowing amber accents for primary actions. 1px solid borders for separation instead of soft shadows."
+  },
+  "colors": {
+    "background": {
+      "default": "#0B0C10",
+      "surface": "#13141A",
+      "surface_hover": "#1A1B23",
+      "surface_active": "#22242C"
+    },
+    "border": {
+      "default": "#22242C",
+      "focus": "#D4AF37",
+      "muted": "#1A1B23"
+    },
+    "text": {
+      "primary": "#EDEDED",
+      "secondary": "#A0A5B5",
+      "muted": "#6C7280",
+      "inverse": "#0B0C10"
+    },
+    "brand": {
+      "primary": "#D4AF37",
+      "primary_hover": "#F0C74B",
+      "secondary": "#8C1C13",
+      "accent": "#4A5568"
+    },
+    "semantic": {
+      "ic_in_character": "#D4AF37",
+      "ooc_out_of_character": "#6C7280",
+      "success": "#2D7A4D",
+      "warning": "#D4AF37",
+      "danger": "#8C1C13",
+      "info": "#3A6C97"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "'Playfair Display', serif",
+      "body": "'Manrope', sans-serif",
+      "mono": "'JetBrains Mono', monospace"
+    },
+    "scales": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tighter leading-none",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-semibold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm tracking-wide",
+      "tiny": "text-xs tracking-[0.1em] uppercase"
+    }
+  },
+  "layout_and_spacing": {
+    "container": "max-w-7xl mx-auto px-6 lg:px-8",
+    "grid_system": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+    "surface_treatment": "Flat backgrounds, 1px subtle border (border-white/10), 4px to 8px border-radius (rounded-md). No heavy shadows, use inner glows or subtle border highlights on hover.",
+    "alignment": "Left-aligned for all dense content (transcriptions, lists). Center alignment only for empty states or major modal headers."
+  },
+  "motion": {
+    "hover": "transition-colors duration-200 ease-in-out",
+    "click": "active:scale-[0.98] transition-transform",
+    "entrance": "animate-in fade-in slide-in-from-bottom-4 duration-500",
+    "data_update": "animate-pulse (for active transcription/processing status)"
+  },
+  "components": {
+    "header": {
+      "style": "Crystal Glass variant. backdrop-blur-xl bg-[#0B0C10]/80 border-b border-white/10 sticky top-0 z-50",
+      "instructions": "Must contain App Logo/Name, main navigation links (Sessions, Characters, Settings), and a User Profile avatar."
+    },
+    "navigation_tabs": {
+      "style": "Shadcn Tabs customized. h-auto, transparent background for list, active tab gets a glowing bottom border (border-b-2 border-[#D4AF37]) or a tinted surface background.",
+      "instructions": "Use tabs to switch between 'Transcription', 'Technical Diary', and 'Review Script' within a session view."
+    },
+    "cards": {
+      "style": "Neumorphism avoided. Use 'Technical Grid' look: bg-[#13141A] border border-white/10 rounded-lg p-6.",
+      "instructions": "For Technical Diary items (NPCs, Locations, XP), use strict, dense cards. Include an icon (e.g., User, MapPin) at the top left of the card content."
+    },
+    "badges": {
+      "style": "Rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider border",
+      "instructions": "Use heavily for IC/OOC tags, Processing Status (e.g., 'Transcribing...', 'Completed'), and Entity types (NPC, Item)."
+    },
+    "transcription_feed": {
+      "style": "Editorial layout. Large line-height. Left-aligned.",
+      "instructions": "IC (In-Character) text should be visually distinct (e.g., slightly larger, Playfair Display, or highlighted with a gold left-border). OOC (Out-of-Character) should be muted (#6C7280) and smaller. Include timestamps and character names for each block."
+    },
+    "tables": {
+      "style": "Shadcn Table. border-collapse, subtle border-b on rows. Hover state: bg-[#1A1B23].",
+      "instructions": "Use for the Discord User -> Character mapping. Include Avatar, Discord Handle, Character Name, and Role."
+    }
+  },
+  "assets": {
+    "icons": {
+      "library": "lucide-react",
+      "instructions": "Use default lucide-react icons, but apply stroke-width of 1.5 for a sleeker, more refined look."
+    },
+    "media": {
+      "hero_background": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/3f847040-d9fe-42ad-a346-ce1731c9365e/images/59b2094c462fca76d5e45c88ed5cbb4ba7733342a78e98b5144a00a7da9a6622.png",
+        "description": "Dark atmospheric tabletop RPG background with glowing 20-sided die and scattered parchment.",
+        "usage": "Use as a subtle blended background image for the Login screen or the main Empty State dashboard, set to opacity 10-20% behind the dark overlay."
+      },
+      "texture_background": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/3f847040-d9fe-42ad-a346-ce1731c9365e/images/07b8042e2952d85c88bc0ba4f848cf1b68f4452fd5629bf3961a9f7425ffa18d.png",
+        "description": "Abstract dark fantasy texture, subtle dragon scale pattern in deep onyx and charcoal.",
+        "usage": "Can be used as a repeating background or top-header texture for the application to break up the flat black color."
+      },
+      "dice_accent_1": {
+        "url": "https://images.pexels.com/photos/3649095/pexels-photo-3649095.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Close-up of a blue twenty-sided dice resting on a black background.",
+        "usage": "Use for feature cards or session thumbnails if generic images are needed."
+      },
+      "dice_accent_2": {
+        "url": "https://images.pexels.com/photos/7150642/pexels-photo-7150642.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Artistic photo of multi-sided gaming dice in a blurred setting, highlighting the number 20.",
+        "usage": "Use as a placeholder for Session cover images."
+      }
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure all text against the #13141A surface meets WCAG AA standards. Use #EDEDED for primary text. Avoid pure black or pure white.",
+    "focus": "All interactive elements must have a clear focus state: focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 focus:ring-offset-2 focus:ring-offset-[#0B0C10].",
+    "motion": "Respect prefers-reduced-motion for all transitions."
+  },
+  "testing": {
+    "data_testid_rules": "All interactive elements (buttons, inputs, tabs, table rows) MUST have a data-testid attribute in kebab-case reflecting their role (e.g., data-testid='session-tab-transcription', data-testid='user-mapping-save-btn')."
+  }
+}
