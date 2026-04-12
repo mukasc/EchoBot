@@ -59,7 +59,9 @@ const Settings = () => {
     llm_provider: "gemini",
     llm_model: "gemini-3-flash-preview",
     use_emergent_key: true,
-    custom_api_key: ""
+    custom_api_key: "",
+    discord_bot_token: "",
+    discord_guild_id: ""
   });
 
   useEffect(() => {
@@ -74,7 +76,9 @@ const Settings = () => {
         llm_provider: response.data.llm_provider || "gemini",
         llm_model: response.data.llm_model || "gemini-3-flash-preview",
         use_emergent_key: response.data.use_emergent_key !== false,
-        custom_api_key: response.data.custom_api_key || ""
+        custom_api_key: response.data.custom_api_key || "",
+        discord_bot_token: response.data.discord_bot_token || "",
+        discord_guild_id: response.data.discord_guild_id || ""
       });
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -261,6 +265,43 @@ const Settings = () => {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+        
+        {/* Discord Bot Settings */}
+        <Card className="card-rpg mb-6 border-[#5865F2]/30">
+          <CardHeader className="border-b border-white/10">
+            <CardTitle className="text-[#EDEDED] font-['Playfair_Display'] flex items-center gap-2">
+              <SettingsIcon className="w-5 h-5 text-[#5865F2]" />
+              Configuração do Bot Discord
+            </CardTitle>
+            <CardDescription className="text-[#A0A5B5]">
+              Vincule seu bot do Discord para permitir captura automática no futuro
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="bot-token" className="text-[#EDEDED]">Token do Bot</Label>
+              <Input
+                id="bot-token"
+                type="password"
+                value={formData.discord_bot_token}
+                onChange={(e) => setFormData({...formData, discord_bot_token: e.target.value})}
+                placeholder="MTIz..."
+                className="input-dark font-mono"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="guild-id" className="text-[#EDEDED]">ID do Servidor (Guild ID)</Label>
+              <Input
+                id="guild-id"
+                value={formData.discord_guild_id}
+                onChange={(e) => setFormData({...formData, discord_guild_id: e.target.value})}
+                placeholder="123456789..."
+                className="input-dark"
+              />
+            </div>
           </CardContent>
         </Card>
 

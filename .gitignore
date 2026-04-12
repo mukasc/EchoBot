@@ -83,3 +83,8 @@ android-sdk/-e
 # Environment files
 *.env
 *.env.*
+backend/env_with_keys.txt
+backend/ffmpeg_path.txt
+backend/uploads/
+voice-bridge/
+test_gemini.py

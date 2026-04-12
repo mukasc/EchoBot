@@ -11,6 +11,9 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
+import openai
+import google.generativeai as genai
+import anthropic
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -127,6 +130,8 @@ class AppSettings(BaseModel):
     llm_model: str = "gemini-3-flash-preview"
     custom_api_key: Optional[str] = None
     use_emergent_key: bool = True
+    discord_bot_token: Optional[str] = None
+    discord_guild_id: Optional[str] = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class AppSettingsUpdate(BaseModel):
@@ -134,6 +139,8 @@ class AppSettingsUpdate(BaseModel):
     llm_model: Optional[str] = None
     custom_api_key: Optional[str] = None
     use_emergent_key: Optional[bool] = None
+    discord_bot_token: Optional[str] = None
+    discord_guild_id: Optional[str] = None
 
 # ============ HELPER FUNCTIONS ============
 def serialize_datetime(obj):
@@ -169,8 +176,22 @@ async def get_llm_api_key() -> str:
     """Get the appropriate LLM API key based on settings"""
     settings = await get_settings()
     if settings.use_emergent_key:
-        return os.environ.get('EMERGENT_LLM_KEY', '')
+        # Fallback to standard OpenAI/Google keys if emergent key was used
+        if settings.llm_provider == LLMProvider.OPENAI:
+            return os.environ.get('OPENAI_API_KEY', '')
+        elif settings.llm_provider == LLMProvider.GEMINI:
+            return os.environ.get('GOOGLE_API_KEY', '')
+        return os.environ.get('OPENAI_API_KEY', '')
     return settings.custom_api_key or ''
+
+async def get_transcription_api_key() -> str:
+    """Always return OpenAI key for Whisper transcription"""
+    # Transcription is hardcoded to OpenAI Whisper for now
+    return os.environ.get('OPENAI_API_KEY', '')
+
+async def get_google_api_key() -> str:
+    """Return Google API key for Gemini transcription"""
+    return os.environ.get('GOOGLE_API_KEY', '')
 
 async def apply_character_mapping(discord_user_id: str) -> Optional[str]:
     """Get character name for a Discord user ID"""
@@ -344,34 +365,108 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
         # Read audio file
         audio_content = await file.read()
         
-        # Get API key
-        api_key = await get_llm_api_key()
-        if not api_key:
-            raise HTTPException(status_code=500, detail="No API key configured")
+        # Save audio file to disk (Problem 1 Fix)
+        upload_dir = ROOT_DIR / "uploads"
+        upload_dir.mkdir(exist_ok=True)
         
-        # Transcribe using Whisper
-        from emergentintegrations.llm.openai import OpenAISpeechToText
-        import io
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_filename = "".join([c if c.isalnum() or c in "._-" else "_" for c in file.filename])
+        file_path = upload_dir / f"session_{session_id}_{timestamp}_{safe_filename}"
         
-        stt = OpenAISpeechToText(api_key=api_key)
+        with open(file_path, "wb") as f:
+            f.write(audio_content)
         
-        audio_file = io.BytesIO(audio_content)
-        audio_file.name = file.filename
+        logger.info(f"Audio saved to {file_path}")
         
-        response = await stt.transcribe(
-            file=audio_file,
-            model="whisper-1",
-            response_format="verbose_json",
-            language="pt",
-            timestamp_granularities=["segment"]
-        )
-        
-        # Process transcription
-        raw_text = response.text
+        settings = await get_settings()
+        raw_text = ""
         segments = []
         
-        if hasattr(response, 'segments'):
-            for seg in response.segments:
+        # Function to transcribe with Gemini (Google)
+        async def transcribe_with_google(content, filename):
+            g_api_key = await get_google_api_key()
+            if not g_api_key:
+                raise Exception("GOOGLE_API_KEY not configured")
+            
+            genai.configure(api_key=g_api_key)
+            
+            # Try multiple model name variations
+            models_to_try = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "models/gemini-1.5-flash", "gemini-1.5-pro"]
+            last_err = None
+            
+            for model_name in models_to_try:
+                try:
+                    logger.info(f"Trying Gemini model: {model_name}...")
+                    model = genai.GenerativeModel(model_name)
+                    
+                    # MIME Type detection
+                    mime = "audio/wav"
+                    if filename.lower().endswith(".mp3"): mime = "audio/mpeg"
+                    elif filename.lower().endswith(".webm"): mime = "audio/webm"
+                    elif filename.lower().endswith(".mp4"): mime = "audio/mp4"
+                    
+                    # Use generation to transcribe
+                    response = model.generate_content([
+                        "Transcreva este áudio de uma sessão de RPG. Retorne apenas a transcrição literal em português.",
+                        {"mime_type": mime, "data": content}
+                    ])
+                    return response.text
+                except Exception as e:
+                    logger.warning(f"Model {model_name} failed: {e}")
+                    last_err = e
+            
+            raise last_err
+        
+        # Function to transcribe with Whisper (OpenAI)
+        async def transcribe_with_openai(content, filename):
+            api_key = await get_transcription_api_key()
+            if not api_key:
+                raise Exception("OPENAI_API_KEY not configured")
+            
+            import io
+            client = openai.OpenAI(api_key=api_key)
+            
+            audio_file = io.BytesIO(content)
+            audio_file.name = filename
+            
+            response = client.audio.transcriptions.create(
+                file=audio_file,
+                model="whisper-1",
+                response_format="verbose_json",
+                language="pt",
+                timestamp_granularities=["segment"]
+            )
+            return response
+
+        # Try transcription based on provider or fallback
+        if settings.llm_provider == LLMProvider.GEMINI:
+            logger.info("Using Gemini for transcription...")
+            try:
+                raw_text = await transcribe_with_google(audio_content, file.filename)
+            except Exception as ge:
+                logger.error(f"Gemini transcription failed: {ge}. Trying OpenAI...")
+                openai_response = await transcribe_with_openai(audio_content, file.filename)
+                raw_text = openai_response.text
+                if hasattr(openai_response, 'segments'):
+                    segments = openai_response.segments
+        else:
+            logger.info("Using OpenAI for transcription...")
+            try:
+                openai_response = await transcribe_with_openai(audio_content, file.filename)
+                raw_text = openai_response.text
+                if hasattr(openai_response, 'segments'):
+                    segments = openai_response.segments
+            except Exception as oe:
+                if "quota" in str(oe).lower() or "429" in str(oe):
+                    logger.warning("OpenAI Quota exceeded. Falling back to Gemini...")
+                    raw_text = await transcribe_with_google(audio_content, file.filename)
+                else:
+                    raise oe
+
+        # Process segments (if raw Gemini transcription or simple Whisper)
+        processed_segments = []
+        if segments:
+            for seg in segments:
                 segment = TranscriptionSegment(
                     speaker_discord_id="unknown",
                     text=seg.text.strip(),
@@ -379,9 +474,9 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
                     timestamp_end=seg.end,
                     message_type=MessageType.IC
                 )
-                segments.append(serialize_datetime(segment.model_dump()))
+                processed_segments.append(serialize_datetime(segment.model_dump()))
         else:
-            # Single segment for entire transcription
+            # Single segment for entire transcription (Gemini or simplified Whisper)
             segment = TranscriptionSegment(
                 speaker_discord_id="unknown",
                 text=raw_text,
@@ -389,23 +484,23 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
                 timestamp_end=0,
                 message_type=MessageType.IC
             )
-            segments.append(serialize_datetime(segment.model_dump()))
+            processed_segments.append(serialize_datetime(segment.model_dump()))
         
         # Update session with transcription
         await db.sessions.update_one(
             {"id": session_id},
             {"$set": {
                 "raw_transcription": raw_text,
-                "transcription_segments": segments,
+                "transcription_segments": processed_segments,
                 "status": SessionStatus.PROCESSING.value,
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }}
         )
         
-        return {"message": "Audio transcribed successfully", "segments_count": len(segments)}
+        return {"message": "Audio transcribed successfully", "method": "Gemini" if not segments else "OpenAI", "segments_count": len(processed_segments)}
         
     except Exception as e:
-        logger.error(f"Transcription error: {e}")
+        logger.exception(f"Transcription error: {e}")
         await db.sessions.update_one(
             {"id": session_id},
             {"$set": {"status": SessionStatus.AWAITING_REVIEW.value, "updated_at": datetime.now(timezone.utc).isoformat()}}
@@ -435,12 +530,9 @@ async def process_session(session_id: str):
         api_key = await get_llm_api_key()
         current_settings = await get_settings()
         
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"process-{session_id}",
-            system_message="""Você é um cronista de RPG especializado. Sua tarefa é analisar transcrições de sessões de RPG e:
+        # Configure and call LLM based on provider
+        response_text = ""
+        system_message = """Você é um cronista de RPG especializado. Sua tarefa é analisar transcrições de sessões de RPG e:
 
 1. IDENTIFICAR e FILTRAR:
    - IC (In-Character): Falas de personagens, narração do mestre, descrições de ações
@@ -470,16 +562,7 @@ Responda SEMPRE em JSON com o formato:
     {"text": "texto", "type": "ic|ooc", "character": "Nome do Personagem ou null"}
   ]
 }"""
-        )
-        
-        # Configure model based on settings
-        if current_settings.llm_provider == LLMProvider.GEMINI:
-            chat.with_model("gemini", current_settings.llm_model)
-        elif current_settings.llm_provider == LLMProvider.OPENAI:
-            chat.with_model("openai", current_settings.llm_model)
-        elif current_settings.llm_provider == LLMProvider.ANTHROPIC:
-            chat.with_model("anthropic", current_settings.llm_model)
-        
+
         prompt = f"""Analise esta transcrição de sessão de RPG ({session.get('game_system', 'D&D 5e')}):
 
 MAPEAMENTO DE JOGADORES:
@@ -489,14 +572,41 @@ TRANSCRIÇÃO:
 {raw_transcription}
 
 Processe e retorne o JSON estruturado."""
-        
-        response = await chat.send_message(UserMessage(text=prompt))
+
+        if current_settings.llm_provider == LLMProvider.OPENAI:
+            client = openai.OpenAI(api_key=api_key)
+            completion = client.chat.completions.create(
+                model=current_settings.llm_model or "gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+            response_text = completion.choices[0].message.content
+        elif current_settings.llm_provider == LLMProvider.GEMINI:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel(
+                model_name=current_settings.llm_model or "gemini-1.5-flash",
+                system_instruction=system_message
+            )
+            response = model.generate_content(prompt)
+            response_text = response.text
+        elif current_settings.llm_provider == LLMProvider.ANTHROPIC:
+            client = anthropic.Anthropic(api_key=api_key)
+            message = client.messages.create(
+                model=current_settings.llm_model or "claude-3-5-sonnet-20240620",
+                max_tokens=4096,
+                system=system_message,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            response_text = message.content[0].text
         
         # Parse AI response
         import json
         try:
             # Try to extract JSON from response
-            response_text = response.strip()
+            response_text = response_text.strip()
             if response_text.startswith("```json"):
                 response_text = response_text[7:]
             if response_text.startswith("```"):
