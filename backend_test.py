@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 class RPGCronistaAPITester:
-    def __init__(self, base_url="https://rpg-cronista.preview.emergentagent.com/api"):
+    def __init__(self, base_url="http://localhost:8000/api"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
@@ -185,7 +185,7 @@ class RPGCronistaAPITester:
         settings_data = {
             "llm_provider": "gemini",
             "llm_model": "gemini-3-flash-preview",
-            "use_emergent_key": True
+            "custom_api_key": "test_key"
         }
         
         success, response = self.run_test(

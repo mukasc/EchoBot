@@ -81,7 +81,7 @@ class AIProcessorService:
     # ------------------------------------------------------------------
 
     def _resolve_api_key(self, app_settings: AppSettings) -> str:
-        if not app_settings.use_emergent_key and app_settings.custom_api_key:
+        if app_settings.custom_api_key:
             return app_settings.custom_api_key
 
         provider = app_settings.llm_provider

@@ -7,7 +7,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - **Backend**: FastAPI (Python) com MongoDB
 - **Frontend**: React + TailwindCSS + Shadcn UI
 - **AI Integration**: 
-  - OpenAI Whisper (STT) via Emergent LLM Key
+  - OpenAI Whisper (STT) via Custom API Key
   - Gemini 3 Flash (LLM) para processamento - configurável para OpenAI/Claude
 - **Design**: Dark Fantasy theme (Jewel & Luxury archetype)
 

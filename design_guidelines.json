@@ -101,12 +101,12 @@
     },
     "media": {
       "hero_background": {
-        "url": "https://static.prod-images.emergentagent.com/jobs/3f847040-d9fe-42ad-a346-ce1731c9365e/images/59b2094c462fca76d5e45c88ed5cbb4ba7733342a78e98b5144a00a7da9a6622.png",
+        "url": "",
         "description": "Dark atmospheric tabletop RPG background with glowing 20-sided die and scattered parchment.",
         "usage": "Use as a subtle blended background image for the Login screen or the main Empty State dashboard, set to opacity 10-20% behind the dark overlay."
       },
       "texture_background": {
-        "url": "https://static.prod-images.emergentagent.com/jobs/3f847040-d9fe-42ad-a346-ce1731c9365e/images/07b8042e2952d85c88bc0ba4f848cf1b68f4452fd5629bf3961a9f7425ffa18d.png",
+        "url": "",
         "description": "Abstract dark fantasy texture, subtle dragon scale pattern in deep onyx and charcoal.",
         "usage": "Can be used as a repeating background or top-header texture for the application to break up the flat black color."
       },

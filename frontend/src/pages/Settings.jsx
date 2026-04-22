@@ -56,7 +56,6 @@ const Settings = () => {
   const [formData, setFormData] = useState({
     llm_provider: "gemini",
     llm_model: "gemini-3-flash-preview",
-    use_emergent_key: true,
     custom_api_key: "",
     discord_bot_token: "",
     discord_guild_id: ""
@@ -67,7 +66,6 @@ const Settings = () => {
       setFormData({
         llm_provider: settings.llm_provider || "gemini",
         llm_model: settings.llm_model || "gemini-3-flash-preview",
-        use_emergent_key: settings.use_emergent_key !== false,
         custom_api_key: settings.custom_api_key || "",
         discord_bot_token: settings.discord_bot_token || "",
         discord_guild_id: settings.discord_guild_id || ""
@@ -165,63 +163,36 @@ const Settings = () => {
               Chave de API
             </CardTitle>
             <CardDescription className="text-[#A0A5B5]">
-              Configure a chave de autenticação para os serviços de IA
+              Configure a chave de autenticação para o serviço de IA selecionado
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-[#EDEDED]">Usar Emergent Universal Key</Label>
-                <p className="text-xs text-[#6C7280]">
-                  Chave compartilhada que funciona com OpenAI, Gemini e Claude
-                </p>
-              </div>
-              <Switch
-                checked={formData.use_emergent_key}
-                onCheckedChange={(checked) => setFormData({...formData, use_emergent_key: checked})}
-              />
-            </div>
-
-            {formData.use_emergent_key ? (
+            <div className="space-y-4">
               <div className="p-4 rounded-lg bg-rpg-gold/5 border border-rpg-gold/20">
                 <div className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-rpg-gold flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-rpg-gold flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[#EDEDED] font-medium text-sm">Emergent Key Ativa</p>
+                    <p className="text-[#EDEDED] font-medium text-sm">Chave Necessária</p>
                     <p className="text-xs text-[#A0A5B5] mt-1">
-                      Você está usando a chave universal que suporta múltiplos provedores.
-                      Os créditos são debitados do seu saldo Emergent.
+                      Forneça sua própria chave de API para {providerLabels[formData.llm_provider]}. 
+                      Esta chave será usada exclusivamente para processar as crônicas deste servidor.
                     </p>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/20">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[#EDEDED] font-medium text-sm">Chave Personalizada</p>
-                      <p className="text-xs text-[#A0A5B5] mt-1">
-                        Forneça sua própria chave de API para {providerLabels[formData.llm_provider]}.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="api-key">Chave de API ({providerLabels[formData.llm_provider]})</Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    value={formData.custom_api_key}
-                    onChange={(e) => setFormData({...formData, custom_api_key: e.target.value})}
-                    placeholder="sk-..."
-                    className="input-dark font-mono text-sm"
-                  />
-                </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="api-key">Chave de API ({providerLabels[formData.llm_provider]})</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  value={formData.custom_api_key}
+                  onChange={(e) => setFormData({...formData, custom_api_key: e.target.value})}
+                  placeholder="Insira sua chave aqui..."
+                  className="input-dark font-mono text-sm"
+                />
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
         
