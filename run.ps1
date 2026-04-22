@@ -26,7 +26,7 @@ Write-Host "[2/3] Voice Bridge (Node.js)..." -ForegroundColor Green
 Start-Process powershell -ArgumentList "-NoExit", "-Command", `
     "Write-Host 'VOICE BRIDGE' -ForegroundColor Magenta; `
      Set-Location '$root\voice-bridge'; `
-     node index.js" `
+     npm start" `
     -WindowStyle Normal
 
 Start-Sleep -Milliseconds 500
