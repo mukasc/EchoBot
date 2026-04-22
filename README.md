@@ -35,6 +35,17 @@ graph TD
 -   **Diário Técnico Automático**: Extração de NPCs, Itens, Locais, Eventos e sugestão de XP.
 -   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão, pronta para ser lida ou usada em TTS.
 -   **Interface Temática**: Design inspirado em arquétipos de luxo e fantasia sombria (*Dark Fantasy*).
+-   **Otimização de Áudio**: Utiliza o formato **Ogg/Opus (64kbps, mono)** para garantir arquivos minúsculos com clareza ideal para transcrição por IA, economizando até 90% de espaço em relação ao WAV puro.
+
+---
+
+## 🛠️ Detalhes Técnicos: Formato de Áudio
+
+Para garantir a melhor eficiência do sistema, o EchoBot não utiliza `.wav` puro para armazenamento definitivo.
+
+- **Formato**: `.ogg` (Opus). O Opus é o formato nativo do Discord, o que facilita a captura e oferece qualidade excelente com compressão superior.
+- **Configuração**: 64kbps (mono). Para voz, esta taxa é mais que suficiente. A clareza para a IA transcrever depende da redução de ruídos de fundo e não de alta fidelidade musical.
+- **Economia**: Um áudio de 1 hora em WAV (48kHz/16bit/Stereo) ocupa ~1GB. Em Opus 64k mono, ocupa apenas **~28MB**.
 
 ---
 

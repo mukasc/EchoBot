@@ -41,19 +41,19 @@ class AudioManager {
     }
 
     /**
-     * Converte um arquivo PCM para WAV usando FFmpeg.
+     * Converte um arquivo PCM para Ogg/Opus usando FFmpeg.
      */
-    async convertToWav(pcmFile, wavFile) {
-        const ffmpegCmd = `${this.ffmpegPath} -y -f s16le -ar 48000 -ac 2 -i "${pcmFile}" "${wavFile}"`;
+    async convertToOpus(pcmFile, oggFile) {
+        const ffmpegCmd = `${this.ffmpegPath} -y -f s16le -ar 48000 -ac 2 -i "${pcmFile}" -c:a libopus -b:a 64k -ac 1 "${oggFile}"`;
         
         return new Promise((resolve, reject) => {
-            console.log(`🎬 [Audio] Convertendo ${path.basename(pcmFile)} -> WAV...`);
+            console.log(`🎬 [Audio] Convertendo ${path.basename(pcmFile)} -> OGG/Opus (64k mono)...`);
             exec(ffmpegCmd, (error) => {
                 if (error) {
                     console.error('❌ [Audio] Erro FFmpeg:', error);
                     return reject(error);
                 }
-                resolve(wavFile);
+                resolve(oggFile);
             });
         });
     }

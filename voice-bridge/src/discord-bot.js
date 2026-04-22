@@ -105,23 +105,23 @@ class DiscordBot {
                     
                     for (const [userId, userData] of subscribedUsers) {
                         userData.stream.end();
-                        const wavFile = path.join(config.tempDir, `recording_${sessionId}_user_${userId}.wav`);
+                        const oggFile = path.join(config.tempDir, `recording_${sessionId}_user_${userId}.ogg`);
                         
                         try {
-                            await audioManager.convertToWav(userData.file, wavFile);
-                            await apiClient.uploadAudio(sessionId, wavFile, userId, sessionStartTime);
-                            audioManager.cleanup([userData.file, wavFile]);
+                            await audioManager.convertToOpus(userData.file, oggFile);
+                            await apiClient.uploadAudio(sessionId, oggFile, userId, sessionStartTime);
+                            audioManager.cleanup([userData.file, oggFile]);
                         } catch (err) {
                             console.error(`❌ Erro no fluxo do usuário ${userId}:`, err.message);
                         }
                     }
                 } else {
                     console.log('⚠️ Nenhum usuário individual, processando áudio combinado...');
-                    const wavFile = path.join(config.tempDir, `recording_${sessionId}.wav`);
+                    const oggFile = path.join(config.tempDir, `recording_${sessionId}.ogg`);
                     
-                    await audioManager.convertToWav(pcmFile, wavFile);
-                    await apiClient.uploadAudio(sessionId, wavFile, null, sessionStartTime);
-                    audioManager.cleanup([pcmFile, wavFile]);
+                    await audioManager.convertToOpus(pcmFile, oggFile);
+                    await apiClient.uploadAudio(sessionId, oggFile, null, sessionStartTime);
+                    audioManager.cleanup([pcmFile, oggFile]);
                 }
 
                 message.channel.send(`✅ Sessão **${sessionId}** enviada para processamento!`);

@@ -206,6 +206,8 @@ class TranscriptionService:
             return "audio/mpeg"
         if name.endswith(".webm"):
             return "audio/webm"
+        if name.endswith(".ogg") or name.endswith(".opus"):
+            return "audio/ogg"
         if name.endswith(".mp4"):
             return "audio/mp4"
         if name.endswith(".m4a"):
