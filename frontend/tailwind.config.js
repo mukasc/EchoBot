@@ -7,6 +7,11 @@ module.exports = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			serif: ['Playfair Display', 'serif'],
+  			sans: ['Manrope', 'sans-serif'],
+  			mono: ['JetBrains Mono', 'monospace'],
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
@@ -52,6 +57,19 @@ module.exports = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
+  			},
+  			rpg: {
+  				void: '#0B0C10',
+  				surface: '#13141A',
+  				'surface-hover': '#1A1B23',
+  				'surface-active': '#22242C',
+  				gold: '#D4AF37',
+  				'gold-hover': '#F0C74B',
+  				crimson: '#8C1C13',
+  				ic: '#D4AF37',
+  				ooc: '#6C7280',
+  				success: '#2D7A4D',
+  				info: '#3A6C97',
   			}
   		},
   		keyframes: {

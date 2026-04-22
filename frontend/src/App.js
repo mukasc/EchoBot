@@ -14,7 +14,7 @@ import Header from "./components/Header";
 
 function App() {
   return (
-    <div className="App min-h-screen bg-[#0B0C10]">
+    <div className="App min-h-screen bg-rpg-void">
       <Toaster 
         position="top-right" 
         toastOptions={{

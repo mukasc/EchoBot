@@ -17,33 +17,26 @@ const Header = () => {
   };
 
   return (
-    <header 
-      className="fixed top-0 left-0 right-0 z-50 glass-header"
-      data-testid="main-header"
-    >
+    <header className="fixed top-0 left-0 right-0 z-50 glass-header">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link 
-            to="/" 
-            className="flex items-center gap-3 group"
-            data-testid="logo-link"
-          >
-            <div className="p-2 rounded-lg bg-[#D4AF37]/10 group-hover:bg-[#D4AF37]/20 transition-colors">
-              <Scroll className="w-6 h-6 text-[#D4AF37]" strokeWidth={1.5} />
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="p-2 rounded-lg bg-rpg-gold/10 group-hover:bg-rpg-gold/20 transition-colors">
+              <Scroll className="w-6 h-6 text-rpg-gold" strokeWidth={1.5} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#EDEDED] font-['Playfair_Display']">
+              <h1 className="text-xl font-bold text-[#EDEDED] font-serif">
                 RPG Cronista
               </h1>
-              <p className="text-xs text-[#6C7280] hidden sm:block">
+              <p className="text-[10px] text-[#6C7280] hidden sm:block uppercase tracking-wider">
                 Crônicas de Aventura
               </p>
             </div>
           </Link>
 
           {/* Navigation */}
-          <nav className="flex items-center gap-1" data-testid="main-nav">
+          <nav className="flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -52,14 +45,13 @@ const Header = () => {
                   key={item.path}
                   to={item.path}
                   className={`
-                    flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
                     transition-all duration-200
                     ${active 
-                      ? 'bg-[#D4AF37]/10 text-[#D4AF37]' 
-                      : 'text-[#A0A5B5] hover:text-[#EDEDED] hover:bg-[#1A1B23]'
+                      ? 'bg-rpg-gold/10 text-rpg-gold' 
+                      : 'text-[#A0A5B5] hover:text-[#EDEDED] hover:bg-white/5'
                     }
                   `}
-                  data-testid={`nav-${item.path.replace('/', '') || 'home'}`}
                 >
                   <Icon className="w-4 h-4" strokeWidth={1.5} />
                   <span className="hidden md:inline">{item.label}</span>

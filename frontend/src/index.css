@@ -58,16 +58,16 @@
   }
   
   body {
-    @apply bg-[#0B0C10] text-[#EDEDED] antialiased;
+    @apply bg-rpg-void text-[#EDEDED] antialiased;
     font-family: 'Manrope', sans-serif;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
+    @apply font-serif;
   }
   
   code, pre {
-    font-family: 'JetBrains Mono', monospace;
+    @apply font-mono;
   }
 }
 
@@ -92,7 +92,7 @@
 
 /* Gold Gradient Text */
 .text-gold-gradient {
-  background: linear-gradient(135deg, #D4AF37 0%, #F0C74B 50%, #D4AF37 100%);
+  background: linear-gradient(135deg, var(--rpg-gold) 0%, var(--rpg-gold-hover) 50%, var(--rpg-gold) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -100,43 +100,38 @@
 
 /* Glow Effects */
 .glow-gold {
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+  @apply shadow-[0_0_20px_rgba(212,175,55,0.3)];
 }
 
 .glow-gold-subtle {
-  box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+  @apply shadow-[0_0_10px_rgba(212,175,55,0.15)];
 }
 
 /* IC/OOC Badge Styles */
 .badge-ic {
-  @apply bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30;
+  @apply bg-rpg-ic/15 text-rpg-ic border-rpg-ic/30 px-2 py-0.5 rounded text-xs font-medium;
 }
 
 .badge-ooc {
-  @apply bg-[#6C7280]/20 text-[#6C7280] border border-[#6C7280]/30;
+  @apply bg-rpg-ooc/15 text-rpg-ooc border-rpg-ooc/30 px-2 py-0.5 rounded text-xs font-medium;
 }
 
 .badge-narration {
-  @apply bg-[#3A6C97]/20 text-[#3A6C97] border border-[#3A6C97]/30;
+  @apply bg-rpg-info/15 text-rpg-info border-rpg-info/30 px-2 py-0.5 rounded text-xs font-medium;
 }
 
-/* Card Hover Effect */
+/* Card RPG Style */
 .card-rpg {
-  @apply bg-[#13141A] border border-white/10 rounded-lg transition-all duration-200;
+  @apply bg-rpg-surface border border-white/10 rounded-lg transition-all duration-200;
 }
 
 .card-rpg:hover {
-  @apply bg-[#1A1B23] border-[#D4AF37]/30;
+  @apply bg-rpg-surface-hover border-rpg-gold/30;
 }
 
 /* Glass Effect */
 .glass-header {
-  @apply backdrop-blur-xl bg-[#0B0C10]/80 border-b border-white/10;
-}
-
-/* Active Tab Indicator */
-.tab-active {
-  @apply border-b-2 border-[#D4AF37] text-[#D4AF37];
+  @apply backdrop-blur-xl bg-rpg-void/80 border-b border-white/10;
 }
 
 /* Pulse Animation for Processing */
@@ -151,24 +146,6 @@
 
 .animate-pulse-gold {
   animation: pulse-gold 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Focus States */
-.focus-gold:focus {
-  @apply outline-none ring-2 ring-[#D4AF37]/50 ring-offset-2 ring-offset-[#0B0C10];
-}
-
-/* Transcript Entry Styles */
-.transcript-ic {
-  @apply border-l-2 border-[#D4AF37] pl-4;
-}
-
-.transcript-ooc {
-  @apply border-l-2 border-[#6C7280] pl-4 opacity-70;
-}
-
-.transcript-narration {
-  @apply border-l-2 border-[#3A6C97] pl-4 italic;
 }
 
 /* Background Pattern */
@@ -190,7 +167,7 @@
 }
 
 .status-awaiting_review {
-  @apply bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30;
+  @apply bg-rpg-gold/20 text-rpg-gold border-rpg-gold/30 px-2.5 py-0.5 rounded-full;
 }
 
 .status-completed {
@@ -202,11 +179,5 @@
   .animate-pulse-gold,
   .animate-pulse {
     animation: none;
-  }
-}
-
-@layer base {
-  [data-debug-wrapper="true"] {
-    display: contents !important;
   }
 }

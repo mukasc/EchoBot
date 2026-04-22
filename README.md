@@ -83,7 +83,7 @@ cd backend
 **Voice Bridge:**
 ```bash
 cd voice-bridge
-node index.js
+node src/index.js
 ```
 
 **Frontend:**
