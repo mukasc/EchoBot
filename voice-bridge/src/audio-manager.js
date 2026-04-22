@@ -21,17 +21,22 @@ class AudioManager {
 
         const userPcmFile = path.join(config.tempDir, `temp_${sessionId}_user_${userId}.pcm`);
         const userOutStream = createWriteStream(userPcmFile);
-        subscribedUsers.set(userId, { stream: userOutStream, file: userPcmFile });
+        
+        // Forçamos 1 canal (Mono) para evitar que músicas Stereo fiquem aceleradas na conversão
+        const decoder = new prism.opus.Decoder({ frameSize: 960, channels: 1, rate: 48000 });
+        
+        subscribedUsers.set(userId, { 
+            stream: userOutStream, 
+            file: userPcmFile,
+            decoder: decoder
+        });
 
         const opusStream = receiver.subscribe(userId, {
             end: {
-                behavior: EndBehaviorType.AfterSilence,
-                duration: 1500,
+                behavior: EndBehaviorType.Manual,
             },
         });
 
-        const decoder = new prism.opus.Decoder({ frameSize: 960, channels: 2, rate: 48000 });
-        
         decoder.on('error', (err) => {
             console.warn(`⚠️ [Audio] Pacote malformado de ${userId}: ${err.message}`);
         });
@@ -41,10 +46,33 @@ class AudioManager {
     }
 
     /**
+     * Rotaciona o stream de um usuário para um novo arquivo de chunk.
+     */
+    rotateUserStream(userId, sessionId, subscribedUsers, chunkIndex) {
+        const userData = subscribedUsers.get(userId);
+        if (!userData) return null;
+
+        const oldFile = userData.file;
+        const oldStream = userData.stream;
+
+        const newPcmFile = path.join(config.tempDir, `temp_${sessionId}_user_${userId}_chunk_${chunkIndex}.pcm`);
+        const newOutStream = createWriteStream(newPcmFile);
+
+        userData.decoder.unpipe(oldStream);
+        userData.decoder.pipe(newOutStream, { end: false });
+
+        userData.file = newPcmFile;
+        userData.stream = newOutStream;
+
+        return { oldFile, oldStream };
+    }
+
+    /**
      * Converte um arquivo PCM para Ogg/Opus usando FFmpeg.
      */
     async convertToOpus(pcmFile, oggFile) {
-        const ffmpegCmd = `${this.ffmpegPath} -y -f s16le -ar 48000 -ac 2 -i "${pcmFile}" -c:a libopus -b:a 64k -ac 1 "${oggFile}"`;
+        // Usamos -ac 1 para ler o PCM Mono que geramos e manter a velocidade correta
+        const ffmpegCmd = `${this.ffmpegPath} -y -f s16le -ar 48000 -ac 1 -i "${pcmFile}" -c:a libopus -b:a 64k -ac 1 "${oggFile}"`;
         
         return new Promise((resolve, reject) => {
             console.log(`🎬 [Audio] Convertendo ${path.basename(pcmFile)} -> OGG/Opus (64k mono)...`);

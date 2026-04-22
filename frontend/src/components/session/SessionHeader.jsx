@@ -8,11 +8,14 @@ import {
   Check, 
   X, 
   Loader2,
-  Clock
+  Clock,
+  Copy,
+  Hash
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -44,10 +47,24 @@ const SessionHeader = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(session.name);
   const [editedSystem, setEditedSystem] = useState(session.game_system);
+  const [editedChunkDuration, setEditedChunkDuration] = useState(session.chunk_duration_minutes || 20);
+
+  const [copied, setCopied] = useState(false);
 
   const handleSave = async () => {
-    await onUpdate({ name: editedName, game_system: editedSystem });
+    await onUpdate({ 
+      name: editedName, 
+      game_system: editedSystem,
+      chunk_duration_minutes: editedChunkDuration
+    });
     setIsEditing(false);
+  };
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(session.id);
+    setCopied(true);
+    toast.success("ID da sessão copiado!");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleFileUpload = (e) => {
@@ -80,12 +97,22 @@ const SessionHeader = ({
                 <h1 className="text-3xl sm:text-4xl font-bold text-[#EDEDED] font-serif">
                   {session.name}
                 </h1>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="text-[#6C7280] hover:text-rpg-gold transition-colors"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="text-[#6C7280] hover:text-rpg-gold transition-colors p-1"
+                    title="Editar"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleCopyId}
+                    className={`transition-colors p-1 ${copied ? 'text-green-500' : 'text-[#6C7280] hover:text-rpg-gold'}`}
+                    title="Copiar ID da sessão"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
               </>
             )}
             <Badge className={`status-${session.status}`}>
@@ -109,6 +136,28 @@ const SessionHeader = ({
               <Badge variant="outline" className="border-white/10">
                 {session.game_system}
               </Badge>
+            )}
+
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <Input
+                  type="number"
+                  min="5"
+                  max="30"
+                  value={editedChunkDuration}
+                  onChange={(e) => setEditedChunkDuration(parseInt(e.target.value) || 20)}
+                  className="input-dark w-16 bg-transparent border-rpg-gold/50 h-8 text-xs"
+                />
+                <span className="text-xs">min/bloco</span>
+              </div>
+            ) : (
+              session.chunk_duration_minutes && (
+                <span className="flex items-center gap-1.5 text-xs text-[#A0A5B5]">
+                  <Clock className="w-3.5 h-3.5" />
+                  {session.chunk_duration_minutes} min/bloco
+                </span>
+              )
             )}
 
             {session.duration_minutes && (

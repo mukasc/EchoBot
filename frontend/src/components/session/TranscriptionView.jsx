@@ -22,6 +22,10 @@ const typeLabels = {
 const TranscriptionView = ({ segments, getSpeakerInfo, onUpdateSegment, onUploadClick }) => {
   const [editingId, setEditingId] = useState(null);
 
+  const sortedSegments = [...(segments || [])].sort((a, b) => 
+    (a.timestamp_start || 0) - (b.timestamp_start || 0)
+  );
+
   const formatTimestamp = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -49,7 +53,7 @@ const TranscriptionView = ({ segments, getSpeakerInfo, onUpdateSegment, onUpload
         {segments?.length > 0 ? (
           <ScrollArea className="h-[500px]">
             <div className="p-6 space-y-4">
-              {segments.map((segment) => (
+              {sortedSegments.map((segment) => (
                 <SegmentItem 
                   key={segment.id} 
                   segment={segment}
@@ -111,7 +115,7 @@ const SegmentItem = ({
           {characterName && speaker.discordName && <span className="text-[#6C7280] font-normal"> | {speaker.discordName}</span>}
         </span>
 
-        {segment.timestamp_start > 0 && (
+        {segment.timestamp_start >= 0 && (
           <span className="text-xs text-[#6C7280]">
             {formatTimestamp(segment.timestamp_start)}
             {segment.timestamp_absolute_start && (

@@ -55,12 +55,14 @@ class Session(BaseModel):
     cover_image_url: Optional[str] = None
     audio_file_id: Optional[str] = None
     is_audio_append: bool = False
+    chunk_duration_minutes: int = 20
 
 
 class SessionCreate(BaseModel):
     name: str
     game_system: str = "D&D 5e"
     cover_image_url: Optional[str] = None
+    chunk_duration_minutes: int = 20
 
 
 class SessionUpdate(BaseModel):
@@ -70,3 +72,4 @@ class SessionUpdate(BaseModel):
     review_script: Optional[str] = None
     technical_diary: Optional[List[TechnicalDiaryEntry]] = None
     cover_image_url: Optional[str] = None
+    chunk_duration_minutes: Optional[int] = None

@@ -184,6 +184,7 @@ async def upload_audio(
     file: UploadFile = File(...),
     speaker_id: Optional[str] = Form(None),
     session_start_time: Optional[str] = Form(None),
+    chunk_offset: float = Form(0.0),
     db: AsyncIOMotorDatabase = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -235,7 +236,7 @@ async def upload_audio(
         # Build TranscriptionSegment documents
         def _calc_absolute(relative: float) -> Optional[str]:
             if session_start_dt and relative is not None:
-                return (session_start_dt + timedelta(seconds=relative)).isoformat()
+                return (session_start_dt + timedelta(seconds=chunk_offset + relative)).isoformat()
             return None
 
         speaker = speaker_id or "unknown"
@@ -246,8 +247,8 @@ async def upload_audio(
                 ts = TranscriptionSegment(
                     speaker_discord_id=speaker,
                     text=seg.text,
-                    timestamp_start=seg.start,
-                    timestamp_end=seg.end,
+                    timestamp_start=chunk_offset + seg.start,
+                    timestamp_end=chunk_offset + seg.end,
                     timestamp_absolute_start=_calc_absolute(seg.start),
                     timestamp_absolute_end=_calc_absolute(seg.end),
                     message_type=MessageType.IC,
@@ -257,8 +258,8 @@ async def upload_audio(
             ts = TranscriptionSegment(
                 speaker_discord_id=speaker,
                 text=result.raw_text,
-                timestamp_start=0,
-                timestamp_end=0,
+                timestamp_start=chunk_offset,
+                timestamp_end=chunk_offset,
                 timestamp_absolute_start=_calc_absolute(0),
                 timestamp_absolute_end=_calc_absolute(0),
                 message_type=MessageType.IC,
@@ -270,14 +271,22 @@ async def upload_audio(
             existing = await db.sessions.find_one({"id": session_id}, {"raw_transcription": 1})
             existing_text = (existing or {}).get("raw_transcription", "")
             new_text = f"{existing_text} {result.raw_text}".strip()
+            # Calculate new duration
+            last_end = 0
+            if result.segments:
+                last_end = max(seg.end for seg in result.segments)
+            current_duration_sec = chunk_offset + last_end
+            current_duration_min = int(current_duration_sec // 60)
+
             await db.sessions.update_one(
                 {"id": session_id},
                 {
                     "$push": {"transcription_segments": {"$each": processed_segments}},
                     "$set": {
                         "raw_transcription": new_text,
-                        "status": SessionStatus.PROCESSING.value,
+                        "status": SessionStatus.AWAITING_REVIEW.value,
                         "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "duration_minutes": current_duration_min
                     },
                 },
             )
@@ -295,7 +304,7 @@ async def upload_audio(
                         "raw_transcription": result.raw_text,
                         "transcription_segments": processed_segments,
                         "audio_file_id": audio_file_id,
-                        "status": SessionStatus.PROCESSING.value,
+                        "status": SessionStatus.AWAITING_REVIEW.value,
                         "updated_at": datetime.now(timezone.utc).isoformat(),
                     }
                 },
@@ -310,6 +319,12 @@ async def upload_audio(
 
     except Exception as exc:
         logger.exception("Transcription error: %s", exc)
+        
+        # Determine if it's a quota error
+        msg = str(exc).lower()
+        if "quota" in msg or "rate limit" in msg or "429" in msg:
+            raise HTTPException(status_code=429, detail=f"Quota exceeded: {exc}") from exc
+
         await db.sessions.update_one(
             {"id": session_id},
             {"$set": {"status": SessionStatus.AWAITING_REVIEW.value, "updated_at": datetime.now(timezone.utc).isoformat()}},

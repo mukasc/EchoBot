@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Clock, Trash2, ChevronRight } from "lucide-react";
+import { Calendar, Clock, Trash2, ChevronRight, Copy, Check, Hash } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
+import { toast } from "sonner";
 
 const statusLabels = {
   recording: "Gravando",
@@ -12,6 +14,8 @@ const statusLabels = {
 };
 
 const SessionCard = ({ session, onDelete }) => {
+  const [copied, setCopied] = useState(false);
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', {
@@ -25,6 +29,15 @@ const SessionCard = ({ session, onDelete }) => {
     if (window.confirm("Tem certeza que deseja excluir esta sessão?")) {
       onDelete(session.id);
     }
+  };
+
+  const handleCopyId = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(session.id);
+    setCopied(true);
+    toast.success("ID da sessão copiado!");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -42,12 +55,22 @@ const SessionCard = ({ session, onDelete }) => {
             {statusLabels[session.status] || session.status}
           </Badge>
           
-          <button
-            onClick={handleDelete}
-            className="absolute top-3 left-3 p-2 rounded-lg bg-rpg-void/80 text-[#6C7280] hover:text-red-500 hover:bg-rpg-void transition-colors opacity-0 group-hover:opacity-100"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={handleDelete}
+              className="p-2 rounded-lg bg-rpg-void/80 text-[#6C7280] hover:text-red-500 hover:bg-rpg-void transition-colors"
+              title="Excluir sessão"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleCopyId}
+              className={`p-2 rounded-lg bg-rpg-void/80 transition-colors ${copied ? 'text-green-500' : 'text-[#6C7280] hover:text-rpg-gold hover:bg-rpg-void'}`}
+              title="Copiar ID da sessão"
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
         
         <CardContent className="p-5">
@@ -69,9 +92,18 @@ const SessionCard = ({ session, onDelete }) => {
           </div>
           
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="text-[#A0A5B5] border-white/10">
-              {session.game_system}
-            </Badge>
+            <div className="flex gap-2">
+              <Badge variant="outline" className="text-[#A0A5B5] border-white/10">
+                {session.game_system}
+              </Badge>
+              <button 
+                onClick={handleCopyId}
+                className="flex items-center gap-1 text-[10px] text-[#6C7280] hover:text-rpg-gold transition-colors"
+              >
+                <Hash className="w-3 h-3" />
+                Copiar ID
+              </button>
+            </div>
             <ChevronRight className="w-5 h-5 text-[#6C7280] group-hover:text-rpg-gold transition-colors" />
           </div>
         </CardContent>

@@ -62,6 +62,11 @@ class TranscriptionService:
         Returns:
             TranscriptionResult with raw text and optional timed segments.
         """
+        # 0. Check for empty content
+        if not audio_content or len(audio_content) < 100:  # less than 100 bytes is definitely not valid audio
+            logger.warning("Empty or too small audio content received for %s", filename)
+            return TranscriptionResult(raw_text="", segments=[], method="None")
+
         # 1. Try local Whisper first (free, offline)
         if file_path and file_path.exists():
             try:
@@ -140,7 +145,6 @@ class TranscriptionService:
 
         models_to_try = [
             "gemini-2.0-flash",
-            "gemini-1.5-flash-latest",
             "gemini-1.5-flash",
             "gemini-1.5-pro",
         ]

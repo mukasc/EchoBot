@@ -21,13 +21,14 @@ import {
 const CreateSessionDialog = ({ open, onOpenChange, onSubmit }) => {
   const [formData, setFormData] = useState({
     name: "",
-    game_system: "D&D 5e"
+    game_system: "D&D 5e",
+    chunk_duration_minutes: 20
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(formData);
-    setFormData({ name: "", game_system: "D&D 5e" });
+    setFormData({ name: "", game_system: "D&D 5e", chunk_duration_minutes: 20 });
   };
 
   return (
@@ -68,6 +69,22 @@ const CreateSessionDialog = ({ open, onOpenChange, onSubmit }) => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="chunk-duration">Duração dos Blocos (minutos)</Label>
+            <div className="flex items-center gap-4">
+              <Input
+                id="chunk-duration"
+                type="number"
+                min="5"
+                max="30"
+                value={formData.chunk_duration_minutes}
+                onChange={(e) => setFormData({...formData, chunk_duration_minutes: parseInt(e.target.value) || 20})}
+                className="input-dark w-24"
+              />
+              <span className="text-sm text-[#A0A5B5]">Sugestão: 20 min (Min: 5, Máx: 30)</span>
+            </div>
           </div>
 
           <DialogFooter className="pt-4">

@@ -10,8 +10,8 @@ module.exports = {
     ffmpegPath: process.env.FFMPEG_PATH || `"C:\\Users\\mukas\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1-full_build\\bin\\ffmpeg.exe"`,
     
     // Caminhos temporários
-    tempDir: path.join(__dirname, '..'),
-    
+    tempDir: path.join(__dirname, '../temp'),
+
     // Discord Intents
     intents: [
         'Guilds',
@@ -20,3 +20,9 @@ module.exports = {
         'GuildVoiceStates',
     ]
 };
+
+// Garante que o diretório temporário exista
+const fs = require('fs');
+if (!fs.existsSync(module.exports.tempDir)) {
+    fs.mkdirSync(module.exports.tempDir, { recursive: true });
+}

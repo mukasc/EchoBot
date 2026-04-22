@@ -6,7 +6,7 @@ const config = require('./config');
 /**
  * Faz upload de um arquivo de áudio para a sessão específica no backend.
  */
-async function uploadAudio(sessionId, filePath, speakerId, sessionStartTime) {
+async function uploadAudio(sessionId, filePath, speakerId, sessionStartTime, chunkOffset = 0) {
     const form = new FormData();
     form.append('file', fs.createReadStream(filePath), {
         filename: filePath,
@@ -20,6 +20,8 @@ async function uploadAudio(sessionId, filePath, speakerId, sessionStartTime) {
     if (sessionStartTime) {
         form.append('session_start_time', sessionStartTime);
     }
+
+    form.append('chunk_offset', chunkOffset.toString());
 
     try {
         console.log(`📤 [API] Enviando ${filePath} (Usuário: ${speakerId || 'Geral'})...`);
@@ -38,6 +40,20 @@ async function uploadAudio(sessionId, filePath, speakerId, sessionStartTime) {
     return false;
 }
 
+async function getSession(sessionId) {
+    try {
+        const response = await axios.get(`${config.apiUrl}/sessions/${sessionId}`);
+        if (response.status === 200) {
+            return response.data;
+        }
+    } catch (err) {
+        console.error(`❌ [API] Erro ao buscar sessão ${sessionId}:`, err.message);
+        throw err;
+    }
+    return null;
+}
+
 module.exports = {
-    uploadAudio
+    uploadAudio,
+    getSession
 };
