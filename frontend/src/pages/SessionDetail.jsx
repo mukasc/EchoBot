@@ -80,10 +80,40 @@ const SessionDetail = () => {
   const [editingScript, setEditingScript] = useState(false);
   const [editedScript, setEditedScript] = useState("");
   const [editingSegment, setEditingSegment] = useState(null);
+  const [characterMappings, setCharacterMappings] = useState([]);
 
   useEffect(() => {
     fetchSession();
+    fetchCharacterMappings();
   }, [id]);
+
+  const fetchCharacterMappings = async () => {
+    try {
+      const response = await axios.get(`${API}/character-mappings`);
+      setCharacterMappings(response.data);
+    } catch (error) {
+      console.error("Error fetching character mappings:", error);
+    }
+  };
+
+  const getSpeakerName = (speakerId) => {
+    if (!speakerId) return { characterName: null, discordName: null };
+    
+    // Check if there's a character mapping for this Discord user
+    const mapping = characterMappings.find(m => m.discord_user_id === speakerId);
+    if (mapping) {
+      return { 
+        characterName: mapping.character_name, 
+        discordName: mapping.discord_username 
+      };
+    }
+    
+    // If no mapping, return the ID
+    return { 
+      characterName: null, 
+      discordName: `Usuário ${speakerId.substring(0, 8)}` 
+    };
+  };
 
   const fetchSession = async () => {
     try {
@@ -336,11 +366,24 @@ const SessionDetail = () => {
                             <Badge className={`badge-${segment.message_type}`}>
                               {typeLabels[segment.message_type]}
                             </Badge>
-                            {segment.speaker_character_name && (
-                              <span className="text-sm font-semibold text-[#D4AF37]">
-                                {segment.speaker_character_name}
-                              </span>
-                            )}
+                            {(() => {
+                              const speaker = getSpeakerName(segment.speaker_discord_id);
+                              const characterName = segment.speaker_character_name || speaker.characterName;
+                              const discordName = speaker.discordName;
+                              
+                              if (characterName || discordName) {
+                                return (
+                                  <span className="text-sm font-semibold text-[#D4AF37]">
+                                    {characterName && <span>{characterName}</span>}
+                                    {discordName && characterName && <span className="text-[#6C7280]"> | </span>}
+                                    {discordName && <span className="text-[#6C7280]">{discordName}</span>}
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span className="text-sm text-[#6C7280]">Desconhecido</span>
+                              );
+                            })()}
                             {segment.timestamp_start > 0 && (
                               <span className="text-xs text-[#6C7280]">
                                 {formatTimestamp(segment.timestamp_start)}

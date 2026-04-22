@@ -1,50 +1,35 @@
-# 🎙️ EchoBot: O Cronista das Sombras
+# EchoBot - O Cronista das Sombras
 
-**EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
+**EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
 
 ---
 
 ## 🏛️ Arquitetura do Sistema
 
-O EchoBot é composto por uma trindade de componentes que trabalham em harmonia:
-
-```mermaid
-graph TD
-    A[🎤 Discord Voice Channel] -->|Capture| B(🤖 Discord Bot - bot.py)
-    B -->|Upload WAV| C{🚀 Backend API - FastAPI}
-    C -->|Store| D[(🍃 MongoDB)]
-    C -->|Transcribe & Process| E[🧠 AI Engines]
-    E -->|Gemini / OpenAI / Anthropic| C
-    C -->|Serve JSON/REST| F[💻 Frontend Dashboard - React]
-    F -->|Config & Manage| C
+```
+[Discord Voice] --> [Voice Bridge (Node.js)] --> [Backend API (FastAPI)] --> [MongoDB]
+                                                              |
+                                                              v
+                                              [Frontend (React + Tailwind)]
 ```
 
----
+### Componentes
 
-## ✨ Funcionalidades
-
-- **Captura de Voz em Tempo Real**: O bot entra no seu canal de voz e grava a sessão com alta fidelidade.
-- **Transcrição Multiprovedor**: Alternância inteligente entre Google Gemini e OpenAI Whisper para garantir precisão e contornar limites de cota.
-- **Processamento Narrativo**:
-    - **Filtragem IC/OOC**: Separa falas de personagens de conversas paralelas sobre regras.
-    - **Diário Técnico**: Extração automática de NPCs, Itens, Locais e XP.
-    - **Roteiro de Revisão**: Gera um resumo narrativo fluido, substituindo nomes de jogadores por nomes de personagens.
-- **Painel de Gestão**: Interface gótica personalizada para gerenciar sessões e mapear usuários do Discord para seus personagens.
+1. **Voice Bridge** (`voice-bridge/`) - Bot Node.js para capturar áudio do Discord
+2. **Backend API** (`backend/`) - API FastAPI com transcrição e processamento de IA
+3. **Frontend** (`frontend/`) - Dashboard React com interface gótica
 
 ---
 
 ## 🚀 Guia de Início Rápido
 
 ### Pré-requisitos
-- **Python 3.10+** (recomendado `venv`)
+- **Python 3.10+** (venv)
 - **Node.js 18+**
 - **MongoDB** (Local ou Atlas)
-- **FFmpeg** instalado e no PATH do sistema.
+- **FFmpeg** instalado e no PATH
 
-### 1. Preparação do Ambiente
-Clone o repositório e configure as variáveis de ambiente nos arquivos `.env` dentro de `/backend` e `/frontend`.
-
-### 2. Instalação das Dependências
+### 1. Instalação
 
 **Backend:**
 ```bash
@@ -60,35 +45,64 @@ cd frontend
 npm install
 ```
 
-### 3. Configuração do Bot Discord
-1. Acesse o [Discord Developer Portal](https://discord.com/developers/applications).
-2. Crie uma nova aplicação e adicione um Bot.
-3. Ative os **Privileged Gateway Intents** (`Message Content`, `Server Members`).
-4. Copie o Token e configure-o na página de **Settings** do EchoBot ou no `.env`.
-5. Convide o bot para seu servidor com permissões de `Connect` e `Speak`.
-
-### 4. Executando o Sistema
-Para sua conveniência, utilize o script unificado em PowerShell:
-```powershell
-./run.ps1
+**Voice Bridge:**
+```bash
+cd voice-bridge
+npm install
 ```
-Este script iniciará o Bot, o Servidor API e o Dashboard em janelas separadas.
+
+### 2. Configuração
+
+Crie o arquivo `.env` em `backend/.env`:
+```env
+MONGO_URL="sua_url_mongodb"
+DB_NAME="rpbcronista"
+OPENAI_API_KEY="sua_chave_openai"
+GOOGLE_API_KEY="sua_chave_google"
+DISCORD_BOT_TOKEN="seu_token_discord"
+```
+
+### 3. Executando
+
+Abra 2 terminais:
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+.\venv\Scripts\python.exe -m uvicorn server:app --reload --port 8000
+```
+
+**Terminal 2 - Voice Bridge:**
+```bash
+cd voice-bridge
+node index.js
+```
+
+### 4. Comandos no Discord
+
+- `!entrar <ID_SESSÃO>` - O bot entra no canal de voz e começa a gravar
+- `!sair` - Para a gravação e envia o áudio para processamento
 
 ---
 
-## 🛠️ Detalhes Técnicos (Architect Review)
+## ✨ Funcionalidades
 
-- **Backend**: FastAPI com Motor (driver assíncrono para MongoDB).
-- **Frontend**: React + Tailwind CSS + Radix UI. Design focado em estética *Gothic/RPG*.
-- **Bot**: Desenvolvido em Discord.py com suporte a Sinks para gravação de áudio.
-- **IA**: Suporte nativo e redundante para as APIs mais potentes do mercado, configuráveis via interface.
-
-### ⚠️ Notas de Portabilidade
-Atualmente, o bot está configurado com caminhos específicos para o FFmpeg e a DLL do Opus em ambiente Windows. Para produção, recomenda-se mover esses caminhos para variáveis de ambiente.
+- **Captura de Voz por Usuário** - Cada participante tem seu áudio separado
+- **Transcrição Local (Faster Whisper)** - Sem custos de API
+- **Transcrição Cloud (Gemini/OpenAI)** - Fallback quando local falha
+- **Processamento Narrativo IC/OOC** - Separa falas de personagens de conversas paralelas
+- **Diário Técnico** - Extração automática de NPCs, Itens, Locais e XP
+- **Roteiro de Revisão** - Narrativa fluida com nomes de personagens
+- **Áudio no MongoDB** - Arquivos compactados com gzip no GridFS
 
 ---
 
-## 📜 Licença
-Este projeto é uma ferramenta de apoio à narrativa e segue as diretrizes de código aberto para a comunidade de RPG.
+## 📝 Notas
+
+- O bot Discord original (`bot.py`) foi substituído pelo Voice Bridge (Node.js)
+- Erro 4017 no Discord indica problema de UDP - tente usar VPN ou VPS
+- O sistema tenta local primeiro, depois cloud (Gemini/OpenAI) como fallback
+
+---
 
 *“Que suas falas sejam épicas e suas crônicas, eternas.”*

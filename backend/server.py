@@ -1,8 +1,10 @@
-from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Query, Form
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
+from gridfs import GridFS
 import os
 import logging
 from pathlib import Path
@@ -22,6 +24,11 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# Sync client for GridFS (motor doesn't support GridFS async yet)
+sync_client = MongoClient(mongo_url)
+sync_db = sync_client[os.environ['DB_NAME']]
+fs = GridFS(sync_db)
 
 # Create the main app without a prefix
 app = FastAPI(title="RPG Cronista API", version="1.0.0")
@@ -104,6 +111,8 @@ class Session(BaseModel):
     review_script: str = ""
     raw_transcription: str = ""
     cover_image_url: Optional[str] = None
+    audio_file_id: Optional[str] = None  # GridFS file ID
+    is_audio_append: bool = False  # Indica se o áudio é continuação
 
 class SessionCreate(BaseModel):
     name: str
@@ -344,11 +353,13 @@ async def update_app_settings(input: AppSettingsUpdate):
 
 # ============ AUDIO PROCESSING ============
 @api_router.post("/sessions/{session_id}/upload-audio")
-async def upload_audio(session_id: str, file: UploadFile = File(...)):
+async def upload_audio(session_id: str, file: UploadFile = File(...), speaker_id: str = Form(None)):
     """Upload audio file for transcription"""
     session = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    
+    logger.info(f"Uploading audio for session {session_id}, speaker: {speaker_id}, filename: {file.filename}")
     
     # Validate file type
     allowed_types = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/webm', 'audio/mp4', 'audio/m4a']
@@ -365,11 +376,42 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
         # Read audio file
         audio_content = await file.read()
         
-        # Save audio file to disk (Problem 1 Fix)
+        # Check if session already has audio (append mode)
+        session = await db.sessions.find_one({"id": session_id}, {"audio_file_id": 1})
+        is_append = session and session.get("audio_file_id") is not None
+        
+        if is_append:
+            logger.info(f"Appending audio to existing session {session_id}")
+        
+        # Generate timestamp early (needed for GridFS)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Compress and save audio to GridFS
+        import io
+        import gzip
+        
+        # Compress audio data
+        compressed_buffer = io.BytesIO()
+        with gzip.GzipFile(fileobj=compressed_buffer, mode='wb') as gz:
+            gz.write(audio_content)
+        compressed_content = compressed_buffer.getvalue()
+        
+        # Save to GridFS
+        audio_filename = f"session_{session_id}_{timestamp}.wav.gz"
+        gridfs_id = fs.put(
+            compressed_content,
+            filename=audio_filename,
+            content_type=file.content_type or 'audio/wav',
+            session_id=session_id,
+            is_append=is_append
+        )
+        
+        logger.info(f"Audio saved to GridFS: {gridfs_id} (compressed: {len(compressed_content)} bytes)")
+        
+        # Save audio file to disk (for Whisper local processing)
         upload_dir = ROOT_DIR / "uploads"
         upload_dir.mkdir(exist_ok=True)
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_filename = "".join([c if c.isalnum() or c in "._-" else "_" for c in file.filename])
         file_path = upload_dir / f"session_{session_id}_{timestamp}_{safe_filename}"
         
@@ -391,13 +433,12 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
             genai.configure(api_key=g_api_key)
             
             # Try multiple model name variations
-            models_to_try = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "models/gemini-1.5-flash", "gemini-1.5-pro"]
+            models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-1.5-pro"]
             last_err = None
             
             for model_name in models_to_try:
                 try:
                     logger.info(f"Trying Gemini model: {model_name}...")
-                    model = genai.GenerativeModel(model_name)
                     
                     # MIME Type detection
                     mime = "audio/wav"
@@ -406,6 +447,7 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
                     elif filename.lower().endswith(".mp4"): mime = "audio/mp4"
                     
                     # Use generation to transcribe
+                    model = genai.GenerativeModel(model_name)
                     response = model.generate_content([
                         "Transcreva este áudio de uma sessão de RPG. Retorne apenas a transcrição literal em português.",
                         {"mime_type": mime, "data": content}
@@ -438,37 +480,106 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
             )
             return response
 
+        # Function to transcribe with local Faster Whisper
+        async def transcribe_with_local(file_path: str):
+            try:
+                from faster_whisper import WhisperModel
+                import torch
+                
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                compute_type = "float16" if device == "cuda" else "int8"
+                
+                logger.info(f"Loading local Whisper model (medium) on {device}...")
+                model = WhisperModel("medium", device=device, compute_type=compute_type)
+                
+                logger.info(f"Transcribing {file_path}...")
+                segments_gen, info = model.transcribe(
+                    file_path,
+                    language="pt",
+                    beam_size=5,
+                    vad_filter=True,
+                )
+                
+                segments = list(segments_gen)
+                detected_lang = info.language or "pt"
+                lang_prob = info.language_probability or 0
+                logger.info(f"Detected language: {detected_lang} (prob: {lang_prob})")
+                
+                full_text = " ".join([seg.text.strip() for seg in segments])
+                
+                class LocalTranscriptionResult:
+                    def __init__(self, text, segs):
+                        self.text = text
+                        self.segments = segs
+                
+                class LocalSegment:
+                    def __init__(self, start, end, text):
+                        self.start = start
+                        self.end = end
+                        self.text = text
+                
+                local_segments = [
+                    LocalSegment(s.start, s.end, s.text.strip()) 
+                    for s in segments
+                ]
+                
+                return LocalTranscriptionResult(full_text, local_segments)
+            except Exception as e:
+                logger.error(f"Local transcription failed: {e}")
+                raise
+
         # Try transcription based on provider or fallback
-        if settings.llm_provider == LLMProvider.GEMINI:
-            logger.info("Using Gemini for transcription...")
-            try:
-                raw_text = await transcribe_with_google(audio_content, file.filename)
-            except Exception as ge:
-                logger.error(f"Gemini transcription failed: {ge}. Trying OpenAI...")
-                openai_response = await transcribe_with_openai(audio_content, file.filename)
-                raw_text = openai_response.text
-                if hasattr(openai_response, 'segments'):
-                    segments = openai_response.segments
-        else:
-            logger.info("Using OpenAI for transcription...")
-            try:
-                openai_response = await transcribe_with_openai(audio_content, file.filename)
-                raw_text = openai_response.text
-                if hasattr(openai_response, 'segments'):
-                    segments = openai_response.segments
-            except Exception as oe:
-                if "quota" in str(oe).lower() or "429" in str(oe):
-                    logger.warning("OpenAI Quota exceeded. Falling back to Gemini...")
+        # First try local Whisper
+        try:
+            logger.info("Trying local Whisper transcription...")
+            local_result = await transcribe_with_local(str(file_path))
+            raw_text = local_result.text
+            segments = local_result.segments
+            logger.info("Local Whisper transcription successful")
+        except Exception as local_err:
+            logger.warning(f"Local transcription failed: {local_err}")
+            
+            if settings.llm_provider == LLMProvider.GEMINI:
+                logger.info("Using Gemini for transcription...")
+                try:
                     raw_text = await transcribe_with_google(audio_content, file.filename)
-                else:
-                    raise oe
+                except Exception as ge:
+                    logger.error(f"Gemini transcription failed: {ge}. Trying OpenAI...")
+                    try:
+                        openai_response = await transcribe_with_openai(audio_content, file.filename)
+                        raw_text = openai_response.text
+                        if hasattr(openai_response, 'segments'):
+                            segments = openai_response.segments
+                    except Exception as oe:
+                        raise Exception(f"All transcription methods failed. Last error: {oe}")
+            else:
+                logger.info("Using OpenAI for transcription...")
+                try:
+                    openai_response = await transcribe_with_openai(audio_content, file.filename)
+                    raw_text = openai_response.text
+                    if hasattr(openai_response, 'segments'):
+                        segments = openai_response.segments
+                except Exception as oe:
+                    if "quota" in str(oe).lower() or "429" in str(oe):
+                        logger.warning("OpenAI Quota exceeded. Trying local Whisper again...")
+                        try:
+                            local_result = await transcribe_with_local(str(file_path))
+                            raw_text = local_result.text
+                            segments = local_result.segments
+                        except Exception as local_retry_err:
+                            logger.warning(f"Local retry failed: {local_retry_err}. Trying Gemini...")
+                            raw_text = await transcribe_with_google(audio_content, file.filename)
+                    else:
+                        raise oe
 
         # Process segments (if raw Gemini transcription or simple Whisper)
         processed_segments = []
+        speaker = speaker_id if speaker_id else "unknown"
+        
         if segments:
             for seg in segments:
                 segment = TranscriptionSegment(
-                    speaker_discord_id="unknown",
+                    speaker_discord_id=speaker,
                     text=seg.text.strip(),
                     timestamp_start=seg.start,
                     timestamp_end=seg.end,
@@ -478,7 +589,7 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
         else:
             # Single segment for entire transcription (Gemini or simplified Whisper)
             segment = TranscriptionSegment(
-                speaker_discord_id="unknown",
+                speaker_discord_id=speaker,
                 text=raw_text,
                 timestamp_start=0,
                 timestamp_end=0,
@@ -486,18 +597,42 @@ async def upload_audio(session_id: str, file: UploadFile = File(...)):
             )
             processed_segments.append(serialize_datetime(segment.model_dump()))
         
-        # Update session with transcription
-        await db.sessions.update_one(
-            {"id": session_id},
-            {"$set": {
-                "raw_transcription": raw_text,
-                "transcription_segments": processed_segments,
-                "status": SessionStatus.PROCESSING.value,
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }}
-        )
+        # Update session with transcription (append mode)
+        if is_append:
+            # Get existing transcription to append
+            existing_session = await db.sessions.find_one({"id": session_id}, {"raw_transcription": 1})
+            existing_text = existing_session.get("raw_transcription", "") if existing_session else ""
+            new_text = existing_text + " " + raw_text if existing_text else raw_text
+            
+            # Append to existing transcription
+            await db.sessions.update_one(
+                {"id": session_id},
+                {
+                    "$push": {
+                        "transcription_segments": {"$each": processed_segments}
+                    },
+                    "$set": {
+                        "raw_transcription": new_text,
+                        "status": SessionStatus.PROCESSING.value,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+            logger.info(f"Appended {len(processed_segments)} segments to session {session_id}")
+        else:
+            # First upload - create new transcription
+            await db.sessions.update_one(
+                {"id": session_id},
+                {"$set": {
+                    "raw_transcription": raw_text,
+                    "transcription_segments": processed_segments,
+                    "audio_file_id": str(gridfs_id),
+                    "status": SessionStatus.PROCESSING.value,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
         
-        return {"message": "Audio transcribed successfully", "method": "Gemini" if not segments else "OpenAI", "segments_count": len(processed_segments)}
+        return {"message": "Audio transcribed successfully", "method": "LocalWhisper" if segments and hasattr(segments[0], 'start') else "Gemini", "segments_count": len(processed_segments), "is_append": is_append}
         
     except Exception as e:
         logger.exception(f"Transcription error: {e}")
@@ -587,7 +722,7 @@ Processe e retorne o JSON estruturado."""
         elif current_settings.llm_provider == LLMProvider.GEMINI:
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(
-                model_name=current_settings.llm_model or "gemini-1.5-flash",
+                model_name=current_settings.llm_model or "gemini-2.0-flash",
                 system_instruction=system_message
             )
             response = model.generate_content(prompt)
