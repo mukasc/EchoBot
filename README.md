@@ -88,12 +88,14 @@ node index.js
 ## ✨ Funcionalidades
 
 - **Captura de Voz por Usuário** - Cada participante tem seu áudio separado
+- **Timestamp Absoluto** - Hora real da fala registrada (ex: 14:32:15)
 - **Transcrição Local (Faster Whisper)** - Sem custos de API
 - **Transcrição Cloud (Gemini/OpenAI)** - Fallback quando local falha
 - **Processamento Narrativo IC/OOC** - Separa falas de personagens de conversas paralelas
 - **Diário Técnico** - Extração automática de NPCs, Itens, Locais e XP
 - **Roteiro de Revisão** - Narrativa fluida com nomes de personagens
 - **Áudio no MongoDB** - Arquivos compactados com gzip no GridFS
+- **Edição de Sessão** - Alterar nome e sistema de jogo pelo frontend
 
 ---
 

@@ -87,6 +87,8 @@ class TranscriptionSegment(BaseModel):
     message_type: MessageType = MessageType.IC
     timestamp_start: float
     timestamp_end: float
+    timestamp_absolute_start: Optional[str] = None  # ISO datetime
+    timestamp_absolute_end: Optional[str] = None    # ISO datetime
     confidence: float = 1.0
     uncertain_terms: List[str] = []
 
@@ -353,11 +355,20 @@ async def update_app_settings(input: AppSettingsUpdate):
 
 # ============ AUDIO PROCESSING ============
 @api_router.post("/sessions/{session_id}/upload-audio")
-async def upload_audio(session_id: str, file: UploadFile = File(...), speaker_id: str = Form(None)):
+async def upload_audio(session_id: str, file: UploadFile = File(...), speaker_id: str = Form(None), session_start_time: str = Form(None)):
     """Upload audio file for transcription"""
     session = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    
+    # Parse session start time if provided
+    session_start_dt = None
+    if session_start_time:
+        try:
+            session_start_dt = datetime.fromisoformat(session_start_time.replace('Z', '+00:00'))
+            logger.info(f"Session start time: {session_start_dt}")
+        except Exception as e:
+            logger.warning(f"Could not parse session_start_time: {e}")
     
     logger.info(f"Uploading audio for session {session_id}, speaker: {speaker_id}, filename: {file.filename}")
     
@@ -576,23 +587,43 @@ async def upload_audio(session_id: str, file: UploadFile = File(...), speaker_id
         processed_segments = []
         speaker = speaker_id if speaker_id else "unknown"
         
+        def calculate_absolute_timestamp(relative_seconds):
+            """Converts relative timestamp to absolute datetime"""
+            if session_start_dt and relative_seconds:
+                try:
+                    from datetime import timedelta
+                    return (session_start_dt + timedelta(seconds=relative_seconds)).isoformat()
+                except:
+                    return None
+            return None
+        
         if segments:
             for seg in segments:
+                abs_start = calculate_absolute_timestamp(seg.start)
+                abs_end = calculate_absolute_timestamp(seg.end)
+                
                 segment = TranscriptionSegment(
                     speaker_discord_id=speaker,
                     text=seg.text.strip(),
                     timestamp_start=seg.start,
                     timestamp_end=seg.end,
+                    timestamp_absolute_start=abs_start,
+                    timestamp_absolute_end=abs_end,
                     message_type=MessageType.IC
                 )
                 processed_segments.append(serialize_datetime(segment.model_dump()))
         else:
             # Single segment for entire transcription (Gemini or simplified Whisper)
+            abs_start = calculate_absolute_timestamp(0)
+            abs_end = calculate_absolute_timestamp(0)
+            
             segment = TranscriptionSegment(
                 speaker_discord_id=speaker,
                 text=raw_text,
                 timestamp_start=0,
                 timestamp_end=0,
+                timestamp_absolute_start=abs_start,
+                timestamp_absolute_end=abs_end,
                 message_type=MessageType.IC
             )
             processed_segments.append(serialize_datetime(segment.model_dump()))

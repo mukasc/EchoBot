@@ -80,6 +80,9 @@ const SessionDetail = () => {
   const [editingScript, setEditingScript] = useState(false);
   const [editedScript, setEditedScript] = useState("");
   const [editingSegment, setEditingSegment] = useState(null);
+  const [editingSessionInfo, setEditingSessionInfo] = useState(false);
+  const [editedSessionName, setEditedSessionName] = useState("");
+  const [editedGameSystem, setEditedGameSystem] = useState("");
   const [characterMappings, setCharacterMappings] = useState([]);
 
   useEffect(() => {
@@ -194,6 +197,30 @@ const SessionDetail = () => {
     }
   };
 
+  const saveSessionInfo = async () => {
+    setSaving(true);
+    try {
+      await axios.put(`${API}/sessions/${id}`, {
+        name: editedSessionName,
+        game_system: editedGameSystem
+      });
+      setSession({ ...session, name: editedSessionName, game_system: editedGameSystem });
+      setEditingSessionInfo(false);
+      toast.success("Informações salvas!");
+    } catch (error) {
+      console.error("Error saving session info:", error);
+      toast.error("Erro ao salvar informações");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEditingSessionInfo = () => {
+    setEditedSessionName(session.name);
+    setEditedGameSystem(session.game_system);
+    setEditingSessionInfo(true);
+  };
+
   const markAsCompleted = async () => {
     try {
       await axios.put(`${API}/sessions/${id}`, { status: "completed" });
@@ -209,6 +236,20 @@ const SessionDetail = () => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatAbsoluteTimestamp = (isoString) => {
+    if (!isoString) return null;
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch {
+      return null;
+    }
   };
 
   if (loading) {
@@ -238,22 +279,78 @@ const SessionDetail = () => {
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl sm:text-4xl font-bold text-[#EDEDED] font-['Playfair_Display']">
-                  {session.name}
-                </h1>
+                {editingSessionInfo ? (
+                  <Input
+                    value={editedSessionName}
+                    onChange={(e) => setEditedSessionName(e.target.value)}
+                    className="input-dark text-3xl sm:text-4xl font-bold bg-transparent border-[#D4AF37]/50"
+                    placeholder="Nome da sessão"
+                  />
+                ) : (
+                  <>
+                    <h1 className="text-3xl sm:text-4xl font-bold text-[#EDEDED] font-['Playfair_Display']">
+                      {session.name}
+                    </h1>
+                    <button
+                      onClick={startEditingSessionInfo}
+                      className="text-[#6C7280] hover:text-[#D4AF37] transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
                 <Badge className={`status-${session.status}`}>
                   {statusLabels[session.status]}
                 </Badge>
               </div>
               <div className="flex items-center gap-4 text-[#A0A5B5]">
-                <Badge variant="outline" className="border-white/10">
-                  {session.game_system}
-                </Badge>
+                {editingSessionInfo ? (
+                  <Select
+                    value={editedGameSystem}
+                    onValueChange={setEditedGameSystem}
+                  >
+                    <SelectTrigger className="input-dark w-40 bg-transparent border-[#D4AF37]/50">
+                      <SelectValue placeholder="Sistema de jogo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#13141A] border-white/10">
+                      <SelectItem value="D&D 5e">D&D 5e</SelectItem>
+                      <SelectItem value="Pathfinder 2e">Pathfinder 2e</SelectItem>
+                      <SelectItem value="Call of Cthulhu">Call of Cthulhu</SelectItem>
+                      <SelectItem value="Tormenta 20">Tormenta 20</SelectItem>
+                      <SelectItem value="Vampiro: A Máscara">Vampiro: A Máscara</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge variant="outline" className="border-white/10">
+                    {session.game_system}
+                  </Badge>
+                )}
                 {session.duration_minutes && (
                   <span className="flex items-center gap-1.5 text-sm">
                     <Clock className="w-4 h-4" />
                     {session.duration_minutes} min
                   </span>
+                )}
+                {editingSessionInfo && (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={saveSessionInfo}
+                      disabled={saving}
+                      className="btn-gold"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingSessionInfo(false)}
+                      className="border-white/10"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -387,6 +484,11 @@ const SessionDetail = () => {
                             {segment.timestamp_start > 0 && (
                               <span className="text-xs text-[#6C7280]">
                                 {formatTimestamp(segment.timestamp_start)}
+                                {segment.timestamp_absolute_start && (
+                                  <span className="ml-1 text-[#D4AF37]" title="Hora real">
+                                    ({formatAbsoluteTimestamp(segment.timestamp_absolute_start)})
+                                  </span>
+                                )}
                               </span>
                             )}
                             
