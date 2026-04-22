@@ -62,23 +62,37 @@ GOOGLE_API_KEY="sua_chave_google"
 DISCORD_BOT_TOKEN="seu_token_discord"
 ```
 
-### 3. Executando
+### 3. Executando (Unificado)
 
-Abra 2 terminais:
+A maneira mais fácil de iniciar todos os serviços (Backend, Voice Bridge e Frontend) simultaneamente é usando o script unificado:
 
-**Terminal 1 - Backend:**
-```bash
-cd backend
-.\venv\Scripts\python.exe -m uvicorn server:app --reload --port 8000
+```powershell
+.\run.ps1
 ```
 
-**Terminal 2 - Voice Bridge:**
+### 4. Executando (Manual)
+
+Se preferir rodar cada componente separadamente:
+
+**Backend (API):**
+```bash
+cd backend
+.\venv\Scripts\uvicorn.exe app.main:app --reload --port 8000
+```
+
+**Voice Bridge:**
 ```bash
 cd voice-bridge
 node index.js
 ```
 
-### 4. Comandos no Discord
+**Frontend:**
+```bash
+cd frontend
+npm start
+```
+
+### 5. Comandos no Discord
 
 - `!entrar <ID_SESSÃO>` - O bot entra no canal de voz e começa a gravar
 - `!sair` - Para a gravação e envia o áudio para processamento

@@ -83,6 +83,7 @@ android-sdk/-e
 # Environment files
 *.env
 *.env.*
+!.env.example
 backend/env_with_keys.txt
 backend/ffmpeg_path.txt
 backend/uploads/
