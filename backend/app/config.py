@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     discord_public_key: str = Field(default="")
     discord_bot_token: str = Field(default="")
 
+    # --- ElevenLabs ---
+    elevenlabs_api_key: str = Field(default="", description="ElevenLabs API key")
+    elevenlabs_voice_id: str = Field(default="pNInz6obpgmqS2C9NfX", description="Default voice ID (Adam)")
+
     # --- CORS ---
     cors_origins: List[str] = Field(
         default=["*"],

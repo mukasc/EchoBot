@@ -54,6 +54,7 @@ class Session(BaseModel):
     raw_transcription: str = ""
     cover_image_url: Optional[str] = None
     audio_file_id: Optional[str] = None
+    narration_audio_url: Optional[str] = None
     is_audio_append: bool = False
     chunk_duration_minutes: int = 20
 

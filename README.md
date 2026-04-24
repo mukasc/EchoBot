@@ -10,6 +10,7 @@
 [![Lucide Icons](https://img.shields.io/badge/Lucide_Icons-F7B93E?style=flat&logo=lucide)](https://lucide.dev/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat&logo=openai)](https://openai.com/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E75E9?style=flat&logo=googlegemini)](https://deepmind.google/technologies/gemini/)
+[![Deepgram](https://img.shields.io/badge/Deepgram-FB542B?style=flat&logo=deepgram)](https://deepgram.com/)
 
 **EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
 
@@ -44,7 +45,8 @@ graph TD
 -   **Transcrição Híbrida**: Prioriza o uso do **Faster Whisper (Local)** para economia, com fallback para APIs de cloud (OpenAI/Gemini).
 -   **Processamento Narrativo Inteligente**: Separa automaticamente falas *In-Character* (IC) de conversas *Out-of-Character* (OOC).
 -   **Diário Técnico Automático**: Extração de NPCs, Itens, Locais, Eventos e sugestão de XP.
--   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão, pronta para ser lida ou usada em TTS.
+-   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão.
+-   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs** ou **Deepgram (Aura)**.
 -   **Interface Temática**: Design inspirado em arquétipos de luxo e fantasia sombria (*Dark Fantasy*).
 -   **Otimização de Áudio**: Utiliza o formato **Ogg/Opus (64kbps, mono)** para garantir arquivos minúsculos com clareza ideal para transcrição por IA, economizando até 90% de espaço em relação ao WAV puro.
 
@@ -159,6 +161,7 @@ Após o bot estar online e convidado para o seu servidor:
 -   **Banco de Dados**: MongoDB (Motor driver)
 -   **Processamento de Áudio**: Faster Whisper, PyTorch
 -   **LLMs**: Google Gemini (padrão), OpenAI GPT-4, Anthropic Claude
+-   **TTS Providers**: ElevenLabs, Deepgram (Aura)
 
 ### Frontend
 -   **Library**: React 19

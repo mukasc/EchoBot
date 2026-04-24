@@ -26,7 +26,8 @@ const SessionDetail = () => {
     uploadAudio, 
     processWithAI, 
     updateSegment, 
-    markAsCompleted 
+    markAsCompleted,
+    generateNarration
   } = useSession(id);
   
   const { getSpeakerInfo, loading: mappingsLoading } = useCharacterMappings();
@@ -96,8 +97,11 @@ const SessionDetail = () => {
           <TabsContent value="script">
             <ReviewScript 
               initialScript={session.review_script}
+              narrationUrl={session.narration_audio_url}
               onSave={updateSession}
+              onGenerateNarration={generateNarration}
               saving={saving}
+              processing={processing}
             />
           </TabsContent>
         </Tabs>

@@ -1,63 +1,61 @@
-# RPG Cronista - Product Requirements Document
+# EchoBot - O Cronista das Sombras (Product Requirements Document)
 
 ## Original Problem Statement
 Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve o conteúdo e oferece uma interface web para revisão e geração de narração épica.
 
 ## Architecture
 - **Backend**: FastAPI (Python) com MongoDB
-- **Frontend**: React + TailwindCSS + Shadcn UI
+- **Voice Bridge**: Node.js (discord.js + @discordjs/voice) para captura de áudio individual
+- **Frontend**: React 19 + TailwindCSS + Shadcn UI
 - **AI Integration**: 
-  - OpenAI Whisper (STT) via Custom API Key
-  - Gemini 3 Flash (LLM) para processamento - configurável para OpenAI/Claude
+  - Faster Whisper (STT Local) + Cloud Fallback (OpenAI/Gemini)
+  - Gemini 3 Flash (LLM padrão) - configurável para OpenAI/Claude/Anthropic
 - **Design**: Dark Fantasy theme (Jewel & Luxury archetype)
+- **License**: AGPL v3 (Foco em Open Source e Transparência)
 
 ## User Personas
-1. **Game Master**: Revisa transcrições, edita roteiros, gera narração épica
-2. **Jogador**: Mapeia seu Discord ID ao personagem
+1. **Game Master**: Revisa transcrições, edita roteiros, gera narração épica e gerencia a cronologia.
+2. **Jogador**: Mapeia seu Discord ID ao personagem para identificação automática na transcrição.
 
 ## Core Requirements (Static)
-1. Captura de áudio do Discord → transcrição com Whisper
-2. Mapeamento Discord User ID → Personagem RPG
-3. Filtro IC (In-Character) vs OOC (Out-of-Character)
-4. Diário Técnico: NPCs, Locais, Itens, XP, Eventos
-5. Roteiro de Revisão editável para TTS futuro
-6. Interface web para revisão e edição
+1. Captura de áudio individual do Discord → transcrição híbrida.
+2. Mapeamento Discord User ID → Personagem RPG.
+3. Filtro inteligente IC (In-Character) vs OOC (Out-of-Character).
+4. Diário Técnico: NPCs, Locais, Itens, XP, Eventos.
+5. Roteiro de Revisão factual e limpo para narração futura.
+6. Interface web administrativa e temática.
 
-## What's Been Implemented (25 Mar 2026)
-- [x] Dashboard de Sessões de RPG
-- [x] CRUD completo de sessões
-- [x] Página de detalhes com tabs (Transcrição, Diário Técnico, Roteiro)
-- [x] Upload de áudio e transcrição com Whisper
-- [x] Processamento com IA (Gemini 3 Flash padrão)
-- [x] Mapeamento Discord User → Personagem
-- [x] Configurações de LLM (provider switcher)
-- [x] Instruções de setup do Bot Discord
-- [x] Sistema de badges IC/OOC/Narração
-- [x] Edição de segmentos de transcrição
-- [x] Sessão de exemplo com dados demo
+## What's Been Implemented (Snapshot: 23 Abr 2026)
+- [x] **Voice Bridge (Node.js)**: Captura real de áudio do Discord com comandos `!entrar` e `!sair`.
+- [x] **Otimização de Áudio**: Conversão para Ogg/Opus (64kbps, mono) economizando 90% de espaço.
+- [x] **Timestamp Absoluto**: Sincronização de falas com o horário real da sessão.
+- [x] **Dashboard de Sessões**: CRUD completo e visualização temática.
+- [x] **Transcrição Híbrida**: Faster Whisper local com fallback automático para Cloud.
+- [x] **Processamento Narrativo**: Separação IC/OOC e geração de Diário Técnico automática.
+- [x] **Mapeamento de Personagens**: Gestão de Discord ID -> Nome do Personagem.
+- [x] **Configurações Globais**: Switcher de provedores de LLM e chaves de API personalizadas.
+- [x] **Licenciamento AGPL v3**: Garantia de liberdade e colaboração comunitária.
+- [x] **Script de Inicialização Unificado**: `run.ps1` para orquestrar todos os serviços.
 
 ## Prioritized Backlog
 
-### P0 (Critical)
-- [x] MVP completo com todas funcionalidades core ✓
-
 ### P1 (High Priority)
-- [ ] Integração real com Discord Bot (captura de áudio automática)
-- [ ] TTS com ElevenLabs para narração épica
-- [ ] Exportação de roteiro em PDF/Markdown
+- [ ] **TTS com ElevenLabs**: Geração de narração épica a partir do Roteiro de Revisão.
+- [ ] **Exportação**: Formatos PDF e Markdown estilizados para o diário e roteiro.
+- [ ] **Estabilidade de Áudio**: Refinamento contínuo da decodificação mono e sincronia de timeline.
 
 ### P2 (Medium Priority)
-- [ ] Histórico de versões do roteiro
-- [ ] Busca e filtros nas sessões
-- [ ] Tags customizáveis para diário técnico
-- [ ] Compartilhamento de sessões entre mestres
+- [ ] **Memória de Longo Prazo (RAG)**: Usar o Diário Técnico de sessões passadas como contexto para o LLM em novas sessões.
+- [ ] **Busca Semântica**: Localizar eventos ou nomes específicos em todo o histórico de transcrições.
+- [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitat distribuição.
 
 ### P3 (Low Priority)
-- [ ] Temas visuais alternativos
-- [ ] Integração com Roll20/Foundry VTT
-- [ ] App mobile
+- [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
+- [ ] **Temas visuais alternativos** (Ex: Cyberpunk, Sci-fi).
+- [ ] **App Mobile Companion** para consulta rápida do Diário Técnico durante o jogo presencial.
+- [ ] **Integração com Roll20**.
 
 ## Next Action Items
-1. Configurar Discord Bot com discord.py[voice] para captura automática
-2. Adicionar integração ElevenLabs para narração
-3. Implementar exportação de roteiros
+1. Implementar serviço de exportação de Roteiros (Markdown/PDF).
+2. Integrar ElevenLabs para o primeiro teste de narração automatizada.
+3. Refinar estabilidade da timeline de áudio.

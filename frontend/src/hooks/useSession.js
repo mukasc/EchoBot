@@ -90,6 +90,33 @@ export const useSession = (sessionId) => {
     return updateSession({ status: "completed" });
   };
 
+  const generateNarration = async (options = {}) => {
+    setProcessing(true);
+    try {
+      const { provider, voiceId } = options;
+      let url = `/sessions/${sessionId}/narration`;
+      
+      const params = new URLSearchParams();
+      if (provider) params.append("provider", provider);
+      if (voiceId) params.append("voice_id", voiceId);
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await api.post(url);
+      toast.success(response.data.message || "Narração gerada!");
+      await fetchSession();
+      return response.data;
+    } catch (error) {
+      const detail = error.response?.data?.detail || "Erro ao gerar narração";
+      toast.error(detail);
+      throw error;
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return {
     session,
     loading,
@@ -101,6 +128,7 @@ export const useSession = (sessionId) => {
     processWithAI,
     updateSegment,
     markAsCompleted,
+    generateNarration,
     refresh: fetchSession
   };
 };

@@ -6,7 +6,13 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from enum import Enum
 from app.models.common import LLMProvider
+
+
+class TTSProvider(str, Enum):
+    ELEVENLABS = "elevenlabs"
+    DEEPGRAM = "deepgram"
 
 
 class AppSettings(BaseModel):
@@ -18,6 +24,11 @@ class AppSettings(BaseModel):
     custom_api_key: Optional[str] = None
     discord_bot_token: Optional[str] = None
     discord_guild_id: Optional[str] = None
+    elevenlabs_api_key: Optional[str] = None
+    elevenlabs_voice_id: str = "onwK4e9ZLuTAKqWW03AF"
+    deepgram_api_key: Optional[str] = None
+    deepgram_model: str = "aura-asteria-en"
+    tts_provider: TTSProvider = TTSProvider.ELEVENLABS
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -27,3 +38,8 @@ class AppSettingsUpdate(BaseModel):
     custom_api_key: Optional[str] = None
     discord_bot_token: Optional[str] = None
     discord_guild_id: Optional[str] = None
+    elevenlabs_api_key: Optional[str] = None
+    elevenlabs_voice_id: Optional[str] = None
+    deepgram_api_key: Optional[str] = None
+    deepgram_model: Optional[str] = None
+    tts_provider: Optional[TTSProvider] = None

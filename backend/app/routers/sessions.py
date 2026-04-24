@@ -44,6 +44,7 @@ from app.models.session import (
 )
 from app.models.settings import AppSettings
 from app.services.ai_processor import AIProcessorService
+from app.services.elevenlabs import ElevenLabsService
 from app.services.transcription import TranscriptionService
 
 logger = logging.getLogger(__name__)
@@ -423,3 +424,81 @@ async def process_session(
     )
 
     return {"message": "Session processed successfully", "diary_entries": len(diary_entries)}
+
+
+@router.post("/{session_id}/narration")
+async def generate_narration(
+    session_id: str, 
+    provider: Optional[str] = None,
+    voice_id: Optional[str] = None,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Gera o áudio da narração épica usando ElevenLabs ou Deepgram."""
+    doc = await db.sessions.find_one({"id": session_id})
+    if not doc:
+        raise NotFoundException("Sessão não encontrada")
+
+    script = doc.get("review_script", "").strip()
+    if not script:
+        raise BadRequestException("Roteiro de revisão está vazio. Processe a sessão primeiro.")
+
+    app_settings = await _get_app_settings(db)
+    
+    # Decide which provider to use
+    used_provider = provider or app_settings.tts_provider or "elevenlabs"
+    
+    try:
+        if used_provider == "elevenlabs":
+            from app.services.elevenlabs import ElevenLabsService
+            api_key = app_settings.elevenlabs_api_key
+            v_id = voice_id or app_settings.elevenlabs_voice_id
+            
+            if not api_key:
+                raise BadRequestException("Chave de API do ElevenLabs não configurada.")
+                
+            svc = ElevenLabsService(app_settings)
+            filename = await svc.generate_narration(text=script, api_key=api_key, voice_id=v_id)
+        
+        elif used_provider == "deepgram":
+            from app.services.deepgram import DeepgramService
+            api_key = app_settings.deepgram_api_key
+            v_id = voice_id or app_settings.deepgram_model
+            
+            if not api_key:
+                raise BadRequestException("Chave de API do Deepgram não configurada.")
+                
+            svc = DeepgramService(app_settings)
+            filename = await svc.generate_narration(text=script, voice_id=v_id)
+        
+        else:
+            raise BadRequestException(f"Provedor de TTS inválido: {used_provider}")
+        
+        # Audio is served via static files at /uploads/narrations/
+        audio_url = f"/uploads/narrations/{filename}"
+        
+        await db.sessions.update_one(
+            {"id": session_id},
+            {
+                "$set": {
+                    "narration_audio_url": audio_url,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+        )
+        
+        return {"message": "Narração gerada com sucesso!", "audio_url": audio_url}
+    except Exception as exc:
+        import traceback
+        logger.error(f"Narration generation error for session {session_id}: {exc}")
+        logger.error(traceback.format_exc())
+        
+        # If it's already an HTTPException, re-raise it
+        if isinstance(exc, HTTPException):
+            raise exc
+            
+        # Detail the error for the frontend
+        error_detail = str(exc)
+        if "ElevenLabs" in error_detail:
+            raise HTTPException(status_code=400, detail=error_detail)
+            
+        raise HTTPException(status_code=500, detail=f"Erro interno ao gerar áudio: {error_detail}")

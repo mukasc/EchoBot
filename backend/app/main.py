@@ -28,6 +28,8 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from app.config import get_settings
 from app.database import close_db, init_db
@@ -90,6 +92,11 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router, prefix=api_prefix)
     app.include_router(characters.router, prefix=api_prefix)
     app.include_router(settings.router, prefix=api_prefix)
+    
+    # Static files for audio/images
+    uploads_dir = Path(__file__).parent.parent / "uploads"
+    uploads_dir.mkdir(exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
     return app
 
