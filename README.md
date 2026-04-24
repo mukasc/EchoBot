@@ -10,6 +10,7 @@
 [![Lucide Icons](https://img.shields.io/badge/Lucide_Icons-F7B93E?style=flat&logo=lucide)](https://lucide.dev/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat&logo=openai)](https://openai.com/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E75E9?style=flat&logo=googlegemini)](https://deepmind.google/technologies/gemini/)
+[![ElevenLabs](https://img.shields.io/badge/ElevenLabs-000000?style=flat&logo=elevenlabs)](https://elevenlabs.io/)
 [![Deepgram](https://img.shields.io/badge/Deepgram-FB542B?style=flat&logo=deepgram)](https://deepgram.com/)
 
 **EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
