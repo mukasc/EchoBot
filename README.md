@@ -37,7 +37,7 @@ graph TD
         
         E1[STT: Faster Whisper / Gemini]
         E2[LLM: Gemini / GPT / Claude]
-        E3[TTS: ElevenLabs / Deepgram]
+        E3[TTS: ElevenLabs / Deepgram / Kokoro]
     end
 
     subgraph "Interface do Mestre"
@@ -72,9 +72,23 @@ graph TD
 -   **Processamento Narrativo Inteligente**: Separa automaticamente falas *In-Character* (IC) de conversas *Out-of-Character* (OOC).
 -   **Diário Técnico Automático**: Extração de NPCs, Itens, Locais, Eventos e sugestão de XP.
 -   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão.
--   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs** ou **Deepgram (Aura)**.
+-   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs**, **Deepgram (Aura)** ou **Kokoro Local (Nativo Python)**.
 -   **Interface Temática**: Design inspirado em arquétipos de luxo e fantasia sombria (*Dark Fantasy*).
 -   **Otimização de Áudio**: Utiliza o formato **Ogg/Opus (64kbps, mono)** para garantir arquivos minúsculos com clareza ideal para transcrição por IA, economizando até 90% de espaço em relação ao WAV puro.
+-   **TTS Local Integrado**: O sistema inclui o motor **Kokoro v1.0** rodando nativamente em Python (via ONNX), permitindo narrações de alta qualidade com **custo zero** e sem necessidade de GPU ou Docker.
+
+---
+
+## 🔊 Kokoro TTS (Nativo)
+
+O EchoBot agora suporta o motor de voz **Kokoro** de forma totalmente nativa. 
+
+- **Como funciona**: Na primeira vez que você solicitar uma narração via Kokoro, o sistema baixará automaticamente o modelo ONNX (~300MB) e os arquivos de voz (~30MB) para a pasta `backend/models/kokoro/`.
+- **Vantagens**: 
+  - 100% gratuito e privado.
+  - Funciona offline após o download inicial.
+  - Não requer ativação de virtualização (BIOS) ou Docker.
+  - Velocidade de inferência otimizada para CPU.
 
 ---
 
@@ -96,6 +110,9 @@ Para garantir a melhor eficiência do sistema, o EchoBot não utiliza `.wav` pur
 -   **Node.js 18+** (npm ou yarn)
 -   **MongoDB** (Local ou MongoDB Atlas)
 -   **FFmpeg**: Essencial para o processamento de áudio. Certifique-se de que está no seu `PATH`.
+-   **eSpeak-ng**: Necessário para o motor de voz **Kokoro**. 
+    - No Windows: [Baixe o instalador .msi aqui](https://github.com/espeak-ng/espeak-ng/releases).
+    - No Linux: `sudo apt-get install espeak-ng`
 
 ### 1. Instalação
 
@@ -187,7 +204,7 @@ Após o bot estar online e convidado para o seu servidor:
 -   **Banco de Dados**: MongoDB (Motor driver)
 -   **Processamento de Áudio**: Faster Whisper, PyTorch
 -   **LLMs**: Google Gemini (padrão), OpenAI GPT-4, Anthropic Claude
--   **TTS Providers**: ElevenLabs, Deepgram (Aura)
+-   **TTS Providers**: ElevenLabs, Deepgram (Aura), Kokoro Local (Nativo Python)
 
 ### Frontend
 -   **Library**: React 19

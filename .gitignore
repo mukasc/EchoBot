@@ -87,5 +87,7 @@ android-sdk/-e
 !.env.example
 backend/env_with_keys.txt
 backend/ffmpeg_path.txt
+# EchoBot specific
 backend/uploads/
+backend/models/kokoro/
 test_gemini.py

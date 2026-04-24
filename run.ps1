@@ -1,5 +1,5 @@
-﻿# EchoBot Unified Start Script
-# Inicia todos os serviços em janelas PowerShell separadas.
+# EchoBot Unified Start Script
+# Inicia todos os servicos em janelas PowerShell separadas.
 #
 # Uso: .\run.ps1  (execute a partir da raiz do projeto EchoBot)
 
@@ -27,10 +27,14 @@ Start-Sleep -Milliseconds 500
 Write-Host "[3/3] Frontend (npm start)..." -ForegroundColor Green
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Write-Host 'FRONTEND' -ForegroundColor Yellow; Set-Location '$root\frontend'; npm start" -WindowStyle Normal
 
+# 4. Kokoro Web (Integrado ao Backend)
+Write-Host "[BONUS] TTS Kokoro (Nativo Python) disponivel no Backend." -ForegroundColor Cyan
+
 Write-Host ""
-Write-Host "Todos os servicos foram iniciados em janelas separadas." -ForegroundColor Yellow
+Write-Host "Todos os servicos foram iniciados." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  Backend  : http://localhost:8000" -ForegroundColor White
-Write-Host "  API Docs : http://localhost:8000/docs" -ForegroundColor White
-Write-Host "  Frontend : http://localhost:3000" -ForegroundColor White
+Write-Host "  Backend      : http://localhost:8000" -ForegroundColor White
+Write-Host "  API Docs     : http://localhost:8000/docs" -ForegroundColor White
+Write-Host "  Frontend     : http://localhost:3000" -ForegroundColor White
+Write-Host "  Kokoro Local : http://localhost:8000/api/v1 (Integrado)" -ForegroundColor White
 Write-Host ""

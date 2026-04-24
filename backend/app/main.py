@@ -34,7 +34,7 @@ from pathlib import Path
 from app.config import get_settings
 from app.database import close_db, init_db
 from app.exceptions import register_exception_handlers
-from app.routers import characters, demo, sessions, settings
+from app.routers import characters, demo, sessions, settings, tts
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -92,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router, prefix=api_prefix)
     app.include_router(characters.router, prefix=api_prefix)
     app.include_router(settings.router, prefix=api_prefix)
+    app.include_router(tts.router, prefix=api_prefix)
     
     # Static files for audio/images
     uploads_dir = Path(__file__).parent.parent / "uploads"

@@ -27,3 +27,5 @@ python-multipart>=0.0.9
 # Optional: local translation
 # transformers>=4.40.0
 # tqdm>=4.66.0
+kokoro-onnx>=0.3.0
+soundfile>=0.12.1

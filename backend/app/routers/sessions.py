@@ -447,6 +447,11 @@ async def generate_narration(
     # Decide which provider to use
     used_provider = provider or app_settings.tts_provider or "elevenlabs"
     
+    logger.info(f"--- Narration Request ---")
+    logger.info(f"Provider: {used_provider}")
+    logger.info(f"Voice ID: {voice_id}")
+    logger.info(f"Script (first 50 chars): {script[:50]}...")
+    
     try:
         if used_provider == "elevenlabs":
             from app.services.elevenlabs import ElevenLabsService
@@ -469,6 +474,44 @@ async def generate_narration(
                 
             svc = DeepgramService(app_settings)
             filename = await svc.generate_narration(text=script, voice_id=v_id)
+
+        elif used_provider == "kokoro":
+            from app.services.kokoro import KokoroService
+            # Kokoro local uses our internal API, but we can call the service directly if we want.
+            # However, KokoroService in services/kokoro.py is a client for the Kokoro Web API.
+            # We should probably use kokoro_local_engine directly to avoid HTTP loopback if possible,
+            # or keep it as is if KokoroService is what we want.
+            # Since we have kokoro_local_engine, let's use it directly to be more efficient.
+            
+            v_id = voice_id or app_settings.kokoro_voice
+            logger.info(f"Kokoro target voice: {v_id}")
+            
+            # Sanitization of voice id
+            if v_id:
+                v_id = v_id.strip()
+
+            from app.services.kokoro_local import kokoro_local_engine
+            import uuid
+            import soundfile as sf
+            
+            filename = f"narration_kokoro_{uuid.uuid4()}.mp3"
+            upload_dir = Path(__file__).parent.parent.parent / "uploads" / "narrations"
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            output_path = upload_dir / filename
+            
+            # Use .wav for intermediate then we can convert or just use .wav if mp3 is not strictly required
+            # But the filename says .mp3. Soundfile can't write mp3 directly easily.
+            # Let's use .wav for now as it's safe, and update the filename.
+            filename = filename.replace(".mp3", ".wav")
+            output_path = upload_dir / filename
+
+            from fastapi.concurrency import run_in_threadpool
+            samples, sample_rate = await run_in_threadpool(
+                kokoro_local_engine.generate,
+                text=script,
+                voice=v_id
+            )
+            sf.write(str(output_path), samples, sample_rate)
         
         else:
             raise BadRequestException(f"Provedor de TTS inválido: {used_provider}")

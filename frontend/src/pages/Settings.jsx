@@ -8,7 +8,8 @@ import {
   Check,
   AlertTriangle,
   Mic2,
-  Music
+  Music,
+  Globe
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
@@ -61,7 +62,10 @@ const Settings = () => {
     custom_api_key: "",
     discord_bot_token: "",
     discord_guild_id: "",
-    elevenlabs_voice_id: "pNInz6obpgmqS2C9NfX"
+    elevenlabs_voice_id: "pNInz6obpgmqS2C9NfX",
+    kokoro_base_url: "http://localhost:3000/api/v1",
+    kokoro_model: "model_q8f16",
+    kokoro_voice: "af_heart"
   });
 
   const [voices, setVoices] = useState([]);
@@ -73,6 +77,8 @@ const Settings = () => {
   const [fetchingDgUsage, setFetchingDgUsage] = useState(false);
   const [dgVoices, setDgVoices] = useState([]);
   const [fetchingDgVoices, setFetchingDgVoices] = useState(false);
+  const [koVoices, setKoVoices] = useState([]);
+  const [fetchingKoVoices, setFetchingKoVoices] = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -86,6 +92,10 @@ const Settings = () => {
         elevenlabs_voice_id: settings.elevenlabs_voice_id || "pNInz6obpgmqS2C9NfX",
         deepgram_api_key: settings.deepgram_api_key || "",
         deepgram_model: settings.deepgram_model || "aura-asteria-en",
+        kokoro_api_key: settings.kokoro_api_key || "",
+        kokoro_base_url: settings.kokoro_base_url || "http://localhost:3000/api/v1",
+        kokoro_model: settings.kokoro_model || "model_q8f16",
+        kokoro_voice: settings.kokoro_voice || "af_heart",
         tts_provider: settings.tts_provider || "elevenlabs"
       });
     }
@@ -159,9 +169,26 @@ const Settings = () => {
       }
     };
 
+    const fetchKoVoices = async () => {
+      setFetchingKoVoices(true);
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const vRes = await fetch(`${baseUrl}/api/settings/kokoro/voices`);
+        if (vRes.ok) {
+          const data = await vRes.json();
+          setKoVoices(data);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar vozes Kokoro:", error);
+      } finally {
+        setFetchingKoVoices(false);
+      }
+    };
+
     fetchVoicesAndUsage();
     fetchDgVoicesAndUsage();
-  }, [formData.elevenlabs_api_key, formData.deepgram_api_key]);
+    fetchKoVoices();
+  }, [formData.elevenlabs_api_key, formData.deepgram_api_key, formData.kokoro_base_url]);
 
   const handleProviderChange = (provider) => {
     const defaultModel = llmModels[provider]?.[0]?.value || "";
@@ -393,6 +420,96 @@ const Settings = () => {
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Kokoro Settings */}
+        <Card className={`card-rpg mb-6 border-emerald-500/30 ${formData.tts_provider === 'kokoro' ? 'ring-1 ring-emerald-500/50' : ''}`}>
+          <CardHeader className="border-b border-white/10 flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
+                <Globe className="w-5 h-5 text-emerald-400" />
+                Kokoro Web (Self-Hosted)
+              </CardTitle>
+              <CardDescription className="text-[#A0A5B5]">
+                IA de TTS gratuita e open-source (Local ou API).
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[#A0A5B5] uppercase font-bold">Usar este?</span>
+              <input 
+                type="radio" 
+                name="tts_provider" 
+                checked={formData.tts_provider === 'kokoro'} 
+                onChange={() => setFormData({...formData, tts_provider: 'kokoro'})}
+                className="w-4 h-4 accent-emerald-400"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Base URL</label>
+                <Input 
+                  value={formData.kokoro_base_url}
+                  onChange={(e) => setFormData({...formData, kokoro_base_url: e.target.value})}
+                  className="input-dark text-sm"
+                  placeholder="http://localhost:3000/api/v1"
+                />
+                <p className="text-[9px] text-[#6C7280]">
+                  URL da sua instância (ex: http://ip:3000/api/v1)
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">API Key (Opcional)</label>
+                <Input 
+                  type="password"
+                  value={formData.kokoro_api_key}
+                  onChange={(e) => setFormData({...formData, kokoro_api_key: e.target.value})}
+                  className="input-dark font-mono text-sm"
+                  placeholder="Sua chave secreta"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Modelo</label>
+                <Input 
+                  value={formData.kokoro_model}
+                  onChange={(e) => setFormData({...formData, kokoro_model: e.target.value})}
+                  className="input-dark text-sm"
+                  placeholder="model_q8f16"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Voz</label>
+                <Select 
+                  value={formData.kokoro_voice} 
+                  onValueChange={(val) => setFormData({...formData, kokoro_voice: val})}
+                >
+                  <SelectTrigger className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
+                    <SelectValue placeholder="Selecione uma voz..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1A1C23] border-white/10 text-[#EDEDED] shadow-xl z-[100]">
+                    {fetchingKoVoices ? (
+                      <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                    ) : koVoices.length > 0 ? (
+                      koVoices.map((v) => (
+                        <SelectItem key={v.voice_id} value={v.voice_id}>
+                          {v.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none" disabled>Nenhuma voz encontrada</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-[10px] text-emerald-400/70 italic">
+              <strong>Dica:</strong> Use o Kokoro para narrações gratuitas e ilimitadas com qualidade ElevenLabs.
+            </p>
           </CardContent>
         </Card>
 
