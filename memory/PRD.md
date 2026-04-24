@@ -25,7 +25,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 5. Roteiro de Revisão factual e limpo para narração futura.
 6. Interface web administrativa e temática.
 
-## What's Been Implemented (Snapshot: 23 Abr 2026)
+## What's Been Implemented (Snapshot: 24 Abr 2026)
 - [x] **Voice Bridge (Node.js)**: Captura real de áudio do Discord com comandos `!entrar` e `!sair`.
 - [x] **Otimização de Áudio**: Conversão para Ogg/Opus (64kbps, mono) economizando 90% de espaço.
 - [x] **Timestamp Absoluto**: Sincronização de falas com o horário real da sessão.
@@ -33,29 +33,30 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [x] **Transcrição Híbrida**: Faster Whisper local com fallback automático para Cloud.
 - [x] **Processamento Narrativo**: Separação IC/OOC e geração de Diário Técnico automática.
 - [x] **Mapeamento de Personagens**: Gestão de Discord ID -> Nome do Personagem.
-- [x] **Configurações Globais**: Switcher de provedores de LLM e chaves de API personalizadas.
+- [x] **Configurações Globais**: Switcher de provedores de LLM, TTS e chaves de API personalizadas.
+- [x] **Ecossistema TTS Multi-Provedor**: Suporte dinâmico para ElevenLabs, Deepgram (Aura) e Kokoro.
+- [x] **Motor TTS Local (Kokoro)**: Integração nativa Python (ONNX) para narração gratuita e de alta qualidade.
 - [x] **Licenciamento AGPL v3**: Garantia de liberdade e colaboração comunitária.
 - [x] **Script de Inicialização Unificado**: `run.ps1` para orquestrar todos os serviços.
 
 ## Prioritized Backlog
 
 ### P1 (High Priority)
-- [ ] **TTS com ElevenLabs**: Geração de narração épica a partir do Roteiro de Revisão.
 - [ ] **Exportação**: Formatos PDF e Markdown estilizados para o diário e roteiro.
+- [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
 - [ ] **Estabilidade de Áudio**: Refinamento contínuo da decodificação mono e sincronia de timeline.
 
 ### P2 (Medium Priority)
 - [ ] **Memória de Longo Prazo (RAG)**: Usar o Diário Técnico de sessões passadas como contexto para o LLM em novas sessões.
 - [ ] **Busca Semântica**: Localizar eventos ou nomes específicos em todo o histórico de transcrições.
-- [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitat distribuição.
+- [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitar distribuição.
 
 ### P3 (Low Priority)
-- [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
 - [ ] **Temas visuais alternativos** (Ex: Cyberpunk, Sci-fi).
 - [ ] **App Mobile Companion** para consulta rápida do Diário Técnico durante o jogo presencial.
 - [ ] **Integração com Roll20**.
 
 ## Next Action Items
 1. Implementar serviço de exportação de Roteiros (Markdown/PDF).
-2. Integrar ElevenLabs para o primeiro teste de narração automatizada.
-3. Refinar estabilidade da timeline de áudio.
+2. Refinar a integração com Foundry VTT via MCP Ouroboros.
+3. Adicionar busca semântica no histórico de sessões.
