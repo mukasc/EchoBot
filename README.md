@@ -16,6 +16,8 @@
 [![ElevenLabs](https://img.shields.io/badge/ElevenLabs-000000?style=flat&logo=elevenlabs)](https://elevenlabs.io/)
 [![Deepgram](https://img.shields.io/badge/Deepgram-FB542B?style=flat&logo=deepgram)](https://deepgram.com/)
 [![Kokoro TTS](https://img.shields.io/badge/Kokoro_TTS-6B4E71?style=flat&logo=pyup&logoColor=white)](https://huggingface.co/hexgrad/Kokoro-82M)
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-000000?style=flat&logo=openai&logoColor=white)](https://openrouter.ai/)
+[![Groq](https://img.shields.io/badge/Groq-f55036?style=flat&logo=speedtest&logoColor=white)](https://groq.com/)
 
 **EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
 
@@ -37,7 +39,7 @@ graph TD
         E{Estratégias de IA}
         
         E1[STT: Faster Whisper / Gemini]
-        E2[LLM: Gemini / GPT / Claude]
+        E2[LLM: Gemini / GPT / Claude / OpenRouter / Groq]
         E3[TTS: ElevenLabs / Deepgram / Kokoro]
     end
 
@@ -74,6 +76,8 @@ graph TD
 -   **Diário Técnico Automático**: Extração de NPCs, Itens, Locais, Eventos e sugestão de XP.
 -   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão.
 -   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs**, **Deepgram (Aura)** ou **Kokoro Local (Nativo Python)**.
+-   **Multi-Provider LLM**: Suporte integrado para **OpenRouter** (acesso a centenas de modelos) e **Groq** (inferência ultra-rápida para modelos open-source como Llama 3).
+-   **Gestão de Chaves Centralizada**: As chaves de API e tokens do Discord são gerenciados diretamente na interface web e persistidos de forma criptografada no MongoDB, eliminando a necessidade de editar arquivos `.env` manualmente.
 -   **Interface Temática**: Design inspirado em arquétipos de luxo e fantasia sombria (*Dark Fantasy*).
 -   **Otimização de Áudio**: Utiliza o formato **Ogg/Opus (64kbps, mono)** para garantir arquivos minúsculos com clareza ideal para transcrição por IA, economizando até 90% de espaço em relação ao WAV puro.
 -   **TTS Local Integrado**: O sistema inclui o motor **Kokoro v1.0** rodando nativamente em Python (via ONNX), permitindo narrações de alta qualidade com **custo zero** e sem necessidade de GPU ou Docker.
@@ -142,21 +146,22 @@ npm install
 
 ### 2. Configuração
 
-Crie um arquivo `.env` na pasta `backend/` seguindo o modelo de `.env.example`:
+Crie um arquivo `.env` na pasta `backend/` seguindo o modelo de `.env.example`. 
+
+> [!IMPORTANT]
+> A partir da versão atual, o `.env` deve conter apenas as chaves de infraestrutura. Todas as chaves de API de IA e o Token do Discord devem ser configurados diretamente na **Tela de Configurações** dentro do App.
 
 ```env
-# MongoDB
+# Infraestrutura (Obrigatório no .env)
 MONGO_URL="sua_url_mongodb"
 DB_NAME="rpbcronista"
-
-# AI / LLM APIs
-OPENAI_API_KEY="sua_chave_openai"
-GOOGLE_API_KEY="sua_chave_google"
-ANTHROPIC_API_KEY="sua_chave_anthropic"
-
-# Discord Bot
-DISCORD_BOT_TOKEN="seu_token_discord"
+MASTER_KEY="sua_chave_mestra_para_criptografia"
 ```
+
+As chaves abaixo **não são mais necessárias no .env** e devem ser inseridas via UI:
+- `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`
+- `OPENROUTER_API_KEY`, `GROQ_API_KEY`
+- `DISCORD_BOT_TOKEN`, `DISCORD_APP_ID`, etc.
 
 ### 3. Executando
 
@@ -204,7 +209,7 @@ Após o bot estar online e convidado para o seu servidor:
 -   **Framework**: FastAPI
 -   **Banco de Dados**: MongoDB (Motor driver)
 -   **Processamento de Áudio**: Faster Whisper, PyTorch
--   **LLMs**: Google Gemini (padrão), OpenAI GPT-4, Anthropic Claude
+-   **LLMs**: Google Gemini (padrão), OpenAI GPT-4, Anthropic Claude, OpenRouter, Groq
 -   **TTS Providers**: ElevenLabs, Deepgram (Aura), Kokoro Local (Nativo Python)
 
 ### Frontend

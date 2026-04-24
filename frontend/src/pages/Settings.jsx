@@ -9,7 +9,9 @@ import {
   AlertTriangle,
   Mic2,
   Music,
-  Globe
+  Globe,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
@@ -44,13 +46,25 @@ const llmModels = {
     { value: "claude-sonnet-4-5-20250929", label: "Claude Sonnet 4.5" },
     { value: "claude-4-sonnet-20250514", label: "Claude 4 Sonnet" },
     { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
+  ],
+  openrouter: [
+    { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash (OpenRouter)" },
+    { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (OpenRouter)" },
+    { value: "meta-llama/llama-3.1-405b-instruct", label: "Llama 3.1 405B (OpenRouter)" },
+    { value: "mistralai/mistral-large-2407", label: "Mistral Large 2 (OpenRouter)" },
+  ],
+  groq: [
+    { value: "llama3-70b-8192", label: "Llama 3 70B (Groq)" },
+    { value: "mixtral-8x7b-32768", label: "Mixtral 8x7B (Groq)" },
   ]
 };
 
 const providerLabels = {
   gemini: "Google Gemini",
   openai: "OpenAI",
-  anthropic: "Anthropic Claude"
+  anthropic: "Anthropic Claude",
+  openrouter: "OpenRouter",
+  groq: "Groq"
 };
 
 const Settings = () => {
@@ -59,15 +73,23 @@ const Settings = () => {
   const [formData, setFormData] = useState({
     llm_provider: "gemini",
     llm_model: "gemini-3-flash-preview",
+    openai_api_key: "",
+    google_api_key: "",
+    anthropic_api_key: "",
     custom_api_key: "",
+    openrouter_api_key: "",
+    groq_api_key: "",
     discord_bot_token: "",
+    discord_app_id: "",
+    discord_public_key: "",
     discord_guild_id: "",
     elevenlabs_voice_id: "pNInz6obpgmqS2C9NfX",
-    kokoro_base_url: "http://localhost:3000/api/v1",
+    kokoro_base_url: "http://localhost:8000/api/v1/audio",
     kokoro_model: "model_q8f16",
     kokoro_voice: "af_heart"
   });
 
+  const [visibleFields, setVisibleFields] = useState({});
   const [voices, setVoices] = useState([]);
   const [fetchingVoices, setFetchingVoices] = useState(false);
   const [voiceError, setVoiceError] = useState(null);
@@ -79,21 +101,34 @@ const Settings = () => {
   const [fetchingDgVoices, setFetchingDgVoices] = useState(false);
   const [koVoices, setKoVoices] = useState([]);
   const [fetchingKoVoices, setFetchingKoVoices] = useState(false);
+  const [dynamicModels, setDynamicModels] = useState({});
+  const [fetchingModels, setFetchingModels] = useState(false);
+
+  const toggleVisibility = (field) => {
+    setVisibleFields(prev => ({ ...prev, [field]: !prev[field] }));
+  };
 
   useEffect(() => {
     if (settings) {
       setFormData({
         llm_provider: settings.llm_provider || "gemini",
         llm_model: settings.llm_model || "gemini-3-flash-preview",
+        openai_api_key: settings.openai_api_key || "",
+        google_api_key: settings.google_api_key || "",
+        anthropic_api_key: settings.anthropic_api_key || "",
         custom_api_key: settings.custom_api_key || "",
+        openrouter_api_key: settings.openrouter_api_key || "",
+        groq_api_key: settings.groq_api_key || "",
         discord_bot_token: settings.discord_bot_token || "",
+        discord_app_id: settings.discord_app_id || "",
+        discord_public_key: settings.discord_public_key || "",
         discord_guild_id: settings.discord_guild_id || "",
         elevenlabs_api_key: settings.elevenlabs_api_key || "",
         elevenlabs_voice_id: settings.elevenlabs_voice_id || "pNInz6obpgmqS2C9NfX",
         deepgram_api_key: settings.deepgram_api_key || "",
         deepgram_model: settings.deepgram_model || "aura-asteria-en",
         kokoro_api_key: settings.kokoro_api_key || "",
-        kokoro_base_url: settings.kokoro_base_url || "http://localhost:3000/api/v1",
+        kokoro_base_url: settings.kokoro_base_url || "http://localhost:8000/api/v1/audio",
         kokoro_model: settings.kokoro_model || "model_q8f16",
         kokoro_voice: settings.kokoro_voice || "af_heart",
         tts_provider: settings.tts_provider || "elevenlabs"
@@ -150,13 +185,15 @@ const Settings = () => {
       setFetchingDgUsage(true);
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const vRes = await fetch(`${baseUrl}/api/settings/deepgram/voices?api_key=${formData.deepgram_api_key}`);
+        const [vRes, uRes] = await Promise.all([
+          fetch(`${baseUrl}/api/settings/deepgram/voices?api_key=${formData.deepgram_api_key}`),
+          fetch(`${baseUrl}/api/settings/deepgram/usage?api_key=${formData.deepgram_api_key}`)
+        ]);
         if (vRes.ok) {
           const data = await vRes.json();
           setDgVoices(data);
         }
 
-        const uRes = await fetch(`${baseUrl}/api/settings/deepgram/usage?api_key=${formData.deepgram_api_key}`);
         if (uRes.ok) {
           const data = await uRes.json();
           setDgUsage(data);
@@ -173,13 +210,13 @@ const Settings = () => {
       setFetchingKoVoices(true);
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const vRes = await fetch(`${baseUrl}/api/settings/kokoro/voices`);
-        if (vRes.ok) {
-          const data = await vRes.json();
+        const res = await fetch(`${baseUrl}/api/settings/kokoro/voices`);
+        if (res.ok) {
+          const data = await res.json();
           setKoVoices(data);
         }
       } catch (error) {
-        console.error("Erro ao buscar vozes Kokoro:", error);
+        console.error("Erro ao buscar vozes do Kokoro:", error);
       } finally {
         setFetchingKoVoices(false);
       }
@@ -189,6 +226,58 @@ const Settings = () => {
     fetchDgVoicesAndUsage();
     fetchKoVoices();
   }, [formData.elevenlabs_api_key, formData.deepgram_api_key, formData.kokoro_base_url]);
+
+  useEffect(() => {
+    const fetchOpenRouterModels = async () => {
+      if (formData.llm_provider !== 'openrouter' || dynamicModels.openrouter) return;
+      
+      setFetchingModels(true);
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/settings/llm/openrouter/models`);
+        if (res.ok) {
+          const data = await res.json();
+          setDynamicModels(prev => ({ ...prev, openrouter: data }));
+        }
+      } catch (error) {
+        console.error("Error fetching OpenRouter models:", error);
+      } finally {
+        setFetchingModels(false);
+      }
+    };
+
+    const fetchGroqModels = async () => {
+      if (formData.llm_provider !== 'groq' || dynamicModels.groq) return;
+      
+      setFetchingModels(true);
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/settings/llm/groq/models`);
+        if (res.ok) {
+          const data = await res.json();
+          setDynamicModels(prev => ({ ...prev, groq: data }));
+        }
+      } catch (error) {
+        console.error("Error fetching Groq models:", error);
+      } finally {
+        setFetchingModels(false);
+      }
+    };
+
+    fetchOpenRouterModels();
+    fetchGroqModels();
+  }, [formData.llm_provider]);
+
+  const getLLMKeyField = () => {
+    switch (formData.llm_provider) {
+      case 'openai': return 'openai_api_key';
+      case 'gemini': return 'google_api_key';
+      case 'anthropic': return 'anthropic_api_key';
+      case 'openrouter': return 'openrouter_api_key';
+      case 'groq': return 'groq_api_key';
+      default: return 'custom_api_key';
+    }
+  };
 
   const handleProviderChange = (provider) => {
     const defaultModel = llmModels[provider]?.[0]?.value || "";
@@ -247,6 +336,8 @@ const Settings = () => {
                   </SelectItem>
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                  <SelectItem value="openrouter">OpenRouter</SelectItem>
+                  <SelectItem value="groq">Groq</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -260,12 +351,16 @@ const Settings = () => {
                 <SelectTrigger className="input-dark">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-rpg-surface border-white/10">
-                  {llmModels[formData.llm_provider]?.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label}
-                    </SelectItem>
-                  ))}
+                <SelectContent className="bg-rpg-surface border-white/10 max-h-[300px]">
+                  {fetchingModels ? (
+                    <SelectItem value="loading" disabled>Carregando modelos...</SelectItem>
+                  ) : (
+                    (dynamicModels[formData.llm_provider] || llmModels[formData.llm_provider])?.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -300,19 +395,98 @@ const Settings = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="api-key">Chave de API ({providerLabels[formData.llm_provider]})</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={formData.custom_api_key}
-                  onChange={(e) => setFormData({...formData, custom_api_key: e.target.value})}
-                  placeholder="Insira sua chave aqui..."
-                  className="input-dark font-mono text-sm"
-                />
+                <div className="relative">
+                  <Input
+                    id="api-key"
+                    type={visibleFields[getLLMKeyField()] ? "text" : "password"}
+                    value={formData[getLLMKeyField()]}
+                    onChange={(e) => setFormData({
+                      ...formData, 
+                      [getLLMKeyField()]: e.target.value
+                    })}
+                    placeholder="Insira sua chave aqui..."
+                    className="input-dark font-mono text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleVisibility(getLLMKeyField())}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6C7280] hover:text-white transition-colors"
+                  >
+                    {visibleFields[getLLMKeyField()] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
+        {/* Discord Bot Settings */}
+        <Card className="card-rpg mb-6 border-indigo-500/30">
+          <CardHeader className="border-b border-white/10">
+            <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
+              <SettingsIcon className="w-5 h-5 text-indigo-400" />
+              Configuração do Bot Discord
+            </CardTitle>
+            <CardDescription className="text-[#A0A5B5]">
+              Vincule seu bot do Discord para permitir captura automática no futuro
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="discord-app-id">Application ID</Label>
+                <Input
+                  id="discord-app-id"
+                  value={formData.discord_app_id}
+                  onChange={(e) => setFormData({ ...formData, discord_app_id: e.target.value })}
+                  placeholder="ID da aplicação Discord"
+                  className="input-dark text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discord-public-key">Public Key</Label>
+                <Input
+                  id="discord-public-key"
+                  value={formData.discord_public_key}
+                  onChange={(e) => setFormData({ ...formData, discord_public_key: e.target.value })}
+                  placeholder="Chave pública da aplicação"
+                  className="input-dark text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discord-guild-id">Guild ID (Opcional)</Label>
+                <Input
+                  id="discord-guild-id"
+                  value={formData.discord_guild_id}
+                  onChange={(e) => setFormData({ ...formData, discord_guild_id: e.target.value })}
+                  placeholder="ID do servidor principal"
+                  className="input-dark text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discord-bot-token">Bot Token</Label>
+                <div className="relative">
+                  <Input
+                    id="discord-bot-token"
+                    type={visibleFields.discord_bot_token ? "text" : "password"}
+                    value={formData.discord_bot_token}
+                    onChange={(e) => setFormData({ ...formData, discord_bot_token: e.target.value })}
+                    placeholder="Token do bot (MTQ4...)"
+                    className="input-dark pr-10 font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleVisibility('discord_bot_token')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6C7280] hover:text-white transition-colors"
+                  >
+                    {visibleFields.discord_bot_token ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* ElevenLabs Settings */}
         <Card className="card-rpg mb-6">
           <CardHeader className="border-b border-white/10">
@@ -327,14 +501,23 @@ const Settings = () => {
           <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="eleven-key">Chave de API ElevenLabs</Label>
-              <Input
-                id="eleven-key"
-                type="password"
-                value={formData.elevenlabs_api_key}
-                onChange={(e) => setFormData({...formData, elevenlabs_api_key: e.target.value})}
-                placeholder="Insira sua chave aqui..."
-                className="input-dark font-mono text-sm"
-              />
+              <div className="relative">
+                <Input
+                  id="eleven-key"
+                  type={visibleFields.elevenlabs_api_key ? "text" : "password"}
+                  value={formData.elevenlabs_api_key}
+                  onChange={(e) => setFormData({...formData, elevenlabs_api_key: e.target.value})}
+                  placeholder="Insira sua chave aqui..."
+                  className="input-dark font-mono text-sm pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleVisibility("elevenlabs_api_key")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6C7280] hover:text-white transition-colors"
+                >
+                  {visibleFields.elevenlabs_api_key ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -383,18 +566,12 @@ const Settings = () => {
                   placeholder="Ou ID manual"
                 />
               </div>
-              <p className="text-[10px] text-rpg-gold/70 italic">
-                <strong>Nota:</strong> No plano <strong>Free</strong>, use apenas vozes '(Nativa)'.
-              </p>
             </div>
 
             {usageError && (
               <div className="pt-4 border-t border-white/5">
                 <p className="text-[10px] text-red-400">
                   <strong>Erro de Assinatura:</strong> {usageError}
-                </p>
-                <p className="text-[9px] text-[#6C7280] mt-1 italic">
-                  Dica: Verifique se sua API Key possui a permissão 'user_read'.
                 </p>
               </div>
             )}
@@ -412,12 +589,6 @@ const Settings = () => {
                     style={{ width: `${Math.min(100, (usage.character_count / usage.character_limit) * 100)}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-[#6C7280]">
-                  Plano: <span className="text-[#A0A5B5] capitalize">{usage.tier}</span> • 
-                  Reinicia em: <span className="text-[#A0A5B5]">
-                    {usage.next_character_count_reset_unix ? new Date(usage.next_character_count_reset_unix * 1000).toLocaleDateString() : 'N/A'}
-                  </span>
-                </p>
               </div>
             )}
           </CardContent>
@@ -456,19 +627,25 @@ const Settings = () => {
                   className="input-dark text-sm"
                   placeholder="http://localhost:3000/api/v1"
                 />
-                <p className="text-[9px] text-[#6C7280]">
-                  URL da sua instância (ex: http://ip:3000/api/v1)
-                </p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">API Key (Opcional)</label>
-                <Input 
-                  type="password"
-                  value={formData.kokoro_api_key}
-                  onChange={(e) => setFormData({...formData, kokoro_api_key: e.target.value})}
-                  className="input-dark font-mono text-sm"
-                  placeholder="Sua chave secreta"
-                />
+                <div className="relative">
+                  <Input 
+                    type={visibleFields.kokoro_api_key ? "text" : "password"}
+                    value={formData.kokoro_api_key}
+                    onChange={(e) => setFormData({...formData, kokoro_api_key: e.target.value})}
+                    className="input-dark font-mono text-sm pr-10"
+                    placeholder="Sua chave secreta"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleVisibility("kokoro_api_key")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6C7280] hover:text-white transition-colors"
+                  >
+                    {visibleFields.kokoro_api_key ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -507,9 +684,6 @@ const Settings = () => {
                 </Select>
               </div>
             </div>
-            <p className="text-[10px] text-emerald-400/70 italic">
-              <strong>Dica:</strong> Use o Kokoro para narrações gratuitas e ilimitadas com qualidade ElevenLabs.
-            </p>
           </CardContent>
         </Card>
 
@@ -538,20 +712,27 @@ const Settings = () => {
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             {dgUsage && (
-              <div className="bg-rpg-surface p-3 rounded border border-white/5 space-y-2 mb-4">
+              <div className="bg-rpg-surface p-3 rounded border border-white/5 space-y-3 mb-4">
                 <div className="flex justify-between items-center text-[10px] uppercase tracking-wider text-[#A0A5B5]">
-                  <span>Status da Conta Deepgram</span>
+                  <span>Status Deepgram</span>
                   <span className="text-cyan-400 font-bold">{dgUsage.tier}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-[#EDEDED]">Saldo Disponível:</span>
-                  <span className="text-sm font-mono text-cyan-400">
-                    {dgUsage.balance?.toLocaleString('en-US', { style: 'currency', currency: dgUsage.units || 'USD' })}
-                  </span>
-                </div>
-                <div className="text-[10px] text-[#A0A5B5]">
-                  Projeto: <span className="text-[#EDEDED]">{dgUsage.project_name}</span>
-                </div>
+                {dgUsage.balance !== undefined && (
+                  <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                    <span className="text-[11px] text-[#A0A5B5]">Saldo Disponível</span>
+                    <span className="text-sm font-mono text-emerald-400 font-bold">
+                      {dgUsage.balance.toLocaleString('en-US', { 
+                        style: 'currency', 
+                        currency: dgUsage.units || 'USD' 
+                      })}
+                    </span>
+                  </div>
+                )}
+                {dgUsage.project_name && (
+                  <div className="text-[9px] text-[#6C7280] italic">
+                    Projeto: {dgUsage.project_name}
+                  </div>
+                )}
               </div>
             )}
             <div className="space-y-2">
@@ -559,82 +740,47 @@ const Settings = () => {
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C7280]" />
                 <Input 
-                  type="password"
+                  type={visibleFields.deepgram_api_key ? "text" : "password"}
                   value={formData.deepgram_api_key}
                   onChange={(e) => setFormData({...formData, deepgram_api_key: e.target.value})}
-                  className="pl-10 input-dark font-mono text-sm"
+                  className="pl-10 pr-10 input-dark font-mono text-sm"
                   placeholder="dg_..."
                 />
+                <button
+                  type="button"
+                  onClick={() => toggleVisibility("deepgram_api_key")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6C7280] hover:text-white transition-colors"
+                >
+                  {visibleFields.deepgram_api_key ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Modelo Aura</label>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Select 
-                    value={formData.deepgram_model} 
-                    onValueChange={(val) => setFormData({...formData, deepgram_model: val})}
-                  >
-                    <SelectTrigger className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
-                      <SelectValue placeholder="Selecione um modelo..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1A1C23] border-white/10 text-[#EDEDED] shadow-xl z-[100]">
-                      {fetchingDgVoices ? (
-                        <SelectItem value="loading" disabled>Carregando...</SelectItem>
-                      ) : dgVoices.map((v) => (
-                        <SelectItem key={v.voice_id} value={v.voice_id}>
-                          {v.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <p className="text-[10px] text-cyan-400/70 italic">
-                <strong>Vantagem:</strong> Latência quase zero e custo muito baixo.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-rpg mb-6 border-indigo-500/30">
-          <CardHeader className="border-b border-white/10">
-            <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-              <SettingsIcon className="w-5 h-5 text-indigo-400" />
-              Configuração do Bot Discord
-            </CardTitle>
-            <CardDescription className="text-[#A0A5B5]">
-              Vincule seu bot do Discord para permitir captura automática no futuro
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="bot-token">Token do Bot</Label>
-              <Input
-                id="bot-token"
-                type="password"
-                value={formData.discord_bot_token}
-                onChange={(e) => setFormData({...formData, discord_bot_token: e.target.value})}
-                placeholder="MTIz..."
-                className="input-dark font-mono text-sm"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="guild-id">ID do Servidor (Guild ID)</Label>
-              <Input
-                id="guild-id"
-                value={formData.discord_guild_id}
-                onChange={(e) => setFormData({...formData, discord_guild_id: e.target.value})}
-                placeholder="123456789..."
-                className="input-dark text-sm"
-              />
+              <Select 
+                value={formData.deepgram_model} 
+                onValueChange={(val) => setFormData({...formData, deepgram_model: val})}
+              >
+                <SelectTrigger className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
+                  <SelectValue placeholder="Selecione um modelo..." />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1A1C23] border-white/10 text-[#EDEDED] shadow-xl z-[100]">
+                  {fetchingDgVoices ? (
+                    <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                  ) : dgVoices.map((v) => (
+                    <SelectItem key={v.voice_id} value={v.voice_id}>
+                      {v.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
 
         {/* Save Button */}
-        <div className="flex justify-end">
+        <div className="flex justify-end mt-8">
           <Button
             onClick={() => saveSettings(formData)}
             disabled={saving}

@@ -8,7 +8,7 @@ export const useCharacterMappings = () => {
   const fetchMappings = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get("/character-mappings");
+      const response = await api.get("/character-mappings/");
       setMappings(response.data);
     } catch (error) {
       console.error("Error fetching character mappings:", error);
@@ -43,7 +43,7 @@ export const useCharacterMappings = () => {
       if (editingId) {
         await api.put(`/character-mappings/${editingId}`, formData);
       } else {
-        await api.post("/character-mappings", formData);
+        await api.post("/character-mappings/", formData);
       }
       await fetchMappings();
       toast.success("Mapeamento salvo!");

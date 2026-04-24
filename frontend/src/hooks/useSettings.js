@@ -10,7 +10,7 @@ export const useSettings = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/settings");
+      const response = await api.get("/settings/");
       setSettings(response.data);
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -27,7 +27,7 @@ export const useSettings = () => {
   const saveSettings = async (formData) => {
     setSaving(true);
     try {
-      await api.put("/settings", formData);
+      await api.put("/settings/", formData);
       toast.success("Configurações salvas!");
       await fetchSettings();
     } catch (error) {

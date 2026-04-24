@@ -22,9 +22,22 @@ class AppSettings(BaseModel):
     id: str = "app_settings"
     llm_provider: LLMProvider = LLMProvider.GEMINI
     llm_model: str = "gemini-2.0-flash"
-    custom_api_key: Optional[str] = None
+    
+    # LLM API Keys
+    openai_api_key: Optional[str] = None
+    google_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
+    groq_api_key: Optional[str] = None
+    custom_api_key: Optional[str] = None # Legacy / generic
+    
+    # Discord Configuration
     discord_bot_token: Optional[str] = None
+    discord_app_id: Optional[str] = None
+    discord_public_key: Optional[str] = None
     discord_guild_id: Optional[str] = None
+    
+    # TTS Configuration
     elevenlabs_api_key: Optional[str] = None
     elevenlabs_voice_id: str = "onwK4e9ZLuTAKqWW03AF"
     deepgram_api_key: Optional[str] = None
@@ -34,15 +47,26 @@ class AppSettings(BaseModel):
     kokoro_model: str = "model_q8f16"
     kokoro_voice: str = "af_heart"
     tts_provider: TTSProvider = TTSProvider.ELEVENLABS
+    
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AppSettingsUpdate(BaseModel):
     llm_provider: Optional[LLMProvider] = None
     llm_model: Optional[str] = None
+    
+    openai_api_key: Optional[str] = None
+    google_api_key: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
+    groq_api_key: Optional[str] = None
     custom_api_key: Optional[str] = None
+    
     discord_bot_token: Optional[str] = None
+    discord_app_id: Optional[str] = None
+    discord_public_key: Optional[str] = None
     discord_guild_id: Optional[str] = None
+    
     elevenlabs_api_key: Optional[str] = None
     elevenlabs_voice_id: Optional[str] = None
     deepgram_api_key: Optional[str] = None

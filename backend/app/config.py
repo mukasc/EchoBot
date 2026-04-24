@@ -24,20 +24,27 @@ class Settings(BaseSettings):
     # --- MongoDB ---
     mongo_url: str = Field(..., description="MongoDB connection string")
     db_name: str = Field("rpbcronista", description="MongoDB database name")
+    master_key: str = Field(default="", description="Master key for encryption")
 
     # --- AI / LLM APIs ---
     openai_api_key: str = Field(default="", description="OpenAI API key")
     google_api_key: str = Field(default="", description="Google / Gemini API key")
     anthropic_api_key: str = Field(default="", description="Anthropic API key")
+    openrouter_api_key: str = Field(default="", description="OpenRouter API key")
+    groq_api_key: str = Field(default="", description="Groq API key")
 
     # --- Discord ---
     discord_app_id: str = Field(default="")
     discord_public_key: str = Field(default="")
     discord_bot_token: str = Field(default="")
+    discord_guild_id: str = Field(default="")
 
     # --- ElevenLabs ---
     elevenlabs_api_key: str = Field(default="", description="ElevenLabs API key")
     elevenlabs_voice_id: str = Field(default="pNInz6obpgmqS2C9NfX", description="Default voice ID (Adam)")
+
+    # --- Deepgram ---
+    deepgram_api_key: str = Field(default="", description="Deepgram API key")
 
     # --- CORS ---
     cors_origins: List[str] = Field(

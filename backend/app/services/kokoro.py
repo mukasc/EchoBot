@@ -86,21 +86,30 @@ class KokoroService:
     async def get_voices(self) -> list:
         """
         Attempts to fetch voices from the Kokoro instance.
-        If it's OpenAI compatible, it might have /v1/voices.
+        Tries multiple common endpoints: /voices, /v1/voices, /audio/voices.
         """
-        # Kokoro Web might not have a public /voices endpoint yet, 
-        # but we can try /v1/voices or /voices.
-        url = f"{self.base_url}/voices"
+        if not self.base_url:
+            return self._get_fallback_voices()
+
+        # Possible endpoints to try
+        endpoints = ["/voices", "/v1/voices", "/audio/voices"]
         
         async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url)
-                if response.status_code == 200:
-                    return response.json()
-            except Exception:
-                pass
+            for endpoint in endpoints:
+                url = f"{self.base_url}{endpoint}"
+                try:
+                    response = await client.get(url, timeout=5.0)
+                    if response.status_code == 200:
+                        voices = response.json()
+                        if isinstance(voices, list):
+                            return voices
+                except Exception:
+                    continue
         
-        # Return a static list of common Kokoro voices as fallback
+        return self._get_fallback_voices()
+
+    def _get_fallback_voices(self) -> list:
+        """Return a static list of common Kokoro voices as fallback"""
         return [
             {"voice_id": "af_heart", "name": "Heart (Female - US)"},
             {"voice_id": "af_bella", "name": "Bella (Female - US)"},

@@ -53,7 +53,21 @@ async function getSession(sessionId) {
     return null;
 }
 
+async function getSettings() {
+    try {
+        const response = await axios.get(`${config.apiUrl}/settings`);
+        if (response.status === 200) {
+            return response.data;
+        }
+    } catch (err) {
+        // Silencioso se falhar, o chamador trata
+        return null;
+    }
+    return null;
+}
+
 module.exports = {
     uploadAudio,
-    getSession
+    getSession,
+    getSettings
 };

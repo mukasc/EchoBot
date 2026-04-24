@@ -42,6 +42,7 @@ async def text_to_speech(request: TTSRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/voices")
+@router.get("/v1/voices", include_in_schema=False)
 async def list_voices():
     """
     List available voices for the local Kokoro engine.

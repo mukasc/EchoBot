@@ -81,16 +81,39 @@ class AIProcessorService:
     # ------------------------------------------------------------------
 
     def _resolve_api_key(self, app_settings: AppSettings) -> str:
+        provider = app_settings.llm_provider
+        
+        # Priority 1: Key from AppSettings (DB)
+        db_key = None
+        if provider == LLMProvider.OPENAI:
+            db_key = app_settings.openai_api_key
+        elif provider == LLMProvider.GEMINI:
+            db_key = app_settings.google_api_key
+        elif provider == LLMProvider.ANTHROPIC:
+            db_key = app_settings.anthropic_api_key
+        elif provider == LLMProvider.OPENROUTER:
+            db_key = app_settings.openrouter_api_key
+        elif provider == LLMProvider.GROQ:
+            db_key = app_settings.groq_api_key
+        
+        if db_key:
+            return db_key
+            
+        # Priority 2: custom_api_key (legacy)
         if app_settings.custom_api_key:
             return app_settings.custom_api_key
 
-        provider = app_settings.llm_provider
+        # Priority 3: Fallback to environment variables (for testing/graceful degradation)
         if provider == LLMProvider.OPENAI:
             return self._settings.openai_api_key
         if provider == LLMProvider.GEMINI:
             return self._settings.google_api_key
         if provider == LLMProvider.ANTHROPIC:
             return self._settings.anthropic_api_key
+        if provider == LLMProvider.OPENROUTER:
+            return self._settings.openrouter_api_key
+        if provider == LLMProvider.GROQ:
+            return self._settings.groq_api_key
         return self._settings.openai_api_key
 
     @staticmethod
@@ -122,6 +145,16 @@ class AIProcessorService:
                 api_key, prompt, app_settings.llm_model or "claude-3-5-sonnet-20240620"
             )
 
+        if provider == LLMProvider.OPENROUTER:
+            return self._call_openrouter(
+                api_key, prompt, app_settings.llm_model or "google/gemini-2.0-flash-001"
+            )
+
+        if provider == LLMProvider.GROQ:
+            return self._call_groq(
+                api_key, prompt, app_settings.llm_model or "llama3-70b-8192"
+            )
+
         raise ValueError(f"Unknown LLM provider: {provider}")
 
     @staticmethod
@@ -136,6 +169,52 @@ class AIProcessorService:
                 {"role": "user", "content": prompt},
             ],
             response_format={"type": "json_object"},
+        )
+        return completion.choices[0].message.content or ""
+
+    @staticmethod
+    def _call_openrouter(api_key: str, prompt: str, model: str) -> str:
+        import openai
+
+        # OpenRouter is OpenAI-compatible
+        client = openai.OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+            default_headers={
+                "HTTP-Referer": "https://github.com/mukas/EchoBot", # Optional
+                "X-Title": "EchoBot", # Optional
+            }
+        )
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            # OpenRouter supports json_object if the underlying model does, 
+            # but it's safer to just let it return text and we parse it.
+            # However, GPT-4o and Gemini via OpenRouter usually support it.
+            response_format={"type": "json_object"} if "gemini" in model.lower() or "gpt" in model.lower() or "llama-3" in model.lower() else None,
+        )
+        return completion.choices[0].message.content or ""
+
+    @staticmethod
+    def _call_groq(api_key: str, prompt: str, model: str) -> str:
+        import openai
+
+        # Groq is OpenAI-compatible
+        client = openai.OpenAI(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=api_key,
+        )
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            # Groq supports JSON mode for some models
+            response_format={"type": "json_object"} if "llama3" in model.lower() or "mixtral" in model.lower() else None,
         )
         return completion.choices[0].message.content or ""
 

@@ -19,24 +19,58 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 const DiscordBot = require('./discord-bot');
+const { getSettings } = require('./api-client');
 
-// Inicializa o cliente Discord com os intents configurados
-const client = new Client({
-    intents: config.intents.map(intent => GatewayIntentBits[intent]),
-});
+async function start() {
+    console.log('⏳ [Voice Bridge] Aguardando configurações do Backend...');
+    
+    let token = config.discordToken;
+    let retries = 0;
+    const maxRetries = 20; // ~1 minute
 
-// Inicializa a lógica do Bot
-const bot = new DiscordBot(client);
+    // Se não tem token no config (provavelmente removido do .env), busca no backend
+    while (!token && retries < maxRetries) {
+        const settings = await getSettings();
+        if (settings && settings.discord_bot_token) {
+            token = settings.discord_bot_token;
+            console.log('✅ [Voice Bridge] Token do Discord recuperado do Backend.');
+            break;
+        }
+        
+        retries++;
+        if (retries % 5 === 0) {
+            console.log(`⏳ [Voice Bridge] Backend ainda não configurado ou indisponível (Tentativa ${retries}/${maxRetries})...`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 3000));
+    }
 
-// Login
-client.login(config.discordToken).catch(err => {
-    console.error('❌ Falha ao fazer login no Discord:', err.message);
-    process.exit(1);
-});
+    if (!token) {
+        console.error('❌ [Voice Bridge] Erro: Token do Discord não encontrado no .env nem no Backend.');
+        console.error('👉 Por favor, configure o Token na tela de Configurações do EchoBot.');
+        process.exit(1);
+    }
 
-// Tratamento de encerramento gracioso
-process.on('SIGINT', () => {
-    console.log('\n👋 Encerrando Voice Bridge...');
-    client.destroy();
-    process.exit(0);
-});
+    // Inicializa o cliente Discord com os intents configurados
+    const client = new Client({
+        intents: config.intents.map(intent => GatewayIntentBits[intent]),
+    });
+
+    // Inicializa a lógica do Bot
+    const bot = new DiscordBot(client);
+
+    // Login
+    client.login(token).catch(err => {
+        console.error('❌ Falha ao fazer login no Discord:', err.message);
+        console.error('💡 Verifique se o token inserido nas Configurações é válido.');
+        process.exit(1);
+    });
+
+    // Tratamento de encerramento gracioso
+    process.on('SIGINT', () => {
+        console.log('\n👋 Encerrando Voice Bridge...');
+        client.destroy();
+        process.exit(0);
+    });
+}
+
+start();

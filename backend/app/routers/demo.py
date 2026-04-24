@@ -191,8 +191,9 @@ async def get_bot_setup_instructions():
                 "step": 5,
                 "title": "Configurar Token no Sistema",
                 "instructions": [
-                    "Após obter o token, adicione-o nas configurações",
-                    "O token será usado para conectar o bot",
+                    "Após obter o token, adicione-o nos campos de configuração acima",
+                    "Clique em 'Salvar Configuração' para validar",
+                    "O bot agora poderá ser usado para capturas futuras",
                 ],
             },
         ],
