@@ -43,7 +43,6 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 
 ### P1 (High Priority)
 - [ ] **Exportação**: Formatos PDF e Markdown estilizados para o diário e roteiro.
-- [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
 - [ ] **Estabilidade de Áudio**: Refinamento contínuo da decodificação mono e sincronia de timeline.
 
 ### P2 (Medium Priority)
@@ -52,11 +51,12 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitar distribuição.
 
 ### P3 (Low Priority)
+- [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
+- [ ] **Integração com Roll20**.
 - [ ] **Temas visuais alternativos** (Ex: Cyberpunk, Sci-fi).
 - [ ] **App Mobile Companion** para consulta rápida do Diário Técnico durante o jogo presencial.
-- [ ] **Integração com Roll20**.
 
 ## Next Action Items
 1. Implementar serviço de exportação de Roteiros (Markdown/PDF).
-2. Refinar a integração com Foundry VTT via MCP Ouroboros.
-3. Adicionar busca semântica no histórico de sessões.
+2. Refinar estabilidade da timeline de áudio.
+3. Iniciar pesquisa para Busca Semântica no histórico de sessões.
