@@ -23,12 +23,34 @@ O EchoBot é composto por três serviços principais que trabalham em harmonia:
 
 ```mermaid
 graph TD
-    A[Discord Voice] -->|Audio Stream| B[Voice Bridge Node.js]
-    B -->|POST /sessions/audio| C[Backend API FastAPI]
-    C -->|Store Audio/Metadata| D[MongoDB]
-    C -->|Transcription| E[Faster Whisper / OpenAI]
-    C -->|Narrative Processing| F[LLM Gemini/GPT/Claude]
-    G[Frontend React] -->|Management & Review| C
+    subgraph "Captação de Áudio"
+        A[Discord Voice] -->|Opus/Ogg Stream| B[Voice Bridge Node.js]
+    end
+
+    subgraph "Processamento & IA"
+        C[Backend API FastAPI]
+        D[(MongoDB)]
+        E{Estratégias de IA}
+        
+        E1[STT: Faster Whisper / Gemini]
+        E2[LLM: Gemini / GPT / Claude]
+        E3[TTS: ElevenLabs / Deepgram]
+    end
+
+    subgraph "Interface do Mestre"
+        G[Frontend React]
+    end
+
+    B -->|POST /api/sessions/audio| C
+    C <-->|Persistência| D
+    
+    C --- E
+    E --- E1
+    E --- E2
+    E --- E3
+    
+    G <-->|Gestão & Revisão| C
+    G -.->|Ouve Narração| E3
 ```
 
 ### Componentes
