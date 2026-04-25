@@ -100,40 +100,57 @@ class TranscriptionService:
     # Private strategies
     # ------------------------------------------------------------------
 
-    async def _transcribe_local(self, file_path: Path) -> TranscriptionResult:
+    # ------------------------------------------------------------------
+    # Private strategies
+    # ------------------------------------------------------------------
+
+    _model_instance = None  # Singleton model
+
+    @classmethod
+    def _get_local_model(cls):
         from faster_whisper import WhisperModel
+        if cls._model_instance is None:
+            try:
+                import torch
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+            except Exception:
+                device = "cpu"
+            
+            compute_type = "float16" if device == "cuda" else "int8"
+            logger.info("Loading local Whisper model (medium) on %s …", device)
+            cls._model_instance = WhisperModel("medium", device=device, compute_type=compute_type)
+        return cls._model_instance
 
-        try:
-            import torch
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        except Exception:  # noqa: BLE001
-            device = "cpu"
+    async def _transcribe_local(self, file_path: Path) -> TranscriptionResult:
+        from fastapi.concurrency import run_in_threadpool
+        
+        def _sync_transcribe():
+            model = self._get_local_model()
 
-        compute_type = "float16" if device == "cuda" else "int8"
-        logger.info("Loading local Whisper model (medium) on %s …", device)
-        model = WhisperModel("medium", device=device, compute_type=compute_type)
-
-        logger.info("Transcribing %s …", file_path)
-        segments_gen, info = model.transcribe(
-            str(file_path),
-            language="pt",
-            beam_size=5,
-            vad_filter=True,
-        )
-        raw_segments = list(segments_gen)
-        lang = info.language or "pt"
-        logger.info("Detected language: %s (prob=%.3f)", lang, info.language_probability)
-
-        result_segments = [
-            TranscriptionSegmentResult(
-                text=s.text.strip(),
-                start=s.start,
-                end=s.end,
+            logger.info("Transcribing %s …", file_path)
+            segments_gen, info = model.transcribe(
+                str(file_path),
+                language="pt",
+                beam_size=5,
+                vad_filter=True,
+                initial_prompt="Esta é uma sessão de RPG de mesa.", # Helps with RPG context
             )
-            for s in raw_segments
-        ]
-        raw_text = " ".join(s.text for s in result_segments)
-        return TranscriptionResult(raw_text=raw_text, segments=result_segments, method="LocalWhisper")
+            raw_segments = list(segments_gen)
+            lang = info.language or "pt"
+            logger.info("Detected language: %s (prob=%.3f)", lang, info.language_probability)
+
+            result_segments = [
+                TranscriptionSegmentResult(
+                    text=s.text.strip(),
+                    start=s.start,
+                    end=s.end,
+                )
+                for s in raw_segments
+            ]
+            raw_text = " ".join(s.text for s in result_segments)
+            return TranscriptionResult(raw_text=raw_text, segments=result_segments, method="LocalWhisper")
+
+        return await run_in_threadpool(_sync_transcribe)
 
     async def _transcribe_gemini(
         self, content: bytes, filename: str, api_key: str

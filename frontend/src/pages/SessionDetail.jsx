@@ -27,7 +27,8 @@ const SessionDetail = () => {
     processWithAI, 
     updateSegment, 
     markAsCompleted,
-    generateNarration
+    generateNarration,
+    reprocessTranscription
   } = useSession(id);
   
   const { getSpeakerInfo, loading: mappingsLoading } = useCharacterMappings();
@@ -54,6 +55,7 @@ const SessionDetail = () => {
           onUpload={uploadAudio}
           onProcess={processWithAI}
           onComplete={markAsCompleted}
+          onReprocess={reprocessTranscription}
         />
 
         <Tabs defaultValue="transcription" className="space-y-6">

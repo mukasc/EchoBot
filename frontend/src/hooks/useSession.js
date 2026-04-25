@@ -27,6 +27,27 @@ export const useSession = (sessionId) => {
     fetchSession();
   }, [fetchSession]);
 
+  // Polling logic for background tasks
+  useEffect(() => {
+    let interval;
+    const shouldPoll = session?.status === "transcribing" || session?.status === "processing";
+
+    if (shouldPoll) {
+      interval = setInterval(() => {
+        // We use a simplified fetch here to avoid setting loading state to true every time
+        api.get(`/sessions/${sessionId}`)
+          .then(response => {
+            setSession(response.data);
+          })
+          .catch(err => console.error("Polling error:", err));
+      }, 3000); // Poll every 3 seconds
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [sessionId, session?.status]);
+
   const updateSession = async (updates) => {
     setSaving(true);
     try {
@@ -48,10 +69,13 @@ export const useSession = (sessionId) => {
 
     setUploading(true);
     try {
-      await api.post(`/sessions/${sessionId}/upload-audio`, formData, {
+      const response = await api.post(`/sessions/${sessionId}/upload-audio`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
-      toast.success("Áudio enviado e transcrito com sucesso!");
+      toast.success("Áudio enviado. Transcrição iniciada em segundo plano!");
+      if (response.data.status) {
+        setSession(prev => ({ ...prev, status: response.data.status }));
+      }
       await fetchSession();
     } catch (error) {
       const detail = error.response?.data?.detail || "Erro ao processar áudio";
@@ -64,8 +88,11 @@ export const useSession = (sessionId) => {
   const processWithAI = async () => {
     setProcessing(true);
     try {
-      await api.post(`/sessions/${sessionId}/process`);
-      toast.success("Sessão processada com IA!");
+      const response = await api.post(`/sessions/${sessionId}/process`);
+      toast.success("Processamento iniciado em segundo plano!");
+      if (response.data.status) {
+        setSession(prev => ({ ...prev, status: response.data.status }));
+      }
       await fetchSession();
     } catch (error) {
       const detail = error.response?.data?.detail || "Erro ao processar com IA";
@@ -116,18 +143,39 @@ export const useSession = (sessionId) => {
     }
   };
 
+  const reprocessTranscription = async () => {
+    setProcessing(true);
+    try {
+      const response = await api.post(`/sessions/${sessionId}/reprocess`);
+      toast.success(response.data.message || "Reprocessamento iniciado!");
+      if (response.data.status) {
+        setSession(prev => ({ ...prev, status: response.data.status }));
+      }
+      await fetchSession();
+    } catch (error) {
+      const detail = error.response?.data?.detail || "Erro ao reprocessar áudio";
+      toast.error(detail);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const isBackgroundProcessing = session?.status === "transcribing" || session?.status === "processing";
+
   return {
     session,
     loading,
     saving,
-    processing,
-    uploading,
+    processing: processing || (session?.status === "processing"),
+    uploading: uploading || (session?.status === "transcribing"),
+    isBackgroundProcessing,
     updateSession,
     uploadAudio,
     processWithAI,
     updateSegment,
     markAsCompleted,
     generateNarration,
+    reprocessTranscription,
     refresh: fetchSession
   };
 };

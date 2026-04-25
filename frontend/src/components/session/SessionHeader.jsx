@@ -10,7 +10,8 @@ import {
   Loader2,
   Clock,
   Copy,
-  Hash
+  Hash,
+  RefreshCcw
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -40,7 +41,8 @@ const SessionHeader = ({
   onUpdate, 
   onUpload, 
   onProcess, 
-  onComplete 
+  onComplete,
+  onReprocess
 }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -180,8 +182,24 @@ const SessionHeader = ({
           </div>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".mp3,.wav,.webm,.mp4,.m4a" className="hidden" />
+          
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onReprocess}
+            disabled={uploading || processing}
+            className="border-white/10 text-[#A0A5B5] hover:bg-rpg-surface-hover"
+            title="Reprocessar áudios originais"
+          >
+            {processing && session.status === 'transcribing' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCcw className="w-4 h-4" />
+            )}
+          </Button>
+
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
@@ -197,7 +215,7 @@ const SessionHeader = ({
             disabled={processing || !session.raw_transcription}
             className="btn-gold"
           >
-            {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+            {processing && session.status === 'processing' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
             Processar com IA
           </Button>
           

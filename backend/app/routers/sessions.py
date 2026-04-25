@@ -19,6 +19,7 @@ Sessions router — CRUD, audio upload and AI processing.
 """
 from __future__ import annotations
 
+import asyncio
 import gzip
 import io
 import logging
@@ -26,10 +27,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.config import Settings, get_settings
+from app.models.common import SessionStatus
+from app.utils.audio import convert_to_ogg
 from app.database import get_db
 from app.exceptions import AppException, BadRequestException, NotFoundException
 from app.models.session import (
@@ -56,6 +59,9 @@ _ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".webm", ".mp4", ".m4a"}
 _ALLOWED_CONTENT_TYPES = {
     "audio/mpeg", "audio/mp3", "audio/wav", "audio/webm", "audio/mp4", "audio/m4a",
 }
+
+# Lock to prevent concurrent transcriptions (OOM protection and race condition avoidance)
+_transcription_lock = asyncio.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -192,12 +198,191 @@ async def update_segment(
 
 
 # ---------------------------------------------------------------------------
+# Background Task Helpers
+# ---------------------------------------------------------------------------
+
+async def _background_transcribe(
+    session_id: str,
+    audio_content: bytes,
+    filename: str,
+    file_path: Path,
+    speaker_id: Optional[str],
+    chunk_offset: float,
+    session_start_dt: Optional[datetime],
+    db: AsyncIOMotorDatabase,
+    settings: Settings,
+):
+    async with _transcription_lock:
+        try:
+            # Determine append mode
+            doc = await db.sessions.find_one({"id": session_id}, {"audio_file_id": 1})
+            is_append = bool(doc.get("audio_file_id"))
+
+            # Transcribe
+            svc = TranscriptionService(settings)
+            result = await svc.transcribe(
+                audio_content=audio_content,
+                filename=filename,
+                file_path=file_path,
+            )
+
+            # Build TranscriptionSegment documents
+            def _calc_absolute(relative: float) -> Optional[str]:
+                if session_start_dt and relative is not None:
+                    return (session_start_dt + timedelta(seconds=chunk_offset + relative)).isoformat()
+                return None
+
+            speaker = speaker_id or "unknown"
+            processed_segments = []
+
+            if result.segments:
+                for seg in result.segments:
+                    ts = TranscriptionSegment(
+                        speaker_discord_id=speaker,
+                        text=seg.text,
+                        timestamp_start=chunk_offset + seg.start,
+                        timestamp_end=chunk_offset + seg.end,
+                        timestamp_absolute_start=_calc_absolute(seg.start),
+                        timestamp_absolute_end=_calc_absolute(seg.end),
+                        message_type=MessageType.IC,
+                    )
+                    processed_segments.append(_serialize_datetime(ts.model_dump()))
+            else:
+                ts = TranscriptionSegment(
+                    speaker_discord_id=speaker,
+                    text=result.raw_text,
+                    timestamp_start=chunk_offset,
+                    timestamp_end=chunk_offset,
+                    timestamp_absolute_start=_calc_absolute(0),
+                    timestamp_absolute_end=_calc_absolute(0),
+                    message_type=MessageType.IC,
+                )
+                processed_segments.append(_serialize_datetime(ts.model_dump()))
+
+            # Store in MongoDB
+            if is_append:
+                # RE-FETCH to avoid race condition on raw_transcription
+                existing = await db.sessions.find_one({"id": session_id}, {"raw_transcription": 1})
+                existing_text = (existing or {}).get("raw_transcription", "")
+                new_text = f"{existing_text} {result.raw_text}".strip()
+                # Calculate new duration
+                last_end = 0
+                if result.segments:
+                    last_end = max(seg.end for seg in result.segments)
+                current_duration_sec = chunk_offset + last_end
+                current_duration_min = int(current_duration_sec // 60)
+
+                await db.sessions.update_one(
+                    {"id": session_id},
+                    {
+                        "$push": {"transcription_segments": {"$each": processed_segments}},
+                        "$set": {
+                            "raw_transcription": new_text,
+                            "status": SessionStatus.AWAITING_REVIEW.value,
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                            "duration_minutes": current_duration_min
+                        },
+                    },
+                )
+            else:
+                # Compress and store audio_file_id reference (lightweight approach)
+                audio_file_id = f"file:{file_path.name}"  # reference to disk path
+
+                await db.sessions.update_one(
+                    {"id": session_id},
+                    {
+                        "$set": {
+                            "raw_transcription": result.raw_text,
+                            "transcription_segments": processed_segments,
+                            "audio_file_id": audio_file_id,
+                            "status": SessionStatus.AWAITING_REVIEW.value,
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    },
+                )
+            logger.info("Background transcription completed for session %s", session_id)
+
+        except Exception as exc:
+            logger.exception("Background transcription error for session %s: %s", session_id, exc)
+            await db.sessions.update_one(
+                {"id": session_id},
+                {"$set": {"status": SessionStatus.AWAITING_REVIEW.value, "updated_at": datetime.now(timezone.utc).isoformat()}},
+            )
+
+
+async def _background_process(
+    session_id: str,
+    raw_transcription: str,
+    game_system: str,
+    mapping_context: str,
+    app_settings: AppSettings,
+    db: AsyncIOMotorDatabase,
+    settings: Settings,
+):
+    try:
+        processor = AIProcessorService(settings)
+        ai_result = await processor.process(
+            raw_transcription=raw_transcription,
+            game_system=game_system,
+            mapping_context=mapping_context,
+            app_settings=app_settings,
+        )
+
+        # Build diary entries
+        diary_entries = [
+            _serialize_datetime(
+                TechnicalDiaryEntry(
+                    category=entry.get("category", "event"),
+                    name=entry.get("name", ""),
+                    description=entry.get("description"),
+                ).model_dump()
+            )
+            for entry in ai_result.get("technical_diary", [])
+        ]
+
+        # Apply IC/OOC classification to existing segments
+        doc = await db.sessions.find_one({"id": session_id}, {"transcription_segments": 1})
+        segments = doc.get("transcription_segments", [])
+        filtered = ai_result.get("filtered_segments", [])
+        for i, seg in enumerate(segments):
+            if i < len(filtered):
+                seg["message_type"] = filtered[i].get("type", "ic")
+                if filtered[i].get("character"):
+                    seg["speaker_character_name"] = filtered[i]["character"]
+
+        llm_metadata = ai_result.get("metadata", {})
+        await db.sessions.update_one(
+            {"id": session_id},
+            {
+                "$set": {
+                    "technical_diary": diary_entries,
+                    "review_script": ai_result.get("review_script", raw_transcription),
+                    "transcription_segments": segments,
+                    "diary_metadata": llm_metadata,
+                    "review_metadata": llm_metadata,
+                    "status": SessionStatus.AWAITING_REVIEW.value,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+        )
+        logger.info("Background AI processing completed for session %s", session_id)
+
+    except Exception as exc:
+        logger.exception("Background AI processing error for session %s: %s", session_id, exc)
+        await db.sessions.update_one(
+            {"id": session_id},
+            {"$set": {"status": SessionStatus.AWAITING_REVIEW.value, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
+
+
+# ---------------------------------------------------------------------------
 # Audio upload + transcription
 # ---------------------------------------------------------------------------
 
 @router.post("/{session_id}/upload-audio")
 async def upload_audio(
     session_id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     speaker_id: Optional[str] = Form(None),
     session_start_time: Optional[str] = Form(None),
@@ -205,7 +390,7 @@ async def upload_audio(
     db: AsyncIOMotorDatabase = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
-    """Upload and transcribe audio for a session."""
+    """Upload and transcribe audio for a session (in background)."""
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:
         raise NotFoundException("Session", session_id)
@@ -223,130 +408,64 @@ async def upload_audio(
         except ValueError:
             logger.warning("Could not parse session_start_time: %s", session_start_time)
 
-    # Mark as transcribing
+    # Mark as transcribing and update session start time if provided
+    update_data = {
+        "status": SessionStatus.TRANSCRIBING.value,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    if session_start_time:
+        update_data["session_start_time"] = session_start_time
+
     await db.sessions.update_one(
         {"id": session_id},
-        {"$set": {"status": SessionStatus.TRANSCRIBING.value, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        {"$set": update_data},
     )
 
     try:
         audio_content = await file.read()
 
-        # Determine append mode
-        is_append = bool(doc.get("audio_file_id"))
-
-        # Persist compressed audio (GridFS via sync client runs in threadpool)
+        # Persist audio to disk
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Include speaker and offset in filename for reprocess capability
+        # We use a sortable offset string (6 digits for hours of RPG)
+        spk = speaker_id or "central"
+        offset_val = int(chunk_offset)
         safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in (file.filename or "audio"))
-        file_path = _UPLOAD_DIR / f"session_{session_id}_{timestamp}_{safe_name}"
+        
+        # New format: session_{id}_off_{offset}_spk_{speaker}_{timestamp}_{original_name}
+        file_path = _UPLOAD_DIR / f"session_{session_id}_off_{offset_val:06d}_spk_{spk}_{timestamp}_{safe_name}"
+        
         _UPLOAD_DIR.mkdir(exist_ok=True)
         file_path.write_bytes(audio_content)
 
-        # Transcribe
-        svc = TranscriptionService(settings)
-        result = await svc.transcribe(
+        # Queue background transcription
+        background_tasks.add_task(
+            _background_transcribe,
+            session_id=session_id,
             audio_content=audio_content,
             filename=file.filename or "audio.wav",
             file_path=file_path,
+            speaker_id=speaker_id,
+            chunk_offset=chunk_offset,
+            session_start_dt=session_start_dt,
+            db=db,
+            settings=settings,
         )
 
-        # Build TranscriptionSegment documents
-        def _calc_absolute(relative: float) -> Optional[str]:
-            if session_start_dt and relative is not None:
-                return (session_start_dt + timedelta(seconds=chunk_offset + relative)).isoformat()
-            return None
-
-        speaker = speaker_id or "unknown"
-        processed_segments = []
-
-        if result.segments:
-            for seg in result.segments:
-                ts = TranscriptionSegment(
-                    speaker_discord_id=speaker,
-                    text=seg.text,
-                    timestamp_start=chunk_offset + seg.start,
-                    timestamp_end=chunk_offset + seg.end,
-                    timestamp_absolute_start=_calc_absolute(seg.start),
-                    timestamp_absolute_end=_calc_absolute(seg.end),
-                    message_type=MessageType.IC,
-                )
-                processed_segments.append(_serialize_datetime(ts.model_dump()))
-        else:
-            ts = TranscriptionSegment(
-                speaker_discord_id=speaker,
-                text=result.raw_text,
-                timestamp_start=chunk_offset,
-                timestamp_end=chunk_offset,
-                timestamp_absolute_start=_calc_absolute(0),
-                timestamp_absolute_end=_calc_absolute(0),
-                message_type=MessageType.IC,
-            )
-            processed_segments.append(_serialize_datetime(ts.model_dump()))
-
-        # Store in MongoDB
-        if is_append:
-            existing = await db.sessions.find_one({"id": session_id}, {"raw_transcription": 1})
-            existing_text = (existing or {}).get("raw_transcription", "")
-            new_text = f"{existing_text} {result.raw_text}".strip()
-            # Calculate new duration
-            last_end = 0
-            if result.segments:
-                last_end = max(seg.end for seg in result.segments)
-            current_duration_sec = chunk_offset + last_end
-            current_duration_min = int(current_duration_sec // 60)
-
-            await db.sessions.update_one(
-                {"id": session_id},
-                {
-                    "$push": {"transcription_segments": {"$each": processed_segments}},
-                    "$set": {
-                        "raw_transcription": new_text,
-                        "status": SessionStatus.AWAITING_REVIEW.value,
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
-                        "duration_minutes": current_duration_min
-                    },
-                },
-            )
-        else:
-            # Compress and store audio_file_id reference (lightweight approach)
-            compressed = io.BytesIO()
-            with gzip.GzipFile(fileobj=compressed, mode="wb") as gz:
-                gz.write(audio_content)
-            audio_file_id = f"file:{file_path.name}"  # reference to disk path
-
-            await db.sessions.update_one(
-                {"id": session_id},
-                {
-                    "$set": {
-                        "raw_transcription": result.raw_text,
-                        "transcription_segments": processed_segments,
-                        "audio_file_id": audio_file_id,
-                        "status": SessionStatus.AWAITING_REVIEW.value,
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                },
-            )
-
         return {
-            "message": "Audio transcribed successfully",
-            "method": result.method,
-            "segments_count": len(processed_segments),
-            "is_append": is_append,
+            "message": "Upload successful. Transcription started in background.",
+            "session_id": session_id,
+            "status": SessionStatus.TRANSCRIBING.value
         }
 
     except Exception as exc:
-        logger.exception("Transcription error: %s", exc)
-        
-        # Determine if it's a quota error
-        msg = str(exc).lower()
-        if "quota" in msg or "rate limit" in msg or "429" in msg:
-            raise HTTPException(status_code=429, detail=f"Quota exceeded: {exc}") from exc
-
+        logger.exception("Upload error: %s", exc)
         await db.sessions.update_one(
             {"id": session_id},
             {"$set": {"status": SessionStatus.AWAITING_REVIEW.value, "updated_at": datetime.now(timezone.utc).isoformat()}},
         )
-        raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Upload failed: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -356,10 +475,11 @@ async def upload_audio(
 @router.post("/{session_id}/process")
 async def process_session(
     session_id: str,
+    background_tasks: BackgroundTasks,
     db: AsyncIOMotorDatabase = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
-    """Process transcription with AI to generate technical diary and review script."""
+    """Process transcription with AI (in background)."""
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:
         raise NotFoundException("Session", session_id)
@@ -377,58 +497,222 @@ async def process_session(
 
     app_settings = await _get_app_settings(db)
 
-    try:
-        processor = AIProcessorService(settings)
-        ai_result = await processor.process(
-            raw_transcription=raw_transcription,
-            game_system=doc.get("game_system", "D&D 5e"),
-            mapping_context=mapping_context,
-            app_settings=app_settings,
-        )
-    except AppException as exc:
-        raise exc
-    except Exception as exc:
-        logger.error("AI processing error: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Processing failed: {exc}") from exc
+    # Mark as processing
+    await db.sessions.update_one(
+        {"id": session_id},
+        {"$set": {"status": SessionStatus.PROCESSING.value, "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
 
-    # Build diary entries
-    diary_entries = [
-        _serialize_datetime(
-            TechnicalDiaryEntry(
-                category=entry.get("category", "event"),
-                name=entry.get("name", ""),
-                description=entry.get("description"),
-            ).model_dump()
-        )
-        for entry in ai_result.get("technical_diary", [])
-    ]
+    # Queue background processing
+    background_tasks.add_task(
+        _background_process,
+        session_id=session_id,
+        raw_transcription=raw_transcription,
+        game_system=doc.get("game_system", "D&D 5e"),
+        mapping_context=mapping_context,
+        app_settings=app_settings,
+        db=db,
+        settings=settings,
+    )
 
-    # Apply IC/OOC classification to existing segments
-    segments = doc.get("transcription_segments", [])
-    filtered = ai_result.get("filtered_segments", [])
-    for i, seg in enumerate(segments):
-        if i < len(filtered):
-            seg["message_type"] = filtered[i].get("type", "ic")
-            if filtered[i].get("character"):
-                seg["speaker_character_name"] = filtered[i]["character"]
+    return {
+        "message": "AI processing started in background.",
+        "session_id": session_id,
+        "status": SessionStatus.PROCESSING.value
+    }
 
-    llm_metadata = ai_result.get("metadata", {})
+
+@router.post("/{session_id}/reprocess")
+async def reprocess_transcription(
+    session_id: str,
+    background_tasks: BackgroundTasks,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """Reprocess all audio files for a session from scratch."""
+    doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not doc:
+        raise NotFoundException("Session", session_id)
+
+    # 1. Clear current transcription
     await db.sessions.update_one(
         {"id": session_id},
         {
             "$set": {
-                "technical_diary": diary_entries,
-                "review_script": ai_result.get("review_script", raw_transcription),
-                "transcription_segments": segments,
-                "diary_metadata": llm_metadata,
-                "review_metadata": llm_metadata,
-                "status": SessionStatus.AWAITING_REVIEW.value,
+                "status": SessionStatus.TRANSCRIBING.value,
+                "raw_transcription": "",
+                "transcription_segments": [],
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
         },
     )
 
-    return {"message": "Session processed successfully", "diary_entries": len(diary_entries)}
+    # 2. Find all audio files for this session
+    audio_files = list(_UPLOAD_DIR.glob(f"session_{session_id}_*"))
+    
+    import re
+    def _sort_key(f: Path):
+        # 1. New Format: _off_{offset}_
+        match = re.search(r"_off_(\d+)", f.name)
+        if match:
+            return (0, int(match.group(1)), f.name)
+        # 2. Old Format / Bridge Format: _1714000000000.
+        ts_match = re.search(r"_(\d{13})\.", f.name)
+        if ts_match:
+            return (0, int(ts_match.group(1)), f.name)
+        # 3. Fallback: filename
+        return (1, 0, f.name)
+
+    audio_files.sort(key=_sort_key)
+    
+    if not audio_files:
+        # Fallback if no files found but we have an audio_file_id
+        if doc.get("audio_file_id") and doc["audio_file_id"].startswith("file:"):
+            legacy_file = _UPLOAD_DIR / doc["audio_file_id"].replace("file:", "")
+            if legacy_file.exists():
+                audio_files = [legacy_file]
+
+    if not audio_files:
+        raise BadRequestException("No audio files found on disk for this session")
+
+    # 3. Queue a sequential background reprocess
+    background_tasks.add_task(
+        _background_reprocess_all,
+        session_id=session_id,
+        audio_files=audio_files,
+        db=db,
+        settings=settings,
+    )
+
+    return {
+        "message": f"Reprocessing {len(audio_files)} audio files started.",
+        "session_id": session_id,
+        "status": SessionStatus.TRANSCRIBING.value
+    }
+
+
+async def _background_reprocess_all(
+    session_id: str,
+    audio_files: List[Path],
+    db: AsyncIOMotorDatabase,
+    settings: Settings,
+):
+    """Sequential reprocessing of all files within the transcription lock."""
+    async with _transcription_lock:
+        try:
+            svc = TranscriptionService(settings)
+            total_duration_sec = 0.0
+            
+            # 1. Pre-scan files to find the baseline if missing in DB
+            session_start_unix: float = 0.0
+            session_doc = await db.sessions.find_one({"id": session_id}, {"session_start_time": 1})
+            if session_doc and session_doc.get("session_start_time"):
+                try:
+                    dt = datetime.fromisoformat(session_doc["session_start_time"].replace("Z", "+00:00"))
+                    session_start_unix = dt.timestamp()
+                except Exception: pass
+
+            import re
+            
+            # If still 0, find the earliest Unix timestamp among files
+            if session_start_unix == 0:
+                all_found_ts = []
+                for f in audio_files:
+                    ts_match = re.search(r"_(\d{13})\.", f.name)
+                    if ts_match:
+                        all_found_ts.append(float(ts_match.group(1)) / 1000.0)
+                if all_found_ts:
+                    session_start_unix = min(all_found_ts)
+                    logger.info(f"Baseline established from earliest file: {session_start_unix}")
+
+            segments_objs: List[TranscriptionSegment] = []
+            
+            for idx, file_path in enumerate(audio_files):
+                logger.info(f"Reprocessing file {idx+1}/{len(audio_files)}: {file_path.name}")
+                
+                content = file_path.read_bytes()
+                
+                # Default values
+                chunk_offset = total_duration_sec
+                speaker = "unknown"
+                
+                # Try to determine exact offset
+                match_new = re.search(r"_off_(\d+)_spk_([^_]+)", file_path.name)
+                if match_new:
+                    chunk_offset = float(match_new.group(1))
+                    speaker = match_new.group(2)
+                    if speaker == "central": speaker = "unknown"
+                else:
+                    spk_match = re.search(r"user_(\d+)", file_path.name)
+                    speaker = spk_match.group(1) if spk_match else "unknown"
+                    
+                    ts_match = re.search(r"_(\d{13})\.", file_path.name)
+                    if ts_match and session_start_unix > 0:
+                        file_unix = float(ts_match.group(1)) / 1000.0
+                        chunk_offset = max(0.0, file_unix - session_start_unix)
+                    else:
+                        chunk_offset = total_duration_sec
+
+                result = await svc.transcribe(
+                    audio_content=content,
+                    filename=file_path.name,
+                    file_path=file_path,
+                )
+                
+                for seg in result.segments:
+                    start_val = chunk_offset + seg.start
+                    end_val = chunk_offset + seg.end
+                    
+                    # Absolute time is session_start + offset
+                    abs_dt_start = datetime.fromtimestamp(session_start_unix + start_val, tz=timezone.utc)
+                    abs_dt_end = datetime.fromtimestamp(session_start_unix + end_val, tz=timezone.utc)
+
+                    ts = TranscriptionSegment(
+                        speaker_discord_id=speaker,
+                        text=seg.text,
+                        timestamp_start=start_val,
+                        timestamp_end=end_val,
+                        timestamp_absolute_start=abs_dt_start.isoformat(),
+                        timestamp_absolute_end=abs_dt_end.isoformat(),
+                        message_type=MessageType.IC,
+                    )
+                    segments_objs.append(ts)
+                
+                # Update total duration for fallback tracking
+                if result.segments:
+                    file_end = max(seg.end for seg in result.segments)
+                    total_duration_sec = max(total_duration_sec, chunk_offset + file_end)
+                else:
+                    total_duration_sec = max(total_duration_sec, chunk_offset + 60.0)
+
+            # Sort ALL segments from ALL files chronologically
+            segments_objs.sort(key=lambda x: x.timestamp_start)
+            
+            # Final data for DB
+            all_segments = [_serialize_datetime(s.model_dump()) for s in segments_objs]
+            full_text = " ".join(s.text for s in segments_objs).strip()
+
+            # Update DB once at the end
+            await db.sessions.update_one(
+                {"id": session_id},
+                {
+                    "$set": {
+                        "raw_transcription": full_text,
+                        "transcription_segments": all_segments,
+                        "status": SessionStatus.AWAITING_REVIEW.value,
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "duration_minutes": int(total_duration_sec // 60)
+                    }
+                },
+            )
+            logger.info(f"Reprocess completed for session {session_id}")
+
+        except Exception as exc:
+            logger.exception(f"Reprocess error for session {session_id}: {exc}")
+            await db.sessions.update_one(
+                {"id": session_id},
+                {"$set": {"status": SessionStatus.AWAITING_REVIEW.value}}
+            )
 
 
 @router.post("/{session_id}/narration")
@@ -520,6 +804,11 @@ async def generate_narration(
         
         else:
             raise BadRequestException(f"Provedor de TTS inválido: {used_provider}")
+        
+        # Convert to OGG for space optimization
+        upload_dir = Path(__file__).parent.parent.parent / "uploads" / "narrations"
+        final_ogg_path = await convert_to_ogg(upload_dir / filename)
+        filename = final_ogg_path.name
         
         # Audio is served via static files at /uploads/narrations/
         audio_url = f"/uploads/narrations/{filename}"
