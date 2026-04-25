@@ -13,7 +13,7 @@ export const useSession = (sessionId) => {
     if (!sessionId) return;
     try {
       setLoading(true);
-      const response = await api.get(`/sessions/${sessionId}`);
+      const response = await api.get(`/sessions/${sessionId}/`);
       setSession(response.data);
     } catch (error) {
       console.error("Error fetching session:", error);
@@ -29,29 +29,34 @@ export const useSession = (sessionId) => {
 
   // Polling logic for background tasks
   useEffect(() => {
+    if (!sessionId) return;
+    
     let interval;
     const shouldPoll = session?.status === "transcribing" || session?.status === "processing";
 
     if (shouldPoll) {
-      interval = setInterval(() => {
-        // We use a simplified fetch here to avoid setting loading state to true every time
-        api.get(`/sessions/${sessionId}`)
-          .then(response => {
+      interval = setInterval(async () => {
+        try {
+          const response = await api.get(`/sessions/${sessionId}/`);
+          // Only update if status changed or data is different
+          if (response.data.status !== session?.status || JSON.stringify(response.data) !== JSON.stringify(session)) {
             setSession(response.data);
-          })
-          .catch(err => console.error("Polling error:", err));
-      }, 3000); // Poll every 3 seconds
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, 4000); // Poll every 4 seconds (slightly less aggressive)
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [sessionId, session?.status]);
+  }, [sessionId, session?.status, session]);
 
   const updateSession = async (updates) => {
     setSaving(true);
     try {
-      const response = await api.put(`/sessions/${sessionId}`, updates);
+      const response = await api.put(`/sessions/${sessionId}/`, updates);
       setSession(prev => ({ ...prev, ...response.data }));
       toast.success("Informações salvas!");
       return response.data;
@@ -69,7 +74,7 @@ export const useSession = (sessionId) => {
 
     setUploading(true);
     try {
-      const response = await api.post(`/sessions/${sessionId}/upload-audio`, formData, {
+      const response = await api.post(`/sessions/${sessionId}/upload-audio/`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       toast.success("Áudio enviado. Transcrição iniciada em segundo plano!");
@@ -88,7 +93,7 @@ export const useSession = (sessionId) => {
   const processWithAI = async () => {
     setProcessing(true);
     try {
-      const response = await api.post(`/sessions/${sessionId}/process`);
+      const response = await api.post(`/sessions/${sessionId}/process/`);
       toast.success("Processamento iniciado em segundo plano!");
       if (response.data.status) {
         setSession(prev => ({ ...prev, status: response.data.status }));
@@ -104,7 +109,7 @@ export const useSession = (sessionId) => {
 
   const updateSegment = async (segmentId, updates) => {
     try {
-      await api.put(`/sessions/${sessionId}/segments/${segmentId}`, updates);
+      await api.put(`/sessions/${sessionId}/segments/${segmentId}/`, updates);
       await fetchSession();
       toast.success("Segmento atualizado!");
     } catch (error) {
@@ -121,7 +126,7 @@ export const useSession = (sessionId) => {
     setProcessing(true);
     try {
       const { provider, voiceId } = options;
-      let url = `/sessions/${sessionId}/narration`;
+      let url = `/sessions/${sessionId}/narration/`;
       
       const params = new URLSearchParams();
       if (provider) params.append("provider", provider);
@@ -146,7 +151,7 @@ export const useSession = (sessionId) => {
   const reprocessTranscription = async () => {
     setProcessing(true);
     try {
-      const response = await api.post(`/sessions/${sessionId}/reprocess`);
+      const response = await api.post(`/sessions/${sessionId}/reprocess/`);
       toast.success(response.data.message || "Reprocessamento iniciado!");
       if (response.data.status) {
         setSession(prev => ({ ...prev, status: response.data.status }));
@@ -154,6 +159,60 @@ export const useSession = (sessionId) => {
       await fetchSession();
     } catch (error) {
       const detail = error.response?.data?.detail || "Erro ao reprocessar áudio";
+      toast.error(detail);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const exportMarkdown = async () => {
+    try {
+      const response = await api.get(`/sessions/${sessionId}/export/markdown/`, {
+        responseType: 'blob'
+      });
+      const filename = `EchoBot_${session?.name?.replace(/\s+/g, '_') || 'session'}.md`;
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Markdown baixado!");
+    } catch (error) {
+      toast.error("Erro ao exportar Markdown");
+    }
+  };
+
+  const exportPDF = async () => {
+    try {
+      const response = await api.get(`/sessions/${sessionId}/export/pdf/`, {
+        responseType: 'blob'
+      });
+      const filename = `EchoBot_${session?.name?.replace(/\s+/g, '_') || 'session'}.pdf`;
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("PDF baixado!");
+    } catch (error) {
+      toast.error("Erro ao exportar PDF");
+    }
+  };
+
+  const exportNotion = async () => {
+    setProcessing(true);
+    try {
+      const response = await api.post(`/sessions/${sessionId}/export/notion/`);
+      toast.success("Exportado para o Notion!");
+      if (response.data.url) {
+        window.open(response.data.url, '_blank');
+      }
+    } catch (error) {
+      const detail = error.response?.data?.detail || "Erro ao exportar para o Notion";
       toast.error(detail);
     } finally {
       setProcessing(false);
@@ -176,6 +235,10 @@ export const useSession = (sessionId) => {
     markAsCompleted,
     generateNarration,
     reprocessTranscription,
+    exportMarkdown,
+    exportPDF,
+    exportNotion,
     refresh: fetchSession
   };
 };
+

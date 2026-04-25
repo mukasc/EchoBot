@@ -15,7 +15,8 @@ import {
   Plus,
   Trash2,
   Layers,
-  ShieldAlert
+  ShieldAlert,
+  ExternalLink
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
@@ -96,7 +97,9 @@ const Settings = () => {
     kokoro_voice: "af_heart",
     tts_provider: "elevenlabs",
     llm_fallbacks: [],
-    llm_primary_enabled: true
+    llm_primary_enabled: true,
+    notion_api_key: "",
+    notion_page_id: ""
   });
 
   const [visibleFields, setVisibleFields] = useState({});
@@ -143,7 +146,9 @@ const Settings = () => {
         kokoro_voice: settings.kokoro_voice || "af_heart",
         tts_provider: settings.tts_provider || "elevenlabs",
         llm_fallbacks: Array.isArray(settings.llm_fallbacks) ? settings.llm_fallbacks : [],
-        llm_primary_enabled: settings.llm_primary_enabled ?? true
+        llm_primary_enabled: settings.llm_primary_enabled ?? true,
+        notion_api_key: settings.notion_api_key || "",
+        notion_page_id: settings.notion_page_id || ""
       });
     }
   }, [settings]);
@@ -162,8 +167,8 @@ const Settings = () => {
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const [vRes, uRes] = await Promise.all([
-          fetch(`${baseUrl}/api/settings/elevenlabs/voices?api_key=${formData.elevenlabs_api_key}`),
-          fetch(`${baseUrl}/api/settings/elevenlabs/usage?api_key=${formData.elevenlabs_api_key}`)
+          fetch(`${baseUrl}/api/settings/elevenlabs/voices/?api_key=${formData.elevenlabs_api_key}`),
+          fetch(`${baseUrl}/api/settings/elevenlabs/usage/?api_key=${formData.elevenlabs_api_key}`)
         ]);
 
         if (vRes.ok) {
@@ -198,8 +203,8 @@ const Settings = () => {
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const [vRes, uRes] = await Promise.all([
-          fetch(`${baseUrl}/api/settings/deepgram/voices?api_key=${formData.deepgram_api_key}`),
-          fetch(`${baseUrl}/api/settings/deepgram/usage?api_key=${formData.deepgram_api_key}`)
+          fetch(`${baseUrl}/api/settings/deepgram/voices/?api_key=${formData.deepgram_api_key}`),
+          fetch(`${baseUrl}/api/settings/deepgram/usage/?api_key=${formData.deepgram_api_key}`)
         ]);
         if (vRes.ok) {
           const data = await vRes.json();
@@ -222,7 +227,7 @@ const Settings = () => {
       setFetchingKoVoices(true);
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${baseUrl}/api/settings/kokoro/voices`);
+        const res = await fetch(`${baseUrl}/api/settings/kokoro/voices/`);
         if (res.ok) {
           const data = await res.json();
           setKoVoices(data);
@@ -248,7 +253,7 @@ const Settings = () => {
       setFetchingModels(true);
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${baseUrl}/api/settings/llm/openrouter/models`);
+        const res = await fetch(`${baseUrl}/api/settings/llm/openrouter/models/`);
         if (res.ok) {
           const data = await res.json();
           setDynamicModels(prev => ({ ...prev, openrouter: data }));
@@ -266,7 +271,7 @@ const Settings = () => {
       setFetchingModels(true);
       try {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${baseUrl}/api/settings/llm/groq/models`);
+        const res = await fetch(`${baseUrl}/api/settings/llm/groq/models/`);
         if (res.ok) {
           const data = await res.json();
           setDynamicModels(prev => ({ ...prev, groq: data }));
@@ -995,6 +1000,57 @@ const Settings = () => {
                   )}
                 </SelectContent>
               </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notion Integration Settings */}
+        <Card className="card-rpg mb-6 border-zinc-500/30">
+          <CardHeader className="border-b border-white/10">
+            <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
+              <ExternalLink className="w-5 h-5 text-zinc-400" />
+              Integração com Notion.so
+            </CardTitle>
+            <CardDescription className="text-[#A0A5B5]">
+              Exporte seus diários e roteiros diretamente para uma página do Notion
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="notion-key">Notion API Key</Label>
+                <div className="relative">
+                  <Input
+                    id="notion-key"
+                    type={visibleFields.notion_api_key ? "text" : "password"}
+                    value={formData.notion_api_key}
+                    onChange={(e) => setFormData({ ...formData, notion_api_key: e.target.value })}
+                    placeholder="secret_..."
+                    className="input-dark font-mono text-sm pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleVisibility('notion_api_key')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6C7280] hover:text-white transition-colors"
+                  >
+                    {visibleFields.notion_api_key ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notion-page-id">Parent Page/Database ID</Label>
+                <Input
+                  id="notion-page-id"
+                  value={formData.notion_page_id}
+                  onChange={(e) => setFormData({ ...formData, notion_page_id: e.target.value })}
+                  placeholder="ID da página onde as notas serão criadas"
+                  className="input-dark text-sm"
+                />
+                <p className="text-[10px] text-[#6C7280]">
+                  Dica: O ID é a parte final da URL da página no Notion. Certifique-se de compartilhar a página com sua Integração (Integration).
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

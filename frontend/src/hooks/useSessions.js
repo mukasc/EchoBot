@@ -38,7 +38,7 @@ export const useSessions = () => {
 
   const deleteSession = async (id) => {
     try {
-      await api.delete(`/sessions/${id}`);
+      await api.delete(`/sessions/${id}/`);
       setSessions(prev => prev.filter(s => s.id !== id));
       toast.success("Sessão excluída");
     } catch (error) {
@@ -51,7 +51,7 @@ export const useSessions = () => {
   const createSampleSession = async () => {
     try {
       setLoading(true);
-      await api.post("/demo/create-sample-session");
+      await api.post("/demo/create-sample-session/");
       await fetchSessions();
       toast.success("Sessão de exemplo criada!");
     } catch (error) {

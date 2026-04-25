@@ -139,7 +139,7 @@ async def create_sample_session(db: AsyncIOMotorDatabase = Depends(get_db)):
     return {"message": "Sample session created", "session_id": session.id}
 
 
-@router.get("/bot-setup-instructions")
+@router.get("/bot-setup-instructions/")
 async def get_bot_setup_instructions():
     """Return instructions for setting up the Discord bot."""
     return {

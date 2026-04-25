@@ -211,91 +211,86 @@ class AIProcessorService:
     ) -> str:
         """Dispatches the call to the specific provider implementation."""
         if provider == LLMProvider.OPENAI:
-            return self._call_openai(api_key, prompt, model if model != "default" else "gpt-4o")
+            return await self._call_openai(api_key, prompt, model if model != "default" else "gpt-4o")
 
         if provider == LLMProvider.GEMINI:
-            return self._call_gemini(api_key, prompt, model if model != "default" else "gemini-2.0-flash")
+            return await self._call_gemini(api_key, prompt, model if model != "default" else "gemini-2.0-flash")
 
         if provider == LLMProvider.ANTHROPIC:
-            return self._call_anthropic(
+            return await self._call_anthropic(
                 api_key, prompt, model if model != "default" else "claude-3-5-sonnet-20240620"
             )
 
         if provider == LLMProvider.OPENROUTER:
-            return self._call_openrouter(
+            return await self._call_openrouter(
                 api_key, prompt, model if model != "default" else "google/gemini-2.0-flash-001"
             )
 
         if provider == LLMProvider.GROQ:
-            return self._call_groq(
+            return await self._call_groq(
                 api_key, prompt, model if model != "default" else "llama3-70b-8192"
             )
 
         raise ValueError(f"Unknown LLM provider: {provider}")
 
-    @staticmethod
-    def _call_openai(api_key: str, prompt: str, model: str) -> str:
-        import openai
+    async def _call_openai(self, api_key: str, prompt: str, model: str) -> str:
+        from openai import AsyncOpenAI
 
-        client = openai.OpenAI(api_key=api_key)
-        completion = client.chat.completions.create(
+        client = AsyncOpenAI(api_key=api_key)
+        completion = await client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
             response_format={"type": "json_object"},
+            timeout=60.0,
         )
         return completion.choices[0].message.content or ""
 
-    @staticmethod
-    def _call_openrouter(api_key: str, prompt: str, model: str) -> str:
-        import openai
+    async def _call_openrouter(self, api_key: str, prompt: str, model: str) -> str:
+        from openai import AsyncOpenAI
 
         # OpenRouter is OpenAI-compatible
-        client = openai.OpenAI(
+        client = AsyncOpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
             default_headers={
-                "HTTP-Referer": "https://github.com/mukas/EchoBot", # Optional
-                "X-Title": "EchoBot", # Optional
+                "HTTP-Referer": "https://github.com/mukas/EchoBot",
+                "X-Title": "EchoBot",
             }
         )
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-            # OpenRouter supports json_object if the underlying model does, 
-            # but it's safer to just let it return text and we parse it.
-            # However, GPT-4o and Gemini via OpenRouter usually support it.
             response_format={"type": "json_object"} if any(m in model.lower() for m in ["gemini", "gpt", "llama-3"]) else None,
+            timeout=60.0,
         )
         return completion.choices[0].message.content or ""
 
-    @staticmethod
-    def _call_groq(api_key: str, prompt: str, model: str) -> str:
-        import openai
+    async def _call_groq(self, api_key: str, prompt: str, model: str) -> str:
+        from openai import AsyncOpenAI
 
         # Groq is OpenAI-compatible
-        client = openai.OpenAI(
+        client = AsyncOpenAI(
             base_url="https://api.groq.com/openai/v1",
             api_key=api_key,
         )
-        completion = client.chat.completions.create(
+        completion = await client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-            # Groq supports JSON mode for most modern models
             response_format={"type": "json_object"} if any(m in model.lower() for m in ["llama-3", "llama3", "mixtral"]) else None,
+            timeout=60.0,
         )
         return completion.choices[0].message.content or ""
 
-    @staticmethod
-    def _call_gemini(api_key: str, prompt: str, model_name: str) -> str:
+    async def _call_gemini(self, api_key: str, prompt: str, model_name: str) -> str:
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
@@ -303,22 +298,22 @@ class AIProcessorService:
             model_name=model_name,
             system_instruction=_SYSTEM_PROMPT,
         )
-        response = model.generate_content(
+        response = await model.generate_content_async(
             prompt,
             generation_config={"response_mime_type": "application/json"}
         )
         return response.text
 
-    @staticmethod
-    def _call_anthropic(api_key: str, prompt: str, model: str) -> str:
-        import anthropic
+    async def _call_anthropic(self, api_key: str, prompt: str, model: str) -> str:
+        from anthropic import AsyncAnthropic
 
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
+        client = AsyncAnthropic(api_key=api_key)
+        message = await client.messages.create(
             model=model,
             max_tokens=4096,
             system=_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
+            timeout=60.0,
         )
         return message.content[0].text
 

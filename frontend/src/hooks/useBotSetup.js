@@ -9,7 +9,7 @@ export const useBotSetup = () => {
   useEffect(() => {
     const fetchInstructions = async () => {
       try {
-        const response = await api.get("/bot-setup-instructions");
+        const response = await api.get("/bot-setup-instructions/");
         setInstructions(response.data);
       } catch (error) {
         console.error("Error fetching instructions:", error);

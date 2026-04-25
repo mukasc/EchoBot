@@ -28,7 +28,10 @@ const SessionDetail = () => {
     updateSegment, 
     markAsCompleted,
     generateNarration,
-    reprocessTranscription
+    reprocessTranscription,
+    exportMarkdown,
+    exportPDF,
+    exportNotion
   } = useSession(id);
   
   const { getSpeakerInfo, loading: mappingsLoading } = useCharacterMappings();
@@ -56,7 +59,11 @@ const SessionDetail = () => {
           onProcess={processWithAI}
           onComplete={markAsCompleted}
           onReprocess={reprocessTranscription}
+          onExportMD={exportMarkdown}
+          onExportPDF={exportPDF}
+          onExportNotion={exportNotion}
         />
+
 
         <Tabs defaultValue="transcription" className="space-y-6">
           <TabsList className="bg-rpg-surface border border-white/10 p-1">
@@ -96,6 +103,9 @@ const SessionDetail = () => {
             <TechnicalDiary 
               entries={session.technical_diary} 
               metadata={session.diary_metadata}
+              onExportMD={exportMarkdown}
+              onExportPDF={exportPDF}
+              onExportNotion={exportNotion}
             />
           </TabsContent>
 
@@ -106,6 +116,9 @@ const SessionDetail = () => {
               metadata={session.review_metadata}
               onSave={updateSession}
               onGenerateNarration={generateNarration}
+              onExportMD={exportMarkdown}
+              onExportPDF={exportPDF}
+              onExportNotion={exportNotion}
               saving={saving}
               processing={processing}
             />

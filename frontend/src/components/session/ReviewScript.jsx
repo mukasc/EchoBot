@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
-import { Edit3, Save, X, Loader2, Mic, Volume2 } from "lucide-react";
-import axios from "axios";
+import { Edit3, Save, X, Loader2, Mic, Volume2, FileCode, FileText, ExternalLink } from "lucide-react";
+import api from "../../lib/api";
+import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-
-import { Badge } from "../ui/badge";
 
 const ReviewScript = ({ 
   initialScript, 
   narrationUrl, 
   metadata,
   onSave, 
-  onGenerateNarration, 
+  onGenerateNarration,
+  onExportMD,
+  onExportPDF,
+  onExportNotion,
   saving, 
   processing 
 }) => {
@@ -29,7 +31,7 @@ const ReviewScript = ({
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/settings/tts/providers`);
+        const response = await api.get("/settings/tts/providers/");
         if (response.data && Array.isArray(response.data)) {
           setAvailableProviders(response.data);
           
@@ -50,7 +52,7 @@ const ReviewScript = ({
       if (!selectedProvider) return;
       setLoadingVoices(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/settings/tts/voices/${selectedProvider}`);
+        const response = await api.get(`/settings/tts/voices/${selectedProvider}/`);
         if (response.data && Array.isArray(response.data)) {
           setAvailableVoices(response.data);
           // Auto-select first voice or a default one
@@ -197,6 +199,36 @@ const ReviewScript = ({
               </Button>
             </div>
           )}
+
+          <div className="flex items-center gap-2 border-l border-white/10 pl-3 ml-1">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onExportMD}
+              className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
+              title="Exportar Markdown"
+            >
+              <FileCode className="w-3.5 h-3.5" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onExportPDF}
+              className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
+              title="Exportar PDF"
+            >
+              <FileText className="w-3.5 h-3.5" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onExportNotion}
+              className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
+              title="Sincronizar com Notion"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-6 space-y-6">

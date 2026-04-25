@@ -43,7 +43,7 @@ export const useCharacterMappings = () => {
   const saveMapping = async (formData, editingId = null) => {
     try {
       if (editingId) {
-        await api.put(`/character-mappings/${editingId}`, formData);
+        await api.put(`/character-mappings/${editingId}/`, formData);
       } else {
         await api.post("/character-mappings/", formData);
       }
@@ -57,7 +57,7 @@ export const useCharacterMappings = () => {
 
   const deleteMapping = async (id) => {
     try {
-      await api.delete(`/character-mappings/${id}`);
+      await api.delete(`/character-mappings/${id}/`);
       setMappings(prev => prev.filter(m => m.id !== id));
       toast.success("Mapeamento excluído");
     } catch (error) {

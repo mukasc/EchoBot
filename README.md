@@ -17,6 +17,7 @@
 [![Kokoro TTS](https://img.shields.io/badge/Kokoro_TTS-6B4E71?style=flat&logo=pyup&logoColor=white)](https://huggingface.co/hexgrad/Kokoro-82M)
 [![OpenRouter](https://img.shields.io/badge/OpenRouter-000000?style=flat&logo=openai&logoColor=white)](https://openrouter.ai/)
 [![Groq](https://img.shields.io/badge/Groq-f55036?style=flat&logo=speedtest&logoColor=white)](https://groq.com/)
+[![Notion](https://img.shields.io/badge/Notion-000000?style=flat&logo=notion&logoColor=white)](https://www.notion.so/)
 [![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=flat&logo=pytest&logoColor=white)](https://docs.pytest.org/)
 [![Attributions](https://img.shields.io/badge/Attributions-List-orange.svg)](ATTRIBUTIONS.md)
@@ -49,6 +50,11 @@ graph TD
         G[Frontend React]
     end
 
+    subgraph "Exportação & Arquivamento"
+        F[Notion.so]
+        H[PDF / Markdown]
+    end
+
     B -->|POST /api/sessions/audio| C
     C <-->|Persistência| D
     
@@ -56,6 +62,9 @@ graph TD
     E --- E1
     E --- E2
     E --- E3
+    
+    C -->|Export| F
+    C -->|Download| H
     
     G <-->|Gestão & Revisão| C
     G -.->|Ouve Narração| E3
@@ -80,7 +89,9 @@ graph TD
 -   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs**, **Deepgram (Aura)** ou **Kokoro Local (Nativo Python)**.
 -   **Multi-Provider LLM & Fallback**: Suporte integrado para **OpenRouter** e **Groq** com um sistema inteligente de contingência (fallbacks) que alterna automaticamente entre provedores em caso de falha.
 -   **Simulação de Fallback Forçado**: Possibilidade de desativar o provedor principal para testar e validar planos de contingência diretamente na interface.
--   **Gestão de Chaves Centralizada**: As chaves de API e tokens do Discord são gerenciados diretamente na interface web e persistidos de forma criptografada no MongoDB.
+-   **Exportação Multiformato**: Gere arquivos **Markdown** ou **PDF Premium** (com tema RPG luxuoso) para seus diários e roteiros.
+-   **Integração com Notion**: Exporte suas crônicas diretamente para uma página ou base de dados no **Notion.so** com um clique.
+-   **Gestão de Chaves Centralizada**: As chaves de API (incluindo Notion) e tokens do Discord são gerenciados diretamente na interface web e persistidos de forma criptografada no MongoDB.
 -   **Interface Temática**: Design inspirado em arquétipos de luxo e fantasia sombria (*Dark Fantasy*).
 -   **Otimização de Áudio**: Utiliza o formato **Ogg/Opus (64kbps, mono)** para garantir arquivos minúsculos com clareza ideal para transcrição por IA, economizando até 90% de espaço em relação ao WAV puro.
 -   **TTS Local Integrado**: O sistema inclui o motor **Kokoro v1.0** rodando nativamente em Python (via ONNX), permitindo narrações de alta qualidade com **custo zero** e sem necessidade de GPU ou Docker.

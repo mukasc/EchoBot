@@ -1,6 +1,7 @@
-import { Package, User, MapPin, Zap, Star } from "lucide-react";
+import { Package, User, MapPin, Zap, Star, FileCode, FileText, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 
 const categoryIcons = {
   npc: User,
@@ -18,22 +19,57 @@ const categoryLabels = {
   event: "Evento"
 };
 
-const TechnicalDiary = ({ entries, metadata }) => {
+const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNotion }) => {
   return (
     <Card className="card-rpg">
-      <CardHeader className="border-b border-white/10 flex flex-row items-center justify-between">
-        <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-          <Package className="w-5 h-5 text-rpg-gold" />
-          Diário Técnico
-        </CardTitle>
-        {metadata && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-[#6C7280] uppercase">Processado por:</span>
-            <Badge variant="outline" className="text-[10px] bg-white/5 border-white/10 text-[#A0A5B5] capitalize">
-              {metadata.provider} • {metadata.model}
-            </Badge>
-          </div>
-        )}
+      <CardHeader className="border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
+            <Package className="w-5 h-5 text-rpg-gold" />
+            Diário Técnico
+          </CardTitle>
+          {metadata && (
+            <div className="flex items-center gap-2 ml-7">
+              <span className="text-[10px] text-[#6C7280] uppercase">Processado por:</span>
+              <Badge variant="outline" className="text-[10px] bg-white/5 border-white/10 text-[#A0A5B5] capitalize">
+                {metadata.provider} • {metadata.model}
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onExportMD}
+            className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
+            title="Exportar Markdown"
+          >
+            <FileCode className="w-3.5 h-3.5 mr-1.5" />
+            MD
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onExportPDF}
+            className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
+            title="Exportar PDF"
+          >
+            <FileText className="w-3.5 h-3.5 mr-1.5" />
+            PDF
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onExportNotion}
+            className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
+            title="Sincronizar com Notion"
+          >
+            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+            Notion
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-6">
         {entries?.length > 0 ? (

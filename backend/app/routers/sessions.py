@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import Response, StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.config import Settings, get_settings
@@ -49,6 +50,7 @@ from app.models.settings import AppSettings
 from app.services.ai_processor import AIProcessorService
 from app.services.elevenlabs import ElevenLabsService
 from app.services.transcription import TranscriptionService
+from app.services.export import ExportService
 
 logger = logging.getLogger(__name__)
 
@@ -89,11 +91,7 @@ def _deserialize_session(doc: dict) -> Session:
     return Session(**doc)
 
 
-async def _get_app_settings(db: AsyncIOMotorDatabase) -> AppSettings:
-    doc = await db.settings.find_one({"id": "app_settings"}, {"_id": 0})
-    if doc:
-        return AppSettings(**doc)
-    return AppSettings()
+from app.services.settings_service import get_app_settings as _get_app_settings
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +317,13 @@ async def _background_process(
     db: AsyncIOMotorDatabase,
     settings: Settings,
 ):
+    logger.info("Background AI processing started for session %s", session_id)
     try:
+        session = await db.sessions.find_one({"id": session_id})
+        if not session:
+            logger.warning("Session %s not found in background process", session_id)
+            return
+
         processor = AIProcessorService(settings)
         ai_result = await processor.process(
             raw_transcription=raw_transcription,
@@ -341,8 +345,7 @@ async def _background_process(
         ]
 
         # Apply IC/OOC classification to existing segments
-        doc = await db.sessions.find_one({"id": session_id}, {"transcription_segments": 1})
-        segments = doc.get("transcription_segments", [])
+        segments = session.get("transcription_segments", [])
         filtered = ai_result.get("filtered_segments", [])
         for i, seg in enumerate(segments):
             if i < len(filtered):
@@ -365,10 +368,10 @@ async def _background_process(
                 }
             },
         )
-        logger.info("Background AI processing completed for session %s", session_id)
+        logger.info("Background AI processing successfully completed for session %s", session_id)
 
     except Exception as exc:
-        logger.exception("Background AI processing error for session %s: %s", session_id, exc)
+        logger.exception("CRITICAL: Background AI processing error for session %s: %s", session_id, exc)
         await db.sessions.update_one(
             {"id": session_id},
             {"$set": {"status": SessionStatus.AWAITING_REVIEW.value, "updated_at": datetime.now(timezone.utc).isoformat()}},
@@ -379,7 +382,7 @@ async def _background_process(
 # Audio upload + transcription
 # ---------------------------------------------------------------------------
 
-@router.post("/{session_id}/upload-audio")
+@router.post("/{session_id}/upload-audio/")
 async def upload_audio(
     session_id: str,
     background_tasks: BackgroundTasks,
@@ -472,7 +475,7 @@ async def upload_audio(
 # AI Processing
 # ---------------------------------------------------------------------------
 
-@router.post("/{session_id}/process")
+@router.post("/{session_id}/process/")
 async def process_session(
     session_id: str,
     background_tasks: BackgroundTasks,
@@ -480,6 +483,7 @@ async def process_session(
     settings: Settings = Depends(get_settings),
 ):
     """Process transcription with AI (in background)."""
+    logger.info("Manual AI processing requested for session %s", session_id)
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:
         raise NotFoundException("Session", session_id)
@@ -504,6 +508,7 @@ async def process_session(
     )
 
     # Queue background processing
+    logger.info("Adding AI processing task to queue for session %s", session_id)
     background_tasks.add_task(
         _background_process,
         session_id=session_id,
@@ -522,7 +527,7 @@ async def process_session(
     }
 
 
-@router.post("/{session_id}/reprocess")
+@router.post("/{session_id}/reprocess/")
 async def reprocess_transcription(
     session_id: str,
     background_tasks: BackgroundTasks,
@@ -715,7 +720,7 @@ async def _background_reprocess_all(
             )
 
 
-@router.post("/{session_id}/narration")
+@router.post("/{session_id}/narration/")
 async def generate_narration(
     session_id: str, 
     provider: Optional[str] = None,
@@ -839,3 +844,77 @@ async def generate_narration(
             raise HTTPException(status_code=400, detail=error_detail)
             
         raise HTTPException(status_code=500, detail=f"Erro interno ao gerar áudio: {error_detail}")
+
+
+# ---------------------------------------------------------------------------
+# Export
+# ---------------------------------------------------------------------------
+
+@router.get("/{session_id}/export/markdown/")
+async def export_markdown(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Export session as a Markdown file."""
+    doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not doc:
+        raise NotFoundException("Session", session_id)
+    
+    session = _deserialize_session(doc)
+    svc = ExportService()
+    md_content = svc.generate_markdown(session)
+    
+    filename = f"EchoBot_{session.name.replace(' ', '_')}_{session.created_at.strftime('%Y%m%d')}.md"
+    
+    return Response(
+        content=md_content,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/{session_id}/export/pdf/")
+async def export_pdf(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Export session as a PDF file."""
+    doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not doc:
+        raise NotFoundException("Session", session_id)
+    
+    session = _deserialize_session(doc)
+    svc = ExportService()
+    
+    try:
+        pdf_bytes = svc.generate_pdf(session)
+        filename = f"EchoBot_{session.name.replace(' ', '_')}_{session.created_at.strftime('%Y%m%d')}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.exception("Error exporting PDF: %s", e)
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar PDF: {str(e)}")
+
+
+@router.post("/{session_id}/export/notion/")
+async def export_notion(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Export session to Notion."""
+    doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not doc:
+        raise NotFoundException("Session", session_id)
+    
+    session = _deserialize_session(doc)
+    app_settings = await _get_app_settings(db)
+    
+    if not app_settings.notion_api_key or not app_settings.notion_page_id:
+        raise BadRequestException("Configurações do Notion (API Key e Page ID) não preenchidas.")
+    
+    svc = ExportService()
+    try:
+        notion_url = await svc.export_to_notion(
+            session=session,
+            api_key=app_settings.notion_api_key,
+            parent_page_id=app_settings.notion_page_id
+        )
+        return {"message": "Exportado para o Notion com sucesso!", "url": notion_url}
+    except Exception as e:
+        logger.exception("Error exporting to Notion: %s", e)
+        raise HTTPException(status_code=500, detail=f"Erro ao exportar para o Notion: {str(e)}")

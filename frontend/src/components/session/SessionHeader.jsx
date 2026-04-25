@@ -11,7 +11,12 @@ import {
   Clock,
   Copy,
   Hash,
-  RefreshCcw
+  RefreshCcw,
+  Download,
+  Share,
+  FileText,
+  FileCode,
+  ExternalLink
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -24,6 +29,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 const statusLabels = {
   recording: "Gravando",
@@ -42,7 +55,10 @@ const SessionHeader = ({
   onUpload, 
   onProcess, 
   onComplete,
-  onReprocess
+  onReprocess,
+  onExportMD,
+  onExportPDF,
+  onExportNotion
 }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -212,11 +228,11 @@ const SessionHeader = ({
           
           <Button
             onClick={onProcess}
-            disabled={processing || !session.raw_transcription}
+            disabled={uploading || !session.raw_transcription}
             className="btn-gold"
           >
             {processing && session.status === 'processing' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
-            Processar com IA
+            {session.status === 'processing' ? 'Reprocessar com IA' : 'Processar com IA'}
           </Button>
           
           {session.status === "awaiting_review" && (
@@ -229,6 +245,32 @@ const SessionHeader = ({
               Concluir
             </Button>
           )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-rpg-gold/30 text-rpg-gold hover:bg-rpg-gold/10">
+                <Download className="w-4 h-4 mr-2" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-rpg-surface border-white/10 text-[#EDEDED] w-48">
+              <DropdownMenuLabel>Formatos</DropdownMenuLabel>
+              <DropdownMenuItem onClick={onExportMD} className="cursor-pointer hover:bg-rpg-gold/10 hover:text-rpg-gold transition-colors">
+                <FileCode className="w-4 h-4 mr-2" />
+                Markdown (.md)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onExportPDF} className="cursor-pointer hover:bg-rpg-gold/10 hover:text-rpg-gold transition-colors">
+                <FileText className="w-4 h-4 mr-2" />
+                PDF Estilizado
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/5" />
+              <DropdownMenuLabel>Integrações</DropdownMenuLabel>
+              <DropdownMenuItem onClick={onExportNotion} className="cursor-pointer hover:bg-rpg-gold/10 hover:text-rpg-gold transition-colors">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Notion
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

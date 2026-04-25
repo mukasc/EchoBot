@@ -19,56 +19,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 
-async def _load_settings(db: AsyncIOMotorDatabase) -> AppSettings:
-    from app.config import get_settings
-    from app.models.common import LLMProvider
-    
-    cfg = get_settings()
-    doc = await db.settings.find_one({"id": "app_settings"}, {"_id": 0})
-    
-    if doc:
-        settings = AppSettings(**doc)
-        # Descriptografar campos sensíveis vindo do banco
-        settings.discord_bot_token = decrypt(settings.discord_bot_token)
-        settings.elevenlabs_api_key = decrypt(settings.elevenlabs_api_key)
-        settings.deepgram_api_key = decrypt(settings.deepgram_api_key)
-        settings.custom_api_key = decrypt(settings.custom_api_key)
-        
-        # Descriptografar chaves nos fallbacks
-        if settings.llm_fallbacks:
-            for fb in settings.llm_fallbacks:
-                if fb.api_key:
-                    fb.api_key = decrypt(fb.api_key)
-    else:
-        settings = AppSettings()
-        
-    # Fallback para .env se os campos estiverem vazios
-    if not settings.discord_bot_token:
-        settings.discord_bot_token = cfg.discord_bot_token or None
-    if not settings.discord_app_id:
-        settings.discord_app_id = cfg.discord_app_id or None
-    if not settings.discord_guild_id:
-        settings.discord_guild_id = cfg.discord_guild_id or None
-    if not settings.elevenlabs_api_key:
-        settings.elevenlabs_api_key = cfg.elevenlabs_api_key or None
-    if not settings.deepgram_api_key:
-        settings.deepgram_api_key = cfg.deepgram_api_key or None
-        
-    # Fallback para custom_api_key baseado no provedor selecionado
-    if not settings.custom_api_key:
-        if settings.llm_provider == LLMProvider.GEMINI:
-            settings.custom_api_key = cfg.google_api_key or None
-        elif settings.llm_provider == LLMProvider.OPENAI:
-            settings.custom_api_key = cfg.openai_api_key or None
-        elif settings.llm_provider == LLMProvider.ANTHROPIC:
-            settings.custom_api_key = cfg.anthropic_api_key or None
-            
-    return settings
+from app.services.settings_service import get_app_settings as load_settings, update_app_settings as save_settings
 
 
 @router.get("/", response_model=AppSettings)
 async def get_app_settings(db: AsyncIOMotorDatabase = Depends(get_db)):
-    return await _load_settings(db)
+    return await load_settings(db)
 
 
 @router.put("/", response_model=AppSettings)
@@ -76,36 +32,10 @@ async def update_app_settings(
     payload: AppSettingsUpdate,
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
-    logger.info(f"Saving updated application settings")
-    
-    # Criptografar campos sensíveis antes de salvar
-    if "discord_bot_token" in update_data:
-        update_data["discord_bot_token"] = encrypt(update_data["discord_bot_token"])
-    if "elevenlabs_api_key" in update_data:
-        update_data["elevenlabs_api_key"] = encrypt(update_data["elevenlabs_api_key"])
-    if "deepgram_api_key" in update_data:
-        update_data["deepgram_api_key"] = encrypt(update_data["deepgram_api_key"])
-    if "custom_api_key" in update_data:
-        update_data["custom_api_key"] = encrypt(update_data["custom_api_key"])
-        
-    # Criptografar chaves nos fallbacks se existirem
-    if "llm_fallbacks" in update_data and update_data["llm_fallbacks"]:
-        for i, fb in enumerate(update_data["llm_fallbacks"]):
-            if "api_key" in fb and fb["api_key"]:
-                update_data["llm_fallbacks"][i]["api_key"] = encrypt(fb["api_key"])
-
-    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-    await db.settings.update_one(
-        {"id": "app_settings"},
-        {"$set": update_data},
-        upsert=True,
-    )
-    return await _load_settings(db)
+    return await save_settings(db, payload)
 
 
-@router.get("/elevenlabs/voices")
+@router.get("/elevenlabs/voices/")
 async def get_elevenlabs_voices(
     api_key: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -125,7 +55,7 @@ async def get_elevenlabs_voices(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/elevenlabs/usage")
+@router.get("/elevenlabs/usage/")
 async def get_elevenlabs_usage(
     api_key: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -145,7 +75,7 @@ async def get_elevenlabs_usage(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/deepgram/voices")
+@router.get("/deepgram/voices/")
 async def get_deepgram_voices(
     api_key: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -163,7 +93,7 @@ async def get_deepgram_voices(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/deepgram/usage")
+@router.get("/deepgram/usage/")
 async def get_deepgram_usage(
     api_key: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -219,7 +149,7 @@ def _format_kokoro_voices(voices: list[str]) -> list[dict]:
     return results
 
 
-@router.get("/kokoro/voices")
+@router.get("/kokoro/voices/")
 async def get_kokoro_voices(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -246,12 +176,12 @@ async def get_kokoro_voices(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/tts/providers")
+@router.get("/tts/providers/")
 async def list_tts_providers():
     return [p.value for p in TTSProvider]
 
 
-@router.get("/tts/voices/{provider}")
+@router.get("/tts/voices/{provider}/")
 async def list_tts_voices(
     provider: str,
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -280,7 +210,7 @@ async def list_tts_voices(
         
     return []
     
-@router.get("/llm/openrouter/models")
+@router.get("/llm/openrouter/models/")
 async def list_openrouter_models(db: AsyncIOMotorDatabase = Depends(get_db)):
     """Busca a lista de modelos disponíveis diretamente do OpenRouter."""
     import httpx
@@ -311,7 +241,7 @@ async def list_openrouter_models(db: AsyncIOMotorDatabase = Depends(get_db)):
         ]
 
 
-@router.get("/llm/groq/models")
+@router.get("/llm/groq/models/")
 async def list_groq_models(db: AsyncIOMotorDatabase = Depends(get_db)):
     """Busca a lista de modelos disponíveis diretamente do Groq."""
     import httpx
