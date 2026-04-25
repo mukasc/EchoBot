@@ -11,7 +11,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
   - Faster Whisper (STT Local) + Cloud Fallback (OpenAI/Gemini)
   - Gemini 3 Flash (LLM padrão) - configurável para OpenAI/Claude/Anthropic
 - **Design**: Dark Fantasy theme (Jewel & Luxury archetype)
-- **License**: AGPL v3 (Foco em Open Source e Transparência)
+- **License**: Proprietária (All Rights Reserved) - Proteção de IP para SaaS
 
 ## User Personas
 1. **Game Master**: Revisa transcrições, edita roteiros, gera narração épica e gerencia a cronologia.
@@ -39,7 +39,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [x] **Motor TTS Local (Kokoro)**: Integração nativa Python (ONNX) para narração gratuita e de alta qualidade.
 - [x] **Estabilidade de Áudio**: Decodificação mono e tratamento de buffers para evitar aceleração de áudio.
 - [x] **Otimização de Espaço (Narração)**: Conversão automática de todas as narrações para formato .ogg (Opus), economizando até 80% de espaço em disco.
-- [x] **Licenciamento AGPL v3**: Garantia de liberdade e colaboração comunitária.
+- [x] **Licenciamento Proprietário**: Proteção do código-fonte como ativo comercial para o futuro SaaS.
 - [x] **Script de Inicialização Unificado**: `run.ps1` para orquestrar todos os serviços.
 
 ## Prioritized Backlog
