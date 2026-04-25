@@ -41,6 +41,10 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [x] **Otimização de Espaço (Narração)**: Conversão automática de todas as narrações para formato .ogg (Opus), economizando até 80% de espaço em disco.
 - [x] **Licenciamento Proprietário**: Proteção do código-fonte como ativo comercial para o futuro SaaS.
 - [x] **Script de Inicialização Unificado**: `run.ps1` para orquestrar todos os serviços.
+- [x] **Estratégia de Failover de LLM**: Redundância automática entre provedores (Gemini, OpenAI, Groq) para máxima disponibilidade.
+- [x] **Infraestrutura de Testes**: Implementação de suíte de testes unitários no Backend (FastAPI) para rotas críticas e serviços.
+- [x] **Conformidade Legal**: Implementação de arquivo de Atribuições (`NOTICE`) e atualização para Licença Proprietária.
+- [x] **Refatoração React 19**: Limpeza de warnings legados e otimização de hooks no Frontend.
 
 ## Prioritized Backlog
 
@@ -61,5 +65,5 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 
 ## Next Action Items
 1. Implementar serviço de exportação de Roteiros e Diários (Markdown/PDF).
-2. Refinar a interface de edição de segmentos da transcrição.
-3. Iniciar pesquisa para Busca Semântica no histórico de sessões.
+2. Refinar a interface de edição de segmentos da transcrição (UX/UI).
+3. Implementar sistema de Busca Semântica (RAG inicial) no histórico de sessões.
