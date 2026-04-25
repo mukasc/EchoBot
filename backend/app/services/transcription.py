@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import io
 import logging
+import asyncio
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
@@ -37,6 +39,10 @@ class TranscriptionResult:
 
 class TranscriptionService:
     """Tries multiple transcription backends with automatic fallback."""
+
+    _model_instance = None  # Singleton model
+    _model_lock = threading.Lock()  # Thread lock for initialization
+    _local_sem: Optional[asyncio.Semaphore] = None  # Lazy-initialized semaphore
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -109,48 +115,54 @@ class TranscriptionService:
     @classmethod
     def _get_local_model(cls):
         from faster_whisper import WhisperModel
-        if cls._model_instance is None:
-            try:
-                import torch
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-            except Exception:
-                device = "cpu"
-            
-            compute_type = "float16" if device == "cuda" else "int8"
-            logger.info("Loading local Whisper model (medium) on %s …", device)
-            cls._model_instance = WhisperModel("medium", device=device, compute_type=compute_type)
-        return cls._model_instance
+        
+        with cls._model_lock:
+            if cls._model_instance is None:
+                try:
+                    import torch
+                    device = "cuda" if torch.cuda.is_available() else "cpu"
+                except Exception:
+                    device = "cpu"
+                
+                compute_type = "float16" if device == "cuda" else "int8"
+                logger.info("Loading local Whisper model (medium) on %s …", device)
+                cls._model_instance = WhisperModel("medium", device=device, compute_type=compute_type)
+            return cls._model_instance
 
     async def _transcribe_local(self, file_path: Path) -> TranscriptionResult:
         from fastapi.concurrency import run_in_threadpool
         
-        def _sync_transcribe():
-            model = self._get_local_model()
+        if TranscriptionService._local_sem is None:
+            TranscriptionService._local_sem = asyncio.Semaphore(1)
 
-            logger.info("Transcribing %s …", file_path)
-            segments_gen, info = model.transcribe(
-                str(file_path),
-                language="pt",
-                beam_size=5,
-                vad_filter=True,
-                initial_prompt="Esta é uma sessão de RPG de mesa.", # Helps with RPG context
-            )
-            raw_segments = list(segments_gen)
-            lang = info.language or "pt"
-            logger.info("Detected language: %s (prob=%.3f)", lang, info.language_probability)
+        async with self._local_sem:
+            def _sync_transcribe():
+                model = self._get_local_model()
 
-            result_segments = [
-                TranscriptionSegmentResult(
-                    text=s.text.strip(),
-                    start=s.start,
-                    end=s.end,
+                logger.info("Transcribing %s …", file_path)
+                segments_gen, info = model.transcribe(
+                    str(file_path),
+                    language="pt",
+                    beam_size=5,
+                    vad_filter=True,
+                    initial_prompt="Esta é uma sessão de RPG de mesa.", # Helps with RPG context
                 )
-                for s in raw_segments
-            ]
-            raw_text = " ".join(s.text for s in result_segments)
-            return TranscriptionResult(raw_text=raw_text, segments=result_segments, method="LocalWhisper")
+                raw_segments = list(segments_gen)
+                lang = info.language or "pt"
+                logger.info("Detected language: %s (prob=%.3f)", lang, info.language_probability)
 
-        return await run_in_threadpool(_sync_transcribe)
+                result_segments = [
+                    TranscriptionSegmentResult(
+                        text=s.text.strip(),
+                        start=s.start,
+                        end=s.end,
+                    )
+                    for s in raw_segments
+                ]
+                raw_text = " ".join(s.text for s in result_segments)
+                return TranscriptionResult(raw_text=raw_text, segments=result_segments, method="LocalWhisper")
+
+            return await run_in_threadpool(_sync_transcribe)
 
     async def _transcribe_gemini(
         self, content: bytes, filename: str, api_key: str
@@ -170,16 +182,24 @@ class TranscriptionService:
             try:
                 logger.info("Trying Gemini model: %s …", model_name)
                 model = genai.GenerativeModel(model_name)
-                response = model.generate_content([
-                    "Transcreva este áudio de uma sessão de RPG. "
-                    "Retorne apenas a transcrição literal em português.",
-                    {"mime_type": mime, "data": content},
-                ])
+                
+                # Using wait_for for explicit timeout handling
+                response = await asyncio.wait_for(
+                    model.generate_content_async([
+                        "Transcreva este áudio de uma sessão de RPG. "
+                        "Retorne apenas a transcrição literal em português.",
+                        {"mime_type": mime, "data": content},
+                    ]),
+                    timeout=90.0  # Slightly longer for large audio files
+                )
                 return TranscriptionResult(
                     raw_text=response.text,
                     segments=[],
                     method="Gemini",
                 )
+            except asyncio.TimeoutError:
+                logger.warning("Gemini model %s timed out.", model_name)
+                last_err = RuntimeError(f"Gemini {model_name} timed out after 90s")
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Gemini model %s failed: %s", model_name, exc)
                 last_err = exc
@@ -191,34 +211,34 @@ class TranscriptionService:
     ) -> TranscriptionResult:
         import openai
 
-        client = openai.OpenAI(api_key=api_key)
-        audio_file = io.BytesIO(content)
-        audio_file.name = filename
+        async with openai.AsyncOpenAI(api_key=api_key, timeout=60.0) as client:
+            audio_file = io.BytesIO(content)
+            audio_file.name = filename
 
-        response = client.audio.transcriptions.create(
-            file=audio_file,
-            model="whisper-1",
-            response_format="verbose_json",
-            language="pt",
-            timestamp_granularities=["segment"],
-        )
+            response = await client.audio.transcriptions.create(
+                file=audio_file,
+                model="whisper-1",
+                response_format="verbose_json",
+                language="pt",
+                timestamp_granularities=["segment"],
+            )
 
-        result_segments: List[TranscriptionSegmentResult] = []
-        if hasattr(response, "segments") and response.segments:
-            result_segments = [
-                TranscriptionSegmentResult(
-                    text=s.text.strip(),
-                    start=s.start,
-                    end=s.end,
-                )
-                for s in response.segments
-            ]
+            result_segments: List[TranscriptionSegmentResult] = []
+            if hasattr(response, "segments") and response.segments:
+                result_segments = [
+                    TranscriptionSegmentResult(
+                        text=s.text.strip(),
+                        start=s.start,
+                        end=s.end,
+                    )
+                    for s in response.segments
+                ]
 
-        return TranscriptionResult(
-            raw_text=response.text,
-            segments=result_segments,
-            method="OpenAIWhisper",
-        )
+            return TranscriptionResult(
+                raw_text=response.text,
+                segments=result_segments,
+                method="OpenAIWhisper",
+            )
 
     @staticmethod
     def _detect_mime(filename: str) -> str:
