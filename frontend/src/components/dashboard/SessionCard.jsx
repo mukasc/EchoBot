@@ -98,10 +98,14 @@ const SessionCard = ({ session, onDelete }) => {
               </Badge>
               <button 
                 onClick={handleCopyId}
-                className="flex items-center gap-1 text-[10px] text-[#6C7280] hover:text-rpg-gold transition-colors"
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium transition-all duration-200 border ${
+                  copied 
+                    ? 'bg-green-500/10 border-green-500/50 text-green-500' 
+                    : 'bg-white/5 border-white/10 text-[#A0A5B5] hover:bg-rpg-gold/10 hover:border-rpg-gold/30 hover:text-rpg-gold shadow-sm'
+                }`}
               >
-                <Hash className="w-3 h-3" />
-                Copiar ID
+                {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Copiado!' : 'Copiar ID'}
               </button>
             </div>
             <ChevronRight className="w-5 h-5 text-[#6C7280] group-hover:text-rpg-gold transition-colors" />

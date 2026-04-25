@@ -86,10 +86,15 @@ const Settings = () => {
     discord_app_id: "",
     discord_public_key: "",
     discord_guild_id: "",
+    elevenlabs_api_key: "",
     elevenlabs_voice_id: "pNInz6obpgmqS2C9NfX",
+    deepgram_api_key: "",
+    deepgram_model: "aura-asteria-en",
+    kokoro_api_key: "",
     kokoro_base_url: "http://localhost:8000/api/v1/audio",
     kokoro_model: "model_q8f16",
     kokoro_voice: "af_heart",
+    tts_provider: "elevenlabs",
     llm_fallbacks: [],
     llm_primary_enabled: true
   });
@@ -137,7 +142,7 @@ const Settings = () => {
         kokoro_model: settings.kokoro_model || "model_q8f16",
         kokoro_voice: settings.kokoro_voice || "af_heart",
         tts_provider: settings.tts_provider || "elevenlabs",
-        llm_fallbacks: settings.llm_fallbacks || [],
+        llm_fallbacks: Array.isArray(settings.llm_fallbacks) ? settings.llm_fallbacks : [],
         llm_primary_enabled: settings.llm_primary_enabled ?? true
       });
     }
@@ -330,7 +335,7 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-rpg-void bg-pattern">
       <div className="max-w-3xl mx-auto px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Header - Outside form for better semantics */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-[#EDEDED] font-serif">
             Configurações
@@ -339,6 +344,13 @@ const Settings = () => {
             Configure os provedores de IA e chaves de API
           </p>
         </div>
+
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveSettings(formData);
+          }}
+        >
 
         {/* LLM Provider Settings */}
         <Card className="card-rpg mb-6">
@@ -354,10 +366,12 @@ const Settings = () => {
             </div>
             <div className="flex flex-col items-end gap-1">
               <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-                <span className="text-[10px] text-[#A0A5B5] uppercase font-bold tracking-wider">
+                <Label htmlFor="primary-llm-toggle" className="text-[10px] text-[#A0A5B5] uppercase font-bold tracking-wider cursor-pointer">
                   {formData.llm_primary_enabled ? 'Provedor Principal: ATIVO' : 'Provedor Principal: DESATIVADO'}
-                </span>
+                </Label>
                 <Switch 
+                  id="primary-llm-toggle"
+                  name="llm_primary_enabled"
                   checked={formData.llm_primary_enabled} 
                   onCheckedChange={(val) => setFormData({ ...formData, llm_primary_enabled: val })}
                   className="scale-90 data-[state=checked]:bg-emerald-500"
@@ -372,16 +386,16 @@ const Settings = () => {
           </CardHeader>
           <CardContent className={`p-6 space-y-6 transition-opacity duration-200 ${!formData.llm_primary_enabled ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
             <div className="space-y-2">
-              <Label className="text-[#EDEDED]">Provedor</Label>
+              <Label htmlFor="llm-provider" className="text-[#EDEDED]">Provedor</Label>
               <Select value={formData.llm_provider} onValueChange={handleProviderChange}>
-                <SelectTrigger className="input-dark">
+                <SelectTrigger id="llm-provider" name="llm_provider" className="input-dark">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-rpg-surface border-white/10">
-                  <SelectItem value="gemini">
+                  <SelectItem value="gemini" textValue="Google Gemini">
                     <div className="flex items-center gap-2">
-                      <span>Google Gemini</span>
-                      <Badge className="bg-rpg-gold/10 text-rpg-gold text-[10px]">Recomendado</Badge>
+                      <span key="txt">Google Gemini</span>
+                      <Badge key="badge" className="bg-rpg-gold/10 text-rpg-gold text-[10px]">Recomendado</Badge>
                     </div>
                   </SelectItem>
                   <SelectItem value="openai">OpenAI</SelectItem>
@@ -393,23 +407,25 @@ const Settings = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[#EDEDED]">Modelo</Label>
+              <Label htmlFor="llm-model" className="text-[#EDEDED]">Modelo</Label>
               <Select 
                 value={formData.llm_model} 
                 onValueChange={(value) => setFormData({...formData, llm_model: value})}
               >
-                <SelectTrigger className="input-dark">
+                <SelectTrigger id="llm-model" className="input-dark">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-rpg-surface border-white/10 max-h-[300px]">
                   {fetchingModels ? (
                     <SelectItem value="loading" disabled>Carregando modelos...</SelectItem>
                   ) : (
-                    (dynamicModels[formData.llm_provider] || llmModels[formData.llm_provider])?.map((model) => (
-                      <SelectItem key={model.value} value={model.value}>
-                        {model.label}
-                      </SelectItem>
-                    ))
+                    (dynamicModels[formData.llm_provider] || llmModels[formData.llm_provider] || [])
+                      .filter(m => m && m.value)
+                      .map((model, idx) => (
+                        <SelectItem key={`primary-${model.value}-${idx}`} value={model.value}>
+                          {model.label}
+                        </SelectItem>
+                      ))
                   )}
                 </SelectContent>
               </Select>
@@ -508,16 +524,19 @@ const Settings = () => {
                         </Badge>
                         <div className="flex items-center gap-2">
                           <Switch 
+                            id={`fb-enabled-${index}`}
+                            name={`fallback_enabled_${index}`}
                             checked={fb.enabled !== false} 
                             onCheckedChange={(val) => updateFallback(index, "enabled", val)}
                             className="scale-75"
                           />
-                          <span className="text-[10px] text-[#A0A5B5] uppercase font-semibold">
+                          <Label htmlFor={`fb-enabled-${index}`} className="text-[10px] text-[#A0A5B5] uppercase font-semibold cursor-pointer">
                             {fb.enabled !== false ? 'Ativo' : 'Inativo'}
-                          </span>
+                          </Label>
                         </div>
                       </div>
                       <Button 
+                        type="button"
                         variant="ghost" 
                         size="sm" 
                         onClick={() => removeFallback(index)}
@@ -529,12 +548,12 @@ const Settings = () => {
 
                     <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-200 ${fb.enabled === false ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
                       <div className="space-y-2">
-                        <Label className="text-xs text-[#A0A5B5]">Provedor</Label>
+                        <Label htmlFor={`fb-provider-${index}`} className="text-xs text-[#A0A5B5]">Provedor</Label>
                         <Select 
                           value={fb.provider} 
                           onValueChange={(val) => updateFallback(index, "provider", val)}
                         >
-                          <SelectTrigger className="input-dark h-9">
+                          <SelectTrigger id={`fb-provider-${index}`} className="input-dark h-9">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-rpg-surface border-white/10">
@@ -548,20 +567,20 @@ const Settings = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-xs text-[#A0A5B5]">Modelo</Label>
+                        <Label htmlFor={`fb-model-${index}`} className="text-xs text-[#A0A5B5]">Modelo</Label>
                         <Select 
                           value={fb.model} 
                           onValueChange={(val) => updateFallback(index, "model", val)}
                         >
-                          <SelectTrigger className="input-dark h-9">
+                          <SelectTrigger id={`fb-model-${index}`} className="input-dark h-9">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-rpg-surface border-white/10">
                             {fetchingModels && !dynamicModels[fb.provider] && (fb.provider === 'openrouter' || fb.provider === 'groq') ? (
                               <SelectItem value="loading" disabled>Carregando modelos...</SelectItem>
                             ) : (
-                              (dynamicModels[fb.provider] || llmModels[fb.provider])?.map((m) => (
-                                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                              (dynamicModels[fb.provider] || llmModels[fb.provider] || [])?.map((m, idx) => (
+                                <SelectItem key={`${m.value}-${idx}`} value={m.value}>{m.label}</SelectItem>
                               ))
                             )}
                           </SelectContent>
@@ -570,9 +589,10 @@ const Settings = () => {
                     </div>
 
                     <div className={`space-y-2 transition-all duration-200 ${fb.enabled === false ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
-                      <Label className="text-xs text-[#A0A5B5]">API Key Específica (Opcional)</Label>
+                      <Label htmlFor={`fb-key-${index}`} className="text-xs text-[#A0A5B5]">API Key Específica (Opcional)</Label>
                       <div className="relative">
                         <Input
+                          id={`fb-key-${index}`}
                           type={visibleFields[`fallback_${index}`] ? "text" : "password"}
                           value={fb.api_key || ""}
                           onChange={(e) => updateFallback(index, "api_key", e.target.value)}
@@ -662,16 +682,28 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* ElevenLabs Settings */}
-        <Card className="card-rpg mb-6">
-          <CardHeader className="border-b border-white/10">
-            <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-              <div className="w-5 h-5 flex items-center justify-center bg-rpg-gold/20 rounded text-[10px] text-rpg-gold font-bold">11</div>
-              ElevenLabs (Narração)
-            </CardTitle>
-            <CardDescription className="text-[#A0A5B5]">
-              Configure a API para geração de áudio épico a partir do roteiro
-            </CardDescription>
+        <Card className={`card-rpg mb-6 border-rpg-gold/30 ${formData.tts_provider === 'elevenlabs' ? 'ring-1 ring-rpg-gold/50' : ''}`}>
+          <CardHeader className="border-b border-white/10 flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
+                <div className="w-5 h-5 flex items-center justify-center bg-rpg-gold/20 rounded text-[10px] text-rpg-gold font-bold">11</div>
+                ElevenLabs (Narração)
+              </CardTitle>
+              <CardDescription className="text-[#A0A5B5]">
+                Configure a API para geração de áudio épico a partir do roteiro
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="use-elevenlabs" className="text-[10px] text-[#A0A5B5] uppercase font-bold cursor-pointer">Usar este?</Label>
+              <input 
+                id="use-elevenlabs"
+                type="radio" 
+                name="tts_provider" 
+                checked={formData.tts_provider === 'elevenlabs'} 
+                onChange={() => setFormData({...formData, tts_provider: 'elevenlabs'})}
+                className="w-4 h-4 accent-rpg-gold"
+              />
+            </div>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
@@ -703,7 +735,7 @@ const Settings = () => {
                     value={formData.elevenlabs_voice_id}
                     onValueChange={(val) => setFormData({...formData, elevenlabs_voice_id: val})}
                   >
-                    <SelectTrigger className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
+                    <SelectTrigger id="voice-id" className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
                       <SelectValue placeholder="Selecione uma voz..." />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1A1C23] border-white/10 text-[#EDEDED] shadow-xl z-[100]">
@@ -714,11 +746,11 @@ const Settings = () => {
                         {voiceError}
                       </SelectItem>
                     ) : voices.length > 0 ? (
-                      voices.map((v) => (
-                        <SelectItem key={v.voice_id} value={v.voice_id}>
+                      voices.filter(v => v && v.voice_id).map((v, idx) => (
+                        <SelectItem key={`el-voice-${v.voice_id}-${idx}`} value={v.voice_id} textValue={v.name}>
                           <div className="flex items-center justify-between w-full gap-4">
-                            <span>{v.name}</span>
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                            <span key="name">{v.name}</span>
+                            <span key="cat" className={`text-[9px] px-1.5 py-0.5 rounded ${
                               v.category === 'premade' 
                                 ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
                                 : 'bg-rpg-gold/20 text-rpg-gold border border-rpg-gold/30'
@@ -735,10 +767,13 @@ const Settings = () => {
                   </Select>
                 </div>
                 <Input 
+                  id="voice-id-manual"
+                  name="elevenlabs_voice_id_manual"
                   value={formData.elevenlabs_voice_id}
                   onChange={(e) => setFormData({...formData, elevenlabs_voice_id: e.target.value})}
                   className="w-40 input-dark font-mono text-xs"
                   placeholder="Ou ID manual"
+                  aria-label="ID da voz manual"
                 />
               </div>
             </div>
@@ -782,8 +817,9 @@ const Settings = () => {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[#A0A5B5] uppercase font-bold">Usar este?</span>
+              <Label htmlFor="use-kokoro" className="text-[10px] text-[#A0A5B5] uppercase font-bold cursor-pointer">Usar este?</Label>
               <input 
+                id="use-kokoro"
                 type="radio" 
                 name="tts_provider" 
                 checked={formData.tts_provider === 'kokoro'} 
@@ -795,8 +831,9 @@ const Settings = () => {
           <CardContent className="space-y-4 pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Base URL</label>
+                <Label htmlFor="kokoro-url" className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Base URL</Label>
                 <Input 
+                  id="kokoro-url"
                   value={formData.kokoro_base_url}
                   onChange={(e) => setFormData({...formData, kokoro_base_url: e.target.value})}
                   className="input-dark text-sm"
@@ -804,9 +841,10 @@ const Settings = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">API Key (Opcional)</label>
+                <Label htmlFor="kokoro-key" className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">API Key (Opcional)</Label>
                 <div className="relative">
                   <Input 
+                    id="kokoro-key"
                     type={visibleFields.kokoro_api_key ? "text" : "password"}
                     value={formData.kokoro_api_key}
                     onChange={(e) => setFormData({...formData, kokoro_api_key: e.target.value})}
@@ -826,8 +864,9 @@ const Settings = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Modelo</label>
+                <Label htmlFor="kokoro-model" className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Modelo</Label>
                 <Input 
+                  id="kokoro-model"
                   value={formData.kokoro_model}
                   onChange={(e) => setFormData({...formData, kokoro_model: e.target.value})}
                   className="input-dark text-sm"
@@ -835,20 +874,20 @@ const Settings = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Voz</label>
+                <Label htmlFor="kokoro-voice" className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Voz</Label>
                 <Select 
                   value={formData.kokoro_voice} 
                   onValueChange={(val) => setFormData({...formData, kokoro_voice: val})}
                 >
-                  <SelectTrigger className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
+                  <SelectTrigger id="kokoro-voice" className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
                     <SelectValue placeholder="Selecione uma voz..." />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1A1C23] border-white/10 text-[#EDEDED] shadow-xl z-[100]">
                     {fetchingKoVoices ? (
                       <SelectItem value="loading" disabled>Carregando...</SelectItem>
                     ) : koVoices.length > 0 ? (
-                      koVoices.map((v) => (
-                        <SelectItem key={v.voice_id} value={v.voice_id}>
+                      koVoices.filter(v => v && v.voice_id).map((v, idx) => (
+                        <SelectItem key={`ko-voice-${v.voice_id}-${idx}`} value={v.voice_id}>
                           {v.name}
                         </SelectItem>
                       ))
@@ -875,8 +914,9 @@ const Settings = () => {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[#A0A5B5] uppercase font-bold">Usar este?</span>
+              <Label htmlFor="use-deepgram" className="text-[10px] text-[#A0A5B5] uppercase font-bold cursor-pointer">Usar este?</Label>
               <input 
+                id="use-deepgram"
                 type="radio" 
                 name="tts_provider" 
                 checked={formData.tts_provider === 'deepgram'} 
@@ -911,10 +951,11 @@ const Settings = () => {
               </div>
             )}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Deepgram API Key</label>
+              <Label htmlFor="deepgram-key" className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Deepgram API Key</Label>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C7280]" />
                 <Input 
+                  id="deepgram-key"
                   type={visibleFields.deepgram_api_key ? "text" : "password"}
                   value={formData.deepgram_api_key}
                   onChange={(e) => setFormData({...formData, deepgram_api_key: e.target.value})}
@@ -932,22 +973,26 @@ const Settings = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Modelo Aura</label>
+              <Label htmlFor="deepgram-model" className="text-xs font-bold text-[#A0A5B5] uppercase tracking-wider">Modelo Aura</Label>
               <Select 
                 value={formData.deepgram_model} 
                 onValueChange={(val) => setFormData({...formData, deepgram_model: val})}
               >
-                <SelectTrigger className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
+                <SelectTrigger id="deepgram-model" className="bg-rpg-onyx/50 border-white/10 text-[#EDEDED] font-mono text-sm">
                   <SelectValue placeholder="Selecione um modelo..." />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1A1C23] border-white/10 text-[#EDEDED] shadow-xl z-[100]">
                   {fetchingDgVoices ? (
                     <SelectItem value="loading" disabled>Carregando...</SelectItem>
-                  ) : dgVoices.map((v) => (
-                    <SelectItem key={v.voice_id} value={v.voice_id}>
-                      {v.name}
-                    </SelectItem>
-                  ))}
+                  ) : dgVoices.length > 0 ? (
+                    dgVoices.filter(v => v && v.voice_id).map((v, idx) => (
+                      <SelectItem key={`dg-voice-${v.voice_id}-${idx}`} value={v.voice_id}>
+                        {v.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>Nenhum modelo encontrado</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -957,7 +1002,7 @@ const Settings = () => {
         {/* Save Button */}
         <div className="flex justify-end mt-8">
           <Button
-            onClick={() => saveSettings(formData)}
+            type="submit"
             disabled={saving}
             className="btn-gold"
           >
@@ -969,9 +1014,10 @@ const Settings = () => {
             Salvar Configurações
           </Button>
         </div>
-      </div>
+      </form>
     </div>
-  );
+  </div>
+);
 };
 
 export default Settings;

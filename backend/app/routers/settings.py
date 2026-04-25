@@ -181,6 +181,44 @@ async def get_deepgram_usage(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _format_kokoro_voices(voices: list[str]) -> list[dict]:
+    """Converte lista de IDs do Kokoro em objetos com nomes amigáveis e bandeiras."""
+    lang_map = {
+        "a": "🇺🇸 Inglês (EUA)",
+        "b": "🇬🇧 Inglês (UK)",
+        "e": "🇪🇸 Espanhol",
+        "f": "🇫🇷 Francês",
+        "h": "🇮🇳 Hindi",
+        "i": "🇮🇹 Italiano",
+        "j": "🇯🇵 Japonês",
+        "p": "🇧🇷 Português",
+        "z": "🇨🇳 Chinês",
+    }
+    
+    results = []
+    for v in voices:
+        # Se já for um dicionário (ex: vindo da KokoroService externa), manter ou adaptar
+        if isinstance(v, dict):
+            results.append(v)
+            continue
+            
+        if len(v) < 3:
+            results.append({"voice_id": v, "name": v, "category": "native"})
+            continue
+            
+        lang_code = v[0]
+        gender_code = v[1]
+        name = v[3:].capitalize()
+        
+        lang_name = lang_map.get(lang_code, "Outro")
+        gender = "Fem" if gender_code == "f" else "Masc"
+        
+        friendly_name = f"{lang_name} - {name} ({gender})"
+        results.append({"voice_id": v, "name": friendly_name, "category": "native"})
+        
+    return results
+
+
 @router.get("/kokoro/voices")
 async def get_kokoro_voices(
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -190,15 +228,18 @@ async def get_kokoro_voices(
     settings = await _load_settings(db)
     
     # If the provider is already set to Kokoro, we can return the local voices directly
-    # to avoid the service trying to call itself via HTTP (which might 404 depending on base_url)
     if settings.tts_provider == TTSProvider.KOKORO:
         from app.services.kokoro_local import kokoro_local_engine
         from fastapi.concurrency import run_in_threadpool
-        return await run_in_threadpool(kokoro_local_engine.get_voices)
+        voices = await run_in_threadpool(kokoro_local_engine.get_voices)
+        return _format_kokoro_voices(voices)
 
     try:
         svc = KokoroService(settings)
         voices = await svc.get_voices()
+        # Se as vozes vierem como lista de strings da instância externa, formatar também
+        if voices and isinstance(voices[0], str):
+            return _format_kokoro_voices(voices)
         return voices
     except Exception as e:
         from fastapi import HTTPException
@@ -235,32 +276,7 @@ async def list_tts_voices(
         from app.services.kokoro_local import kokoro_local_engine
         from fastapi.concurrency import run_in_threadpool
         voices = await run_in_threadpool(kokoro_local_engine.get_voices)
-        
-        lang_map = {
-            "a": "🇺🇸 Inglês (EUA)",
-            "b": "🇬🇧 Inglês (UK)",
-            "e": "🇪🇸 Espanhol",
-            "f": "🇫🇷 Francês",
-            "h": "🇮🇳 Hindi",
-            "i": "🇮🇹 Italiano",
-            "j": "🇯🇵 Japonês",
-            "p": "🇧🇷 Português",
-            "z": "🇨🇳 Chinês",
-        }
-        
-        results = []
-        for v in voices:
-            lang_code = v[0]
-            gender_code = v[1]
-            name = v[3:].capitalize()
-            
-            lang_name = lang_map.get(lang_code, "Outro")
-            gender = "Fem" if gender_code == "f" else "Masc"
-            
-            friendly_name = f"{lang_name} - {name} ({gender})"
-            results.append({"voice_id": v, "name": friendly_name, "category": "native"})
-            
-        return results
+        return _format_kokoro_voices(voices)
         
     return []
     
