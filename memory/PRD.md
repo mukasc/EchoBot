@@ -55,12 +55,15 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 ### P2 (Medium Priority)
 - [ ] **Memória de Longo Prazo (RAG)**: Usar o Diário Técnico de sessões passadas como contexto para o LLM em novas sessões.
 - [ ] **Busca Semântica**: Localizar eventos ou nomes específicos em todo o histórico de transcrições.
+- [ ] **Gestão de Crônicas/Aventuras**: Implementar hierarquia onde as sessões são agrupadas dentro de uma "Crônica" ou "Campanha".
 - [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitar distribuição.
 
 ### P3 (Low Priority)
 - [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
 - [ ] **Integração com Roll20**.
 - [ ] **Temas visuais alternativos** (Ex: Cyberpunk, Sci-fi).
+- [ ] **Sistema de Login & Multi-Usuário**: Autenticação básica e isolamento de dados (o usuário só vê seus próprios registros).
+- [ ] **Mensuração de Consumo**: Painel para rastrear uso de tokens (LLM) e tempo de áudio (TTS/STT) por usuário.
 - [ ] **App Mobile Companion** para consulta rápida do Diário Técnico durante o jogo presencial.
 
 ## Next Action Items
