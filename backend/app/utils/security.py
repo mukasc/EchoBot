@@ -19,7 +19,7 @@ class SecurityManager:
                 # Fallback to a development key if MASTER_KEY is missing
                 # In production, this should probably raise an error
                 print("WARNING: MASTER_KEY not found in environment. Using insecure fallback.")
-                key = base64.urlsafe_b64encode(b"insecure-fallback-key-32-bytes-!!")
+                key = base64.urlsafe_b64encode(b"insecure-fallback-key-32-bytes-!")
             
             try:
                 cls._fernet = Fernet(key)

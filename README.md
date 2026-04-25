@@ -18,6 +18,8 @@
 [![Kokoro TTS](https://img.shields.io/badge/Kokoro_TTS-6B4E71?style=flat&logo=pyup&logoColor=white)](https://huggingface.co/hexgrad/Kokoro-82M)
 [![OpenRouter](https://img.shields.io/badge/OpenRouter-000000?style=flat&logo=openai&logoColor=white)](https://openrouter.ai/)
 [![Groq](https://img.shields.io/badge/Groq-f55036?style=flat&logo=speedtest&logoColor=white)](https://groq.com/)
+[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=flat&logo=pytest&logoColor=white)](https://docs.pytest.org/)
 
 **EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
 
@@ -191,6 +193,37 @@ npm start
 ```bash
 cd frontend
 npm start
+```
+
+---
+
+## 🧪 Testes
+
+O EchoBot possui uma suíte de testes abrangente para garantir a estabilidade de todos os serviços.
+
+### Execução Unificada (Recomendado)
+Para rodar todos os testes de uma vez só:
+```powershell
+.\test_all.ps1
+```
+
+### Executando Testes Individuais
+```bash
+cd backend
+# Ative o venv primeiro
+pytest
+```
+
+### Executando Testes do Frontend (React)
+```bash
+cd frontend
+npm test
+```
+
+### Executando Testes do Voice Bridge (Node.js)
+```bash
+cd voice-bridge
+npm test
 ```
 
 ---

@@ -110,8 +110,8 @@ class AIProcessorService:
                 # If we got here, it worked!
                 parsed = self._parse_response(response_text, raw_transcription)
                 parsed["metadata"] = {
-                    "provider": str(provider),
-                    "model": str(model if model != "default" else self._get_default_model(provider)),
+                    "provider": provider.value if hasattr(provider, "value") else str(provider),
+                    "model": model.value if hasattr(model, "value") else str(model if model != "default" else self._get_default_model(provider)),
                     "attempts": str(i + 1),
                     "primary_enabled": str(app_settings.llm_primary_enabled)
                 }

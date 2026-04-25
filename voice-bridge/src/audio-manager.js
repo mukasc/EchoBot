@@ -1,5 +1,5 @@
 const { createWriteStream, existsSync, unlinkSync } = require('fs');
-const { exec } = require('child_process');
+const child_process = require('child_process');
 const prism = require('prism-media');
 const { EndBehaviorType } = require('@discordjs/voice');
 const path = require('path');
@@ -76,7 +76,7 @@ class AudioManager {
         
         return new Promise((resolve, reject) => {
             console.log(`🎬 [Audio] Convertendo ${path.basename(pcmFile)} -> OGG/Opus (64k mono)...`);
-            exec(ffmpegCmd, (error) => {
+            child_process.exec(ffmpegCmd, (error) => {
                 if (error) {
                     console.error('❌ [Audio] Erro FFmpeg:', error);
                     return reject(error);
