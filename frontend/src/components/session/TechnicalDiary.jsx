@@ -18,14 +18,22 @@ const categoryLabels = {
   event: "Evento"
 };
 
-const TechnicalDiary = ({ entries }) => {
+const TechnicalDiary = ({ entries, metadata }) => {
   return (
     <Card className="card-rpg">
-      <CardHeader className="border-b border-white/10">
+      <CardHeader className="border-b border-white/10 flex flex-row items-center justify-between">
         <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
           <Package className="w-5 h-5 text-rpg-gold" />
           Diário Técnico
         </CardTitle>
+        {metadata && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[#6C7280] uppercase">Processado por:</span>
+            <Badge variant="outline" className="text-[10px] bg-white/5 border-white/10 text-[#A0A5B5] capitalize">
+              {metadata.provider} • {metadata.model}
+            </Badge>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-6">
         {entries?.length > 0 ? (

@@ -91,13 +91,17 @@ const SessionDetail = () => {
           </TabsContent>
 
           <TabsContent value="diary">
-            <TechnicalDiary entries={session.technical_diary} />
+            <TechnicalDiary 
+              entries={session.technical_diary} 
+              metadata={session.diary_metadata}
+            />
           </TabsContent>
 
           <TabsContent value="script">
             <ReviewScript 
               initialScript={session.review_script}
               narrationUrl={session.narration_audio_url}
+              metadata={session.review_metadata}
               onSave={updateSession}
               onGenerateNarration={generateNarration}
               saving={saving}

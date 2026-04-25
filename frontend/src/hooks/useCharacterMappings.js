@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../lib/api";
+import { toast } from "sonner";
 
 export const useCharacterMappings = () => {
   const [mappings, setMappings] = useState([]);
@@ -12,6 +13,7 @@ export const useCharacterMappings = () => {
       setMappings(response.data);
     } catch (error) {
       console.error("Error fetching character mappings:", error);
+      toast.error("Erro ao carregar mapeamentos");
     } finally {
       setLoading(false);
     }
@@ -48,8 +50,8 @@ export const useCharacterMappings = () => {
       await fetchMappings();
       toast.success("Mapeamento salvo!");
     } catch (error) {
-      toast.error("Erro ao salvar mapeamento");
-      throw error;
+      const detail = error.response?.data?.detail || "Erro ao salvar mapeamento";
+      toast.error(detail);
     }
   };
 
@@ -59,8 +61,8 @@ export const useCharacterMappings = () => {
       setMappings(prev => prev.filter(m => m.id !== id));
       toast.success("Mapeamento excluído");
     } catch (error) {
-      toast.error("Erro ao excluir mapeamento");
-      throw error;
+      const detail = error.response?.data?.detail || "Erro ao excluir mapeamento";
+      toast.error(detail);
     }
   };
 

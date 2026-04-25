@@ -31,7 +31,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.exceptions import BadRequestException, NotFoundException
+from app.exceptions import AppException, BadRequestException, NotFoundException
 from app.models.session import (
     Session,
     SessionCreate,
@@ -385,6 +385,8 @@ async def process_session(
             mapping_context=mapping_context,
             app_settings=app_settings,
         )
+    except AppException as exc:
+        raise exc
     except Exception as exc:
         logger.error("AI processing error: %s", exc)
         raise HTTPException(status_code=500, detail=f"Processing failed: {exc}") from exc
@@ -410,6 +412,7 @@ async def process_session(
             if filtered[i].get("character"):
                 seg["speaker_character_name"] = filtered[i]["character"]
 
+    llm_metadata = ai_result.get("metadata", {})
     await db.sessions.update_one(
         {"id": session_id},
         {
@@ -417,6 +420,8 @@ async def process_session(
                 "technical_diary": diary_entries,
                 "review_script": ai_result.get("review_script", raw_transcription),
                 "transcription_segments": segments,
+                "diary_metadata": llm_metadata,
+                "review_metadata": llm_metadata,
                 "status": SessionStatus.AWAITING_REVIEW.value,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }

@@ -76,8 +76,9 @@ graph TD
 -   **Diário Técnico Automático**: Extração de NPCs, Itens, Locais, Eventos e sugestão de XP.
 -   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão.
 -   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs**, **Deepgram (Aura)** ou **Kokoro Local (Nativo Python)**.
--   **Multi-Provider LLM**: Suporte integrado para **OpenRouter** (acesso a centenas de modelos) e **Groq** (inferência ultra-rápida para modelos open-source como Llama 3).
--   **Gestão de Chaves Centralizada**: As chaves de API e tokens do Discord são gerenciados diretamente na interface web e persistidos de forma criptografada no MongoDB, eliminando a necessidade de editar arquivos `.env` manualmente.
+-   **Multi-Provider LLM & Fallback**: Suporte integrado para **OpenRouter** e **Groq** com um sistema inteligente de contingência (fallbacks) que alterna automaticamente entre provedores em caso de falha.
+-   **Simulação de Fallback Forçado**: Possibilidade de desativar o provedor principal para testar e validar planos de contingência diretamente na interface.
+-   **Gestão de Chaves Centralizada**: As chaves de API e tokens do Discord são gerenciados diretamente na interface web e persistidos de forma criptografada no MongoDB.
 -   **Interface Temática**: Design inspirado em arquétipos de luxo e fantasia sombria (*Dark Fantasy*).
 -   **Otimização de Áudio**: Utiliza o formato **Ogg/Opus (64kbps, mono)** para garantir arquivos minúsculos com clareza ideal para transcrição por IA, economizando até 90% de espaço em relação ao WAV puro.
 -   **TTS Local Integrado**: O sistema inclui o motor **Kokoro v1.0** rodando nativamente em Python (via ONNX), permitindo narrações de alta qualidade com **custo zero** e sem necessidade de GPU ou Docker.

@@ -15,7 +15,8 @@ from typing import Any, Dict
 
 from app.config import Settings
 from app.models.common import LLMProvider
-from app.models.settings import AppSettings
+from app.models.settings import AppSettings, LLMConfig
+from app.exceptions import AppException
 
 logger = logging.getLogger(__name__)
 
@@ -67,23 +68,99 @@ class AIProcessorService:
     ) -> Dict[str, Any]:
         """
         Send transcription to the configured LLM and parse the structured response.
+        Implements fallback logic using app_settings.llm_fallbacks.
 
         Returns the parsed JSON dict with keys:
             technical_diary, review_script, filtered_segments
         """
-        api_key = self._resolve_api_key(app_settings)
         prompt = self._build_prompt(raw_transcription, game_system, mapping_context)
-        response_text = await self._call_llm(app_settings, api_key, prompt)
-        return self._parse_response(response_text, raw_transcription)
+        
+        # Build the chain of attempts: (provider, model, specific_api_key)
+        attempts = []
+        
+        logger.info(f"Building LLM chain. Primary enabled: {app_settings.llm_primary_enabled}, Primary: {app_settings.llm_provider}")
+        
+        if app_settings.llm_primary_enabled:
+            attempts.append((app_settings.llm_provider, app_settings.llm_model or "default", None))
+        
+        for fb in app_settings.llm_fallbacks:
+            logger.info(f"Checking fallback: {fb.provider} ({fb.model}), enabled: {fb.enabled}")
+            if fb.enabled:
+                attempts.append((fb.provider, fb.model, fb.api_key))
+
+        logger.info(f"Total attempts in chain: {len(attempts)}")
+        
+        if not attempts:
+            raise AppException(
+                detail="Nenhum provedor de IA está ativo. Ative o Provedor Principal ou pelo menos um Fallback nas Configurações.",
+                status_code=400
+            )
+
+        last_error = None
+        for i, (provider, model, specific_key) in enumerate(attempts):
+            try:
+                logger.info(f"LLM Attempt {i+1}: {provider} ({model})")
+                
+                # Resolve API Key for this specific attempt
+                api_key = self._resolve_api_key(provider, specific_key, app_settings)
+                
+                # Call the specific provider
+                response_text = await self._call_llm_direct(provider, model, api_key, prompt)
+                
+                # If we got here, it worked!
+                parsed = self._parse_response(response_text, raw_transcription)
+                parsed["metadata"] = {
+                    "provider": str(provider),
+                    "model": str(model if model != "default" else self._get_default_model(provider)),
+                    "attempts": str(i + 1),
+                    "primary_enabled": str(app_settings.llm_primary_enabled)
+                }
+                return parsed
+                
+            except Exception as e:
+                last_error = e
+                logger.warning(f"LLM Attempt {i+1} failed ({provider}): {str(e)}")
+                # Continue to next attempt
+                continue
+
+        # If we reach here, all attempts failed
+        logger.error(f"All LLM attempts failed. Last error: {str(last_error)}")
+        raise AppException(
+            detail=f"Falha ao processar com IA após {len(attempts)} tentativas. Erro: {str(last_error)}",
+            status_code=503
+        )
 
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _resolve_api_key(self, app_settings: AppSettings) -> str:
-        provider = app_settings.llm_provider
+    def _get_default_model(self, provider: LLMProvider) -> str:
+        """Returns the hardcoded default model name for each provider."""
+        if provider == LLMProvider.OPENAI:
+            return "gpt-4o"
+        if provider == LLMProvider.GEMINI:
+            return "gemini-2.0-flash"
+        if provider == LLMProvider.ANTHROPIC:
+            return "claude-3-5-sonnet-20240620"
+        if provider == LLMProvider.OPENROUTER:
+            return "google/gemini-2.0-flash-001"
+        if provider == LLMProvider.GROQ:
+            return "llama3-70b-8192"
+        return "default"
+
+    def _resolve_api_key(
+        self, 
+        provider: LLMProvider, 
+        specific_key: Optional[str], 
+        app_settings: AppSettings
+    ) -> str:
+        """Resolves the API key for a specific provider, considering fallbacks and environment variables."""
         
-        # Priority 1: Key from AppSettings (DB)
+        # Priority 1: Specific key provided in the fallback config
+        if specific_key:
+            return specific_key
+
+        # Priority 2: Global Key from AppSettings (DB)
         db_key = None
         if provider == LLMProvider.OPENAI:
             db_key = app_settings.openai_api_key
@@ -99,11 +176,11 @@ class AIProcessorService:
         if db_key:
             return db_key
             
-        # Priority 2: custom_api_key (legacy)
+        # Priority 3: custom_api_key (legacy)
         if app_settings.custom_api_key:
             return app_settings.custom_api_key
 
-        # Priority 3: Fallback to environment variables (for testing/graceful degradation)
+        # Priority 4: Fallback to environment variables
         if provider == LLMProvider.OPENAI:
             return self._settings.openai_api_key
         if provider == LLMProvider.GEMINI:
@@ -129,30 +206,29 @@ class AIProcessorService:
             "Processe e retorne o JSON estruturado."
         )
 
-    async def _call_llm(
-        self, app_settings: AppSettings, api_key: str, prompt: str
+    async def _call_llm_direct(
+        self, provider: LLMProvider, model: str, api_key: str, prompt: str
     ) -> str:
-        provider = app_settings.llm_provider
-
+        """Dispatches the call to the specific provider implementation."""
         if provider == LLMProvider.OPENAI:
-            return self._call_openai(api_key, prompt, app_settings.llm_model or "gpt-4o")
+            return self._call_openai(api_key, prompt, model if model != "default" else "gpt-4o")
 
         if provider == LLMProvider.GEMINI:
-            return self._call_gemini(api_key, prompt, app_settings.llm_model or "gemini-2.0-flash")
+            return self._call_gemini(api_key, prompt, model if model != "default" else "gemini-2.0-flash")
 
         if provider == LLMProvider.ANTHROPIC:
             return self._call_anthropic(
-                api_key, prompt, app_settings.llm_model or "claude-3-5-sonnet-20240620"
+                api_key, prompt, model if model != "default" else "claude-3-5-sonnet-20240620"
             )
 
         if provider == LLMProvider.OPENROUTER:
             return self._call_openrouter(
-                api_key, prompt, app_settings.llm_model or "google/gemini-2.0-flash-001"
+                api_key, prompt, model if model != "default" else "google/gemini-2.0-flash-001"
             )
 
         if provider == LLMProvider.GROQ:
             return self._call_groq(
-                api_key, prompt, app_settings.llm_model or "llama3-70b-8192"
+                api_key, prompt, model if model != "default" else "llama3-70b-8192"
             )
 
         raise ValueError(f"Unknown LLM provider: {provider}")
@@ -194,7 +270,7 @@ class AIProcessorService:
             # OpenRouter supports json_object if the underlying model does, 
             # but it's safer to just let it return text and we parse it.
             # However, GPT-4o and Gemini via OpenRouter usually support it.
-            response_format={"type": "json_object"} if "gemini" in model.lower() or "gpt" in model.lower() or "llama-3" in model.lower() else None,
+            response_format={"type": "json_object"} if any(m in model.lower() for m in ["gemini", "gpt", "llama-3"]) else None,
         )
         return completion.choices[0].message.content or ""
 
@@ -213,8 +289,8 @@ class AIProcessorService:
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-            # Groq supports JSON mode for some models
-            response_format={"type": "json_object"} if "llama3" in model.lower() or "mixtral" in model.lower() else None,
+            # Groq supports JSON mode for most modern models
+            response_format={"type": "json_object"} if any(m in model.lower() for m in ["llama-3", "llama3", "mixtral"]) else None,
         )
         return completion.choices[0].message.content or ""
 
@@ -227,7 +303,10 @@ class AIProcessorService:
             model_name=model_name,
             system_instruction=_SYSTEM_PROMPT,
         )
-        response = model.generate_content(prompt)
+        response = model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
         return response.text
 
     @staticmethod
@@ -251,10 +330,16 @@ class AIProcessorService:
         text = re.sub(r"^```(?:json)?", "", text, flags=re.MULTILINE).strip()
         text = re.sub(r"```$", "", text, flags=re.MULTILINE).strip()
 
+        # Try to find JSON block if there's extra text
+        if not text.startswith("{"):
+            match = re.search(r"({.*})", text, re.DOTALL)
+            if match:
+                text = match.group(1)
+
         try:
             return json.loads(text)
-        except json.JSONDecodeError:
-            logger.warning("Failed to parse LLM JSON response. Using fallback structure.")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse LLM JSON response: {e}. Raw: {text[:200]}...")
             return {
                 "technical_diary": [],
                 "review_script": fallback_transcription,

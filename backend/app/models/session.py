@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -57,6 +57,8 @@ class Session(BaseModel):
     narration_audio_url: Optional[str] = None
     is_audio_append: bool = False
     chunk_duration_minutes: int = 20
+    diary_metadata: Optional[Dict[str, Any]] = None
+    review_metadata: Optional[Dict[str, Any]] = None
 
 
 class SessionCreate(BaseModel):

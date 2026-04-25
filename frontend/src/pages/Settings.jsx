@@ -11,13 +11,18 @@ import {
   Music,
   Globe,
   Eye,
-  EyeOff
+  EyeOff,
+  Plus,
+  Trash2,
+  Layers,
+  ShieldAlert
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Switch } from "../components/ui/switch";
+import { Badge } from "../components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -25,8 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Badge } from "../components/ui/badge";
-
 // Custom Hooks
 import { useSettings } from "../hooks/useSettings";
 
@@ -86,7 +89,9 @@ const Settings = () => {
     elevenlabs_voice_id: "pNInz6obpgmqS2C9NfX",
     kokoro_base_url: "http://localhost:8000/api/v1/audio",
     kokoro_model: "model_q8f16",
-    kokoro_voice: "af_heart"
+    kokoro_voice: "af_heart",
+    llm_fallbacks: [],
+    llm_primary_enabled: true
   });
 
   const [visibleFields, setVisibleFields] = useState({});
@@ -131,7 +136,9 @@ const Settings = () => {
         kokoro_base_url: settings.kokoro_base_url || "http://localhost:8000/api/v1/audio",
         kokoro_model: settings.kokoro_model || "model_q8f16",
         kokoro_voice: settings.kokoro_voice || "af_heart",
-        tts_provider: settings.tts_provider || "elevenlabs"
+        tts_provider: settings.tts_provider || "elevenlabs",
+        llm_fallbacks: settings.llm_fallbacks || [],
+        llm_primary_enabled: settings.llm_primary_enabled ?? true
       });
     }
   }, [settings]);
@@ -228,8 +235,10 @@ const Settings = () => {
   }, [formData.elevenlabs_api_key, formData.deepgram_api_key, formData.kokoro_base_url]);
 
   useEffect(() => {
+    const providersNeeded = new Set([formData.llm_provider, ...formData.llm_fallbacks.map(f => f.provider)]);
+
     const fetchOpenRouterModels = async () => {
-      if (formData.llm_provider !== 'openrouter' || dynamicModels.openrouter) return;
+      if (!providersNeeded.has('openrouter') || dynamicModels.openrouter) return;
       
       setFetchingModels(true);
       try {
@@ -247,7 +256,7 @@ const Settings = () => {
     };
 
     const fetchGroqModels = async () => {
-      if (formData.llm_provider !== 'groq' || dynamicModels.groq) return;
+      if (!providersNeeded.has('groq') || dynamicModels.groq) return;
       
       setFetchingModels(true);
       try {
@@ -266,7 +275,7 @@ const Settings = () => {
 
     fetchOpenRouterModels();
     fetchGroqModels();
-  }, [formData.llm_provider]);
+  }, [formData.llm_provider, formData.llm_fallbacks, dynamicModels.openrouter, dynamicModels.groq]);
 
   const getLLMKeyField = () => {
     switch (formData.llm_provider) {
@@ -286,6 +295,28 @@ const Settings = () => {
       llm_provider: provider,
       llm_model: defaultModel
     });
+  };
+
+  const addFallback = () => {
+    setFormData({
+      ...formData,
+      llm_fallbacks: [
+        ...formData.llm_fallbacks,
+        { provider: "groq", model: "llama3-70b-8192", label: "Novo Fallback", api_key: "", enabled: true }
+      ]
+    });
+  };
+
+  const removeFallback = (index) => {
+    const newList = [...formData.llm_fallbacks];
+    newList.splice(index, 1);
+    setFormData({ ...formData, llm_fallbacks: newList });
+  };
+
+  const updateFallback = (index, field, value) => {
+    const newList = [...formData.llm_fallbacks];
+    newList[index] = { ...newList[index], [field]: value };
+    setFormData({ ...formData, llm_fallbacks: newList });
   };
 
   if (loading) {
@@ -311,16 +342,35 @@ const Settings = () => {
 
         {/* LLM Provider Settings */}
         <Card className="card-rpg mb-6">
-          <CardHeader className="border-b border-white/10">
-            <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-              <Brain className="w-5 h-5 text-rpg-gold" />
-              Provedor de IA
-            </CardTitle>
-            <CardDescription className="text-[#A0A5B5]">
-              Escolha qual LLM será usado para processar as transcrições
-            </CardDescription>
+          <CardHeader className="border-b border-white/10 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
+                <Brain className="w-5 h-5 text-rpg-gold" />
+                Provedor de IA
+              </CardTitle>
+              <CardDescription className="text-[#A0A5B5]">
+                Escolha qual LLM será usado para processar as transcrições
+              </CardDescription>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+                <span className="text-[10px] text-[#A0A5B5] uppercase font-bold tracking-wider">
+                  {formData.llm_primary_enabled ? 'Provedor Principal: ATIVO' : 'Provedor Principal: DESATIVADO'}
+                </span>
+                <Switch 
+                  checked={formData.llm_primary_enabled} 
+                  onCheckedChange={(val) => setFormData({ ...formData, llm_primary_enabled: val })}
+                  className="scale-90 data-[state=checked]:bg-emerald-500"
+                />
+              </div>
+              {!formData.llm_primary_enabled && (
+                <span className="text-[9px] text-amber-400 font-medium animate-pulse">
+                  O sistema usará apenas os fallbacks abaixo
+                </span>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-6">
+          <CardContent className={`p-6 space-y-6 transition-opacity duration-200 ${!formData.llm_primary_enabled ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
             <div className="space-y-2">
               <Label className="text-[#EDEDED]">Provedor</Label>
               <Select value={formData.llm_provider} onValueChange={handleProviderChange}>
@@ -416,6 +466,131 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* LLM Fallback Chain */}
+        <Card className="card-rpg mb-6 border-amber-500/20">
+          <CardHeader className="border-b border-white/10 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-amber-400" />
+                Plano de Contingência (Fallbacks)
+              </CardTitle>
+              <CardDescription className="text-[#A0A5B5]">
+                Se o provedor principal falhar, o bot tentará estes em ordem
+              </CardDescription>
+            </div>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={addFallback}
+              className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Fallback
+            </Button>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {formData.llm_fallbacks?.length === 0 ? (
+                <div className="text-center py-6 border-2 border-dashed border-white/5 rounded-lg">
+                  <p className="text-sm text-[#6C7280]">Nenhum fallback configurado.</p>
+                </div>
+              ) : (
+                formData.llm_fallbacks?.map((fb, index) => (
+                  <div key={index} className={`p-4 rounded-lg bg-white/5 border border-white/10 space-y-4 transition-all duration-200 ${fb.enabled === false ? 'border-dashed opacity-60' : ''}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge className={`border-amber-500/20 ${fb.enabled !== false ? 'bg-amber-500/10 text-amber-400' : 'bg-gray-500/10 text-gray-400 opacity-50'}`}>
+                          Prioridade #{index + 1}
+                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Switch 
+                            checked={fb.enabled !== false} 
+                            onCheckedChange={(val) => updateFallback(index, "enabled", val)}
+                            className="scale-75"
+                          />
+                          <span className="text-[10px] text-[#A0A5B5] uppercase font-semibold">
+                            {fb.enabled !== false ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => removeFallback(index)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-400/10 h-8 w-8 p-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-200 ${fb.enabled === false ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-[#A0A5B5]">Provedor</Label>
+                        <Select 
+                          value={fb.provider} 
+                          onValueChange={(val) => updateFallback(index, "provider", val)}
+                        >
+                          <SelectTrigger className="input-dark h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-rpg-surface border-white/10">
+                            <SelectItem value="gemini">Google Gemini</SelectItem>
+                            <SelectItem value="openai">OpenAI</SelectItem>
+                            <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                            <SelectItem value="openrouter">OpenRouter</SelectItem>
+                            <SelectItem value="groq">Groq</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs text-[#A0A5B5]">Modelo</Label>
+                        <Select 
+                          value={fb.model} 
+                          onValueChange={(val) => updateFallback(index, "model", val)}
+                        >
+                          <SelectTrigger className="input-dark h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-rpg-surface border-white/10">
+                            {fetchingModels && !dynamicModels[fb.provider] && (fb.provider === 'openrouter' || fb.provider === 'groq') ? (
+                              <SelectItem value="loading" disabled>Carregando modelos...</SelectItem>
+                            ) : (
+                              (dynamicModels[fb.provider] || llmModels[fb.provider])?.map((m) => (
+                                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className={`space-y-2 transition-all duration-200 ${fb.enabled === false ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                      <Label className="text-xs text-[#A0A5B5]">API Key Específica (Opcional)</Label>
+                      <div className="relative">
+                        <Input
+                          type={visibleFields[`fallback_${index}`] ? "text" : "password"}
+                          value={fb.api_key || ""}
+                          onChange={(e) => updateFallback(index, "api_key", e.target.value)}
+                          placeholder="Deixe em branco para usar a chave global"
+                          className="input-dark h-9 font-mono text-xs pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleVisibility(`fallback_${index}`)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6C7280] hover:text-white transition-colors"
+                        >
+                          {visibleFields[`fallback_${index}`] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

@@ -35,8 +35,8 @@ export const useSession = (sessionId) => {
       toast.success("Informações salvas!");
       return response.data;
     } catch (error) {
-      toast.error("Erro ao salvar informações");
-      throw error;
+      const detail = error.response?.data?.detail || "Erro ao salvar informações";
+      toast.error(detail);
     } finally {
       setSaving(false);
     }
@@ -54,8 +54,8 @@ export const useSession = (sessionId) => {
       toast.success("Áudio enviado e transcrito com sucesso!");
       await fetchSession();
     } catch (error) {
-      toast.error("Erro ao processar áudio");
-      throw error;
+      const detail = error.response?.data?.detail || "Erro ao processar áudio";
+      toast.error(detail);
     } finally {
       setUploading(false);
     }
@@ -68,8 +68,8 @@ export const useSession = (sessionId) => {
       toast.success("Sessão processada com IA!");
       await fetchSession();
     } catch (error) {
-      toast.error("Erro ao processar com IA");
-      throw error;
+      const detail = error.response?.data?.detail || "Erro ao processar com IA";
+      toast.error(detail);
     } finally {
       setProcessing(false);
     }
@@ -111,7 +111,6 @@ export const useSession = (sessionId) => {
     } catch (error) {
       const detail = error.response?.data?.detail || "Erro ao gerar narração";
       toast.error(detail);
-      throw error;
     } finally {
       setProcessing(false);
     }

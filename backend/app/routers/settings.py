@@ -33,6 +33,12 @@ async def _load_settings(db: AsyncIOMotorDatabase) -> AppSettings:
         settings.elevenlabs_api_key = decrypt(settings.elevenlabs_api_key)
         settings.deepgram_api_key = decrypt(settings.deepgram_api_key)
         settings.custom_api_key = decrypt(settings.custom_api_key)
+        
+        # Descriptografar chaves nos fallbacks
+        if settings.llm_fallbacks:
+            for fb in settings.llm_fallbacks:
+                if fb.api_key:
+                    fb.api_key = decrypt(fb.api_key)
     else:
         settings = AppSettings()
         
@@ -71,6 +77,7 @@ async def update_app_settings(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    logger.info(f"Saving updated application settings")
     
     # Criptografar campos sensíveis antes de salvar
     if "discord_bot_token" in update_data:
@@ -81,6 +88,12 @@ async def update_app_settings(
         update_data["deepgram_api_key"] = encrypt(update_data["deepgram_api_key"])
     if "custom_api_key" in update_data:
         update_data["custom_api_key"] = encrypt(update_data["custom_api_key"])
+        
+    # Criptografar chaves nos fallbacks se existirem
+    if "llm_fallbacks" in update_data and update_data["llm_fallbacks"]:
+        for i, fb in enumerate(update_data["llm_fallbacks"]):
+            if "api_key" in fb and fb["api_key"]:
+                update_data["llm_fallbacks"][i]["api_key"] = encrypt(fb["api_key"])
 
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
 

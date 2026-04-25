@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,12 +16,22 @@ class TTSProvider(str, Enum):
     KOKORO = "kokoro"
 
 
+class LLMConfig(BaseModel):
+    label: str = "Fallback"
+    provider: LLMProvider
+    model: str
+    enabled: bool = True
+    api_key: Optional[str] = None # If provided, overrides the global key
+
+
 class AppSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: str = "app_settings"
     llm_provider: LLMProvider = LLMProvider.GEMINI
     llm_model: str = "gemini-2.0-flash"
+    llm_primary_enabled: bool = True
+    llm_fallbacks: List[LLMConfig] = Field(default_factory=list)
     
     # LLM API Keys
     openai_api_key: Optional[str] = None
@@ -54,6 +64,8 @@ class AppSettings(BaseModel):
 class AppSettingsUpdate(BaseModel):
     llm_provider: Optional[LLMProvider] = None
     llm_model: Optional[str] = None
+    llm_primary_enabled: Optional[bool] = None
+    llm_fallbacks: Optional[List[LLMConfig]] = None
     
     openai_api_key: Optional[str] = None
     google_api_key: Optional[str] = None
