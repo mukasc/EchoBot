@@ -1,5 +1,6 @@
-# EchoBot - O Cronista das Sombras
+# EchoBot - O Cronista das Sombras 🏛️📜
 
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react)](https://reactjs.org/)
@@ -22,7 +23,7 @@
 [![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=flat&logo=pytest&logoColor=white)](https://docs.pytest.org/)
 [![Attributions](https://img.shields.io/badge/Attributions-List-orange.svg)](ATTRIBUTIONS.md)
 
-**EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
+**EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord ou via **upload manual de arquivos**, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
 
 ---
 
@@ -34,6 +35,7 @@ O EchoBot é composto por três serviços principais que trabalham em harmonia:
 graph TD
     subgraph "Captação de Áudio"
         A[Discord Voice] -->|Opus/Ogg Stream| B[Voice Bridge Node.js]
+        A1[Upload Manual] -->|Arquivo .ogg/mp3| C
     end
 
     subgraph "Processamento & IA"
@@ -43,7 +45,7 @@ graph TD
         
         E1[STT: Faster Whisper / Gemini]
         E2[LLM: Gemini / GPT / Claude / OpenRouter / Groq]
-        E3[TTS: ElevenLabs / Deepgram / Kokoro]
+        E3[TTS: ElevenLabs / Deepgram / Kokoro Local & Web]
     end
 
     subgraph "Interface do Mestre"
@@ -81,33 +83,36 @@ graph TD
 ## ✨ Funcionalidades
 
 -   **Captura de Voz Multi-usuário**: Grava o áudio de cada participante separadamente para transcrições mais precisas.
+-   **Upload Manual**: Ingestão de arquivos de áudio externos diretamente pela interface web para processamento de sessões gravadas fora do Discord.
 -   **Timestamp Absoluto**: Registra o horário real de cada fala (ex: 14:32:15), facilitando a sincronização com a sessão.
 -   **Transcrição Híbrida**: Prioriza o uso do **Faster Whisper (Local)** para economia, com fallback para APIs de cloud (OpenAI/Gemini).
 -   **Processamento Narrativo Inteligente**: Separa automaticamente falas *In-Character* (IC) de conversas *Out-of-Character* (OOC).
 -   **Diário Técnico Automático**: Extração de NPCs, Itens, Locais, Eventos e sugestão de XP.
 -   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão.
--   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs**, **Deepgram (Aura)** ou **Kokoro Local (Nativo Python)**.
+-   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs**, **Deepgram (Aura)** ou **Kokoro** (Nativo Python ou Servidor API).
 -   **Multi-Provider LLM & Fallback**: Suporte integrado para **OpenRouter** e **Groq** com um sistema inteligente de contingência (fallbacks) que alterna automaticamente entre provedores em caso de falha.
 -   **Simulação de Fallback Forçado**: Possibilidade de desativar o provedor principal para testar e validar planos de contingência diretamente na interface.
 -   **Exportação Multiformato**: Gere arquivos **Markdown** ou **PDF Premium** (com tema RPG luxuoso) para seus diários e roteiros.
 -   **Integração com Notion**: Exporte suas crônicas diretamente para uma página ou base de dados no **Notion.so** com um clique.
 -   **Gestão de Chaves Centralizada**: As chaves de API (incluindo Notion) e tokens do Discord são gerenciados diretamente na interface web e persistidos de forma criptografada no MongoDB.
--   **Interface Temática**: Design inspirado em arquétipos de luxo e fantasia sombria (*Dark Fantasy*).
+-   **Interface Temática Premium**: Design inspirado em arquétipos de luxo e fantasia sombria (*Dark Fantasy*), otimizado para **Acessibilidade** e navegabilidade fluida.
 -   **Otimização de Áudio**: Utiliza o formato **Ogg/Opus (64kbps, mono)** para garantir arquivos minúsculos com clareza ideal para transcrição por IA, economizando até 90% de espaço em relação ao WAV puro.
 -   **TTS Local Integrado**: O sistema inclui o motor **Kokoro v1.0** rodando nativamente em Python (via ONNX), permitindo narrações de alta qualidade com **custo zero** e sem necessidade de GPU ou Docker.
+-   **Conformidade & Créditos**: Documentação completa de bibliotecas de terceiros via `ATTRIBUTIONS.md`.
 
 ---
 
-## 🔊 Kokoro TTS (Nativo)
+## 🔊 Kokoro TTS (Híbrido)
 
-O EchoBot agora suporta o motor de voz **Kokoro** de forma totalmente nativa. 
+O EchoBot suporta o motor de voz **Kokoro** de duas formas:
 
-- **Como funciona**: Na primeira vez que você solicitar uma narração via Kokoro, o sistema baixará automaticamente o modelo ONNX (~300MB) e os arquivos de voz (~30MB) para a pasta `backend/models/kokoro/`.
+1.  **Nativo (Local)**: Na primeira vez que você solicitar uma narração via Kokoro Local, o sistema baixará automaticamente o modelo ONNX (~300MB) para a pasta `backend/models/kokoro/`. Funciona offline e com custo zero.
+2.  **Web (API)**: Conecte-se a uma instância remota do Kokoro (compatível com o protocolo OpenAI) para delegar o processamento e economizar recursos locais.
+
 - **Vantagens**: 
-  - 100% gratuito e privado.
-  - Funciona offline após o download inicial.
-  - Não requer ativação de virtualização (BIOS) ou Docker.
-  - Velocidade de inferência otimizada para CPU.
+  - 100% gratuito e privado (no modo local).
+  - Qualidade comparável a serviços pagos de elite.
+  - Não requer ativação de virtualização (BIOS) ou Docker para rodar localmente.
 
 ---
 
@@ -299,5 +304,11 @@ EchoBot/
 -   **Fallback de IA**: O sistema tentará transcrever localmente primeiro; se falhar, utilizará as APIs configuradas (OpenAI/Gemini).
 
 ---
+
+## ⚖️ Licença e Propriedade Intelectual
+
+© 2026 Murillo Petry (Muka). Todos os direitos reservados.
+
+Este software e todo o seu código-fonte são de propriedade exclusiva. A reprodução, distribuição ou modificação sem autorização expressa é estritamente proibida. Para detalhes sobre bibliotecas de terceiros utilizadas, consulte o arquivo [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
 *“Que suas falas sejam épicas e suas crônicas, eternas.”* 🏛️📜
