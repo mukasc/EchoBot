@@ -22,7 +22,37 @@
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
         <title>EchoBot | O Cronista das Sombras</title>
-        <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
+        <script>
+          // Suppress ResizeObserver loop errors
+          const resizeObserverErrMessages = [
+            "ResizeObserver loop completed with undelivered notifications.",
+            "ResizeObserver loop limit exceeded",
+          ];
+
+          window.addEventListener("error", (e) => {
+            if (resizeObserverErrMessages.includes(e.message)) {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+            }
+          }, true);
+
+          // Monkey-patch ResizeObserver to debounce callbacks
+          if (window.ResizeObserver) {
+            const RO = window.ResizeObserver;
+            window.ResizeObserver = class ResizeObserver extends RO {
+              constructor(callback) {
+                super((entries, observer) => {
+                  requestAnimationFrame(() => {
+                    callback(entries, observer);
+                  });
+                });
+              }
+            };
+          }
+          
+          // Existing DataCloneError suppression
+          window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);
+        </script>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>

@@ -21,6 +21,35 @@ import ReactDOM from "react-dom/client";
 import "@/index.css";
 import App from "@/App";
 
+// Suppress ResizeObserver loop errors which are benign but trigger dev overlays
+const originalResizeObserver = window.ResizeObserver;
+window.ResizeObserver = class ResizeObserver extends originalResizeObserver {
+  constructor(callback) {
+    super((entries, observer) => {
+      requestAnimationFrame(() => {
+        callback(entries, observer);
+      });
+    });
+  }
+};
+
+const resizeObserverErrMessages = [
+  "ResizeObserver loop completed with undelivered notifications.",
+  "ResizeObserver loop limit exceeded",
+];
+
+const suppressResizeObserverError = (e) => {
+  const message = e instanceof ErrorEvent ? e.message : e;
+  if (resizeObserverErrMessages.includes(message)) {
+    if (e instanceof ErrorEvent) e.stopImmediatePropagation();
+    return true;
+  }
+  return false;
+};
+
+window.addEventListener("error", suppressResizeObserverError);
+window.onerror = suppressResizeObserverError;
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
