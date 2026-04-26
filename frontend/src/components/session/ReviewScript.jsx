@@ -45,7 +45,7 @@ const ReviewScript = ({
     };
 
     fetchProviders();
-  }, []);
+  }, [selectedProvider]);
 
   useEffect(() => {
     const fetchVoices = async () => {

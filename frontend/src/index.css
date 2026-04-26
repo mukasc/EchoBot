@@ -122,16 +122,20 @@
 
 /* Card RPG Style */
 .card-rpg {
-  @apply bg-rpg-surface border border-white/10 rounded-lg transition-all duration-200;
+  @apply bg-rpg-surface border border-white/10 rounded-xl transition-all duration-300 shadow-lg;
 }
 
 .card-rpg:hover {
-  @apply bg-rpg-surface-hover border-rpg-gold/30;
+  @apply bg-rpg-surface-hover border-rpg-gold/40 shadow-rpg-gold/10 -translate-y-1;
 }
 
-/* Glass Effect */
+/* Glass Effect Premium */
 .glass-header {
-  @apply backdrop-blur-xl bg-rpg-void/80 border-b border-white/10;
+  @apply backdrop-blur-xl bg-rpg-void/80 border border-white/10 shadow-2xl;
+}
+
+.glass-card {
+  @apply backdrop-blur-md bg-white/[0.03] border border-white/10;
 }
 
 /* Pulse Animation for Processing */
@@ -174,10 +178,44 @@
   @apply bg-green-500/20 text-green-400 border-green-500/30;
 }
 
+/* Entry Animations */
+.animate-in-fade {
+  animation: fadeInFade 0.6s ease-out forwards;
+}
+
+.animate-in-slide-up {
+  animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered Entry Delays */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-gold,
-  .animate-pulse {
+  .animate-pulse,
+  .animate-in-fade,
+  .animate-in-slide-up {
     animation: none;
   }
 }

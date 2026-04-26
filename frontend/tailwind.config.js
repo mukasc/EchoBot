@@ -93,6 +93,10 @@ module.exports = {
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
+  		},
+  		boxShadow: {
+  			'rpg-gold': '0 0 20px rgba(212, 175, 55, 0.2)',
+  			'rpg-glow': '0 0 15px rgba(212, 175, 55, 0.1)'
   		}
   	}
   },

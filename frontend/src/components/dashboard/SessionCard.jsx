@@ -3,6 +3,17 @@ import { Link } from "react-router-dom";
 import { Calendar, Clock, Trash2, ChevronRight, Copy, Check, Hash } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { toast } from "sonner";
 
 const statusLabels = {
@@ -23,12 +34,8 @@ const SessionCard = ({ session, onDelete }) => {
     });
   };
 
-  const handleDelete = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (window.confirm("Tem certeza que deseja excluir esta sessão?")) {
-      onDelete(session.id);
-    }
+  const handleDelete = () => {
+    onDelete(session.id);
   };
 
   const handleCopyId = (e) => {
@@ -55,18 +62,36 @@ const SessionCard = ({ session, onDelete }) => {
             {statusLabels[session.status] || session.status}
           </Badge>
           
-          <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={handleDelete}
-              className="p-2 rounded-lg bg-rpg-void/80 text-[#6C7280] hover:text-red-500 hover:bg-rpg-void transition-colors"
-              title="Excluir sessão"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+          <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    className="p-2 rounded-lg bg-rpg-void/80 text-[#6C7280] hover:text-red-500 hover:bg-rpg-void transition-colors"
+                    aria-label="Excluir sessão"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-rpg-surface border-white/10">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-[#EDEDED] font-serif">Confirmar Exclusão</AlertDialogTitle>
+                    <AlertDialogDescription className="text-[#A0A5B5]">
+                      Tem certeza que deseja excluir a sessão "{session.name}"? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="bg-transparent border-white/10 text-[#A0A5B5] hover:bg-white/5">Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-500 text-white border-none">Excluir</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+            
             <button
               onClick={handleCopyId}
               className={`p-2 rounded-lg bg-rpg-void/80 transition-colors ${copied ? 'text-green-500' : 'text-[#6C7280] hover:text-rpg-gold hover:bg-rpg-void'}`}
-              title="Copiar ID da sessão"
+              aria-label="Copiar ID da sessão"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             </button>
@@ -103,6 +128,7 @@ const SessionCard = ({ session, onDelete }) => {
                     ? 'bg-green-500/10 border-green-500/50 text-green-500' 
                     : 'bg-white/5 border-white/10 text-[#A0A5B5] hover:bg-rpg-gold/10 hover:border-rpg-gold/30 hover:text-rpg-gold shadow-sm'
                 }`}
+                aria-label="Copiar ID da sessão"
               >
                 {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 {copied ? 'Copiado!' : 'Copiar ID'}

@@ -85,12 +85,8 @@ const CharacterMappings = () => {
               Como obter o Discord User ID?
             </h3>
             <ol className="space-y-3 text-[#A0A5B5]">
-              {[
-                "Abra as Configurações do Discord (ícone de engrenagem)",
-                "Vá em \"Avançado\" e ative o \"Modo de Desenvolvedor\"",
-                "Clique com o botão direito no usuário e selecione \"Copiar ID\""
-              ].map((step, i) => (
-                <li key={i} className="flex gap-3">
+              {["Abra as Configurações do Discord (ícone de engrenagem)", "Vá em \"Avançado\" e ative o \"Modo de Desenvolvedor\"", "Clique com o botão direito no usuário e selecione \"Copiar ID\""].map((step, i) => (
+                <li key={i} className={`flex gap-3 animate-in-slide-up delay-${(i + 1) * 100}`}>
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-rpg-gold/10 text-rpg-gold text-sm flex items-center justify-center font-semibold">
                     {i + 1}
                   </span>

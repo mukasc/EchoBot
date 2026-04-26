@@ -358,7 +358,7 @@ const Settings = () => {
         >
 
         {/* LLM Provider Settings */}
-        <Card className="card-rpg mb-6">
+        <Card className="card-rpg mb-6 animate-in-slide-up">
           <CardHeader className="border-b border-white/10 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
@@ -439,7 +439,7 @@ const Settings = () => {
         </Card>
 
         {/* API Key Settings */}
-        <Card className="card-rpg mb-6">
+        <Card className="card-rpg mb-6 animate-in-slide-up delay-75">
           <CardHeader className="border-b border-white/10">
             <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
               <Key className="w-5 h-5 text-rpg-gold" />
@@ -492,7 +492,7 @@ const Settings = () => {
         </Card>
 
         {/* LLM Fallback Chain */}
-        <Card className="card-rpg mb-6 border-amber-500/20">
+        <Card className="card-rpg mb-6 border-amber-500/20 animate-in-slide-up delay-150">
           <CardHeader className="border-b border-white/10 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
@@ -621,10 +621,10 @@ const Settings = () => {
         </Card>
 
         {/* Discord Bot Settings */}
-        <Card className="card-rpg mb-6 border-indigo-500/30">
+        <Card className="card-rpg mb-6 border-rpg-gold/20 bg-rpg-gold/5 animate-in-slide-up delay-200">
           <CardHeader className="border-b border-white/10">
             <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-              <SettingsIcon className="w-5 h-5 text-indigo-400" />
+              <SettingsIcon className="w-5 h-5 text-rpg-gold" />
               Configuração do Bot Discord
             </CardTitle>
             <CardDescription className="text-[#A0A5B5]">
@@ -687,7 +687,7 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        <Card className={`card-rpg mb-6 border-rpg-gold/30 ${formData.tts_provider === 'elevenlabs' ? 'ring-1 ring-rpg-gold/50' : ''}`}>
+        <Card className={`card-rpg mb-6 border-rpg-gold/30 animate-in-slide-up delay-300 ${formData.tts_provider === 'elevenlabs' ? 'ring-1 ring-rpg-gold/50' : ''}`}>
           <CardHeader className="border-b border-white/10 flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">

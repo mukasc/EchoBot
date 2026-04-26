@@ -76,10 +76,10 @@ const BotSetup = () => {
         </div>
 
         {/* Configuration Section */}
-        <Card className="card-rpg mb-8 border-indigo-500/40 bg-indigo-500/5">
+        <Card className="card-rpg mb-8 border-rpg-gold/20 bg-rpg-gold/5 animate-in-slide-up delay-100">
           <CardHeader className="border-b border-white/10">
             <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-              <Key className="w-5 h-5 text-indigo-400" />
+              <Key className="w-5 h-5 text-rpg-gold" />
               Configuração do Bot Discord
             </CardTitle>
             <CardDescription className="text-[#A0A5B5]">
@@ -146,7 +146,7 @@ const BotSetup = () => {
               <Button 
                 onClick={handleSave} 
                 disabled={saving}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white border-none"
+                className="btn-gold border-none"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

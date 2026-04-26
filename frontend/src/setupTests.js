@@ -15,3 +15,15 @@ afterEach(() => {
 
 // Clean up after the tests are finished.
 afterAll(() => server.close());
+
+// Mock browser APIs for Radix UI
+class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+window.ResizeObserver = ResizeObserver;
+window.HTMLElement.prototype.scrollIntoView = function() {};
+window.HTMLElement.prototype.hasPointerCapture = function() { return false; };
+window.HTMLElement.prototype.releasePointerCapture = function() {};

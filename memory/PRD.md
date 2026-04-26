@@ -49,7 +49,11 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
   *   *Nota: Atualmente aceita um arquivo por vez e mantém o formato original (sem conversão para .ogg no upload).*
 - [x] **Exportação e Integração**: Exportação de Diário e Roteiro em formatos PDF e Markdown.
   *   *Bônus:* Implementada integração direta com **Notion.so** para envio automatizado de notas de sessão.
-- [x] **Configurações de Roteiro**: Implementação de controle de **Densidade** (Curto, Padrão, Alternativo, Detalhado) e **Perspectiva Narrativa** (1ª, 2ª, 3ª Pessoa, Relatório Tático) para personalização do resumo gerado por IA.
+- [x] **Premium UI/UX overhaul**: Implementação de tema "Dark Fantasy" consistente com Glassmorphism, animações de entrada e transições suaves em todas as páginas (`Dashboard`, `BotSetup`, `Settings`).
+- [x] **Navegação Fluida**: Implementação de Header flutuante e interativo.
+- [x] **Feedback do Usuário Moderno**: Substituição de alertas nativos por diálogos de confirmação (`AlertDialog`) do Radix UI.
+- [x] **Estabilização de Testes Frontend**: Suite de testes Vitest atualizada para cobrir interações complexas de UI (UserEvent) e mocks de APIs do navegador (`ResizeObserver`, etc.).
+- [x] **Acessibilidade & Semântica**: Auditoria completa de labels, roles e hierarquia de cabeçalhos.
 
 ## Prioritized Backlog
 

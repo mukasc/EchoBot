@@ -57,17 +57,18 @@ const TranscriptionView = ({ segments, getSpeakerInfo, onUpdateSegment, onUpload
         {segments?.length > 0 ? (
           <ScrollArea className="h-[500px]">
             <div className="p-6 space-y-4">
-              {sortedSegments.map((segment) => (
-                <SegmentItem 
-                  key={segment.id} 
-                  segment={segment}
-                  isEditing={editingId === segment.id}
-                  setEditing={setEditingId}
-                  getSpeakerInfo={getSpeakerInfo}
-                  onUpdate={onUpdateSegment}
-                  formatTimestamp={formatTimestamp}
-                  formatAbsoluteTimestamp={formatAbsoluteTimestamp}
-                />
+              {sortedSegments.map((segment, index) => (
+                <div key={segment.id} className={`animate-in-slide-up delay-${(index % 5) * 100}`}>
+                  <SegmentItem 
+                    segment={segment}
+                    isEditing={editingId === segment.id}
+                    setEditing={setEditingId}
+                    getSpeakerInfo={getSpeakerInfo}
+                    onUpdate={onUpdateSegment}
+                    formatTimestamp={formatTimestamp}
+                    formatAbsoluteTimestamp={formatAbsoluteTimestamp}
+                  />
+                </div>
               ))}
             </div>
           </ScrollArea>
@@ -104,7 +105,7 @@ const SegmentItem = ({
   };
 
   return (
-    <div className={`pl-4 border-l-2 transition-opacity ${
+    <div className={`pl-4 border-l-2 transition-all duration-300 ${
       segment.message_type === 'ic' ? 'border-rpg-ic' :
       segment.message_type === 'ooc' ? 'border-rpg-ooc opacity-70' :
       'border-rpg-info italic'
@@ -139,11 +140,11 @@ const SegmentItem = ({
       </div>
       
       {isEditing ? (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-in-fade">
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="input-dark"
+            className="input-dark min-h-[100px] leading-relaxed"
           />
           <div className="flex gap-2">
             <Select value={type} onValueChange={setType}>
@@ -156,16 +157,16 @@ const SegmentItem = ({
                 <SelectItem value="narration">Narração</SelectItem>
               </SelectContent>
             </Select>
-            <Button size="sm" onClick={handleSave} className="btn-gold">
+            <Button size="sm" onClick={handleSave} className="btn-gold" aria-label="Salvar alteração">
               <Check className="w-4 h-4" />
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setEditing(null)} className="border-white/10">
+            <Button size="sm" variant="outline" onClick={() => setEditing(null)} className="border-white/10" aria-label="Cancelar edição">
               <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
       ) : (
-        <p className={`text-${segment.message_type === 'ooc' ? '[#6C7280]' : '[#EDEDED]'}`}>
+        <p className={`text-base leading-relaxed tracking-wide ${segment.message_type === 'ooc' ? 'text-[#6C7280]' : 'text-[#EDEDED]'}`}>
           {segment.text}
         </p>
       )}

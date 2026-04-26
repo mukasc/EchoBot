@@ -43,7 +43,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-rpg-void bg-pattern">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 animate-in-slide-up">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold text-[#EDEDED] font-serif">
               Sessões de RPG
@@ -98,13 +98,14 @@ const Dashboard = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sessions.map((session) => (
-              <SessionCard 
-                key={session.id} 
-                session={session} 
-                onDelete={deleteSession} 
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in-fade delay-200">
+            {sessions.map((session, index) => (
+              <div key={session.id} className={`animate-in-slide-up delay-${(index % 5 + 1) * 100}`}>
+                <SessionCard 
+                  session={session} 
+                  onDelete={deleteSession} 
+                />
+              </div>
             ))}
           </div>
         )}
