@@ -11,7 +11,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
   - Faster Whisper (STT Local) + Cloud Fallback (OpenAI/Gemini)
   - Gemini 3 Flash (LLM padrão) - configurável para OpenAI/Claude/Anthropic
 - **Design**: Dark Fantasy theme (Jewel & Luxury archetype)
-- **License**: Proprietária (All Rights Reserved) - Proteção de IP para SaaS
+- **License**: Proprietária (All Rights Reserved) - Modelo de Licenciamento On-Premises (Estilo Foundry VTT). Veja [Licenciamento](file:///c:/Users/mukas/.gemini/antigravity/scratch/EchoBot/memory/on_premises_licensing.md) para detalhes.
 
 ## User Personas
 1. **Game Master**: Revisa transcrições, edita roteiros, gera narração épica e gerencia a cronologia.
@@ -71,7 +71,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Mixagem de Trilha Sonora**: Opção de adicionar trilha sonora de fundo (ambiente) automaticamente na geração do áudio narrado (TTS). Focar em curadoria de trilhas "human-made" para diferenciação ética.
 - [ ] **Video Recap (Discord-Ready)**: Geração de vídeo MP4 otimizado (limite 10MB) com áudio e imagem estática para compartilhamento rápido no Discord.
 - [ ] **Política de Privacidade Ativa**: Implementar deleção automática de áudios brutos após transcrição bem-sucedida para garantir segurança de dados.
-- [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitar distribuição.
+- [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitar a distribuição On-Premises.
 
 ### P3 (Low Priority)
 - [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
@@ -88,7 +88,26 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 
 ---
 
-## Cloud Migration & Monetization Strategy (Insights)
+## Estratégia de Distribuição e Monetização (On-Premises)
+
+### 1. Modelo de Venda Direta (Estilo Foundry VTT)
+- **Licença Perpétua:** O usuário adquire uma chave única para uso vitalício da versão atual e atualizações menores.
+- **Single Instance Enforcement:** Validação de licença para permitir apenas uma instância ativa por chave.
+- **Foco em Privacidade:** Sem dependência de nuvem centralizada para o funcionamento core do bot.
+
+### 2. Facilitação de Configuração (Low Friction)
+- **Tutoriais Exaustivos:** Vídeos e guias passo-a-passo para Nginx, SSL, MongoDB e Voice Bridge.
+- **Setup Scripts:** Automatização da instalação de dependências locais (Docker/NPM/Python).
+
+### 3. Estabilidade e Autossuficiência
+- **Foco na Robustez:** Prioridade em um software que "simplesmente funciona" após configurado, minimizando a necessidade de intervenções técnicas constantes.
+- **Ecossistema de Auto-Suporte:** Incentivo à resolução de problemas via documentação e base de conhecimento da comunidade.
+
+---
+
+## Cloud Migration & Monetization Strategy (Insights - Opcional/Futuro)
+
+Veja [Estratégia SaaS](file:///c:/Users/mukas/.gemini/antigravity/scratch/EchoBot/memory/saas_licensing.md) para detalhes sobre este modelo.
 
 ### 1. Resource Management (Local vs. Cloud)
 - **STT (Transcription):** In cloud environments, the local Faster Whisper engine requires high-cost GPU instances. 
