@@ -58,9 +58,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 _UPLOAD_DIR = Path(__file__).parent.parent.parent / "uploads"
-_ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".webm", ".mp4", ".m4a"}
+_ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".webm", ".mp4", ".m4a", ".ogg", ".opus"}
 _ALLOWED_CONTENT_TYPES = {
     "audio/mpeg", "audio/mp3", "audio/wav", "audio/webm", "audio/mp4", "audio/m4a",
+    "audio/ogg", "audio/opus", "video/ogg", "application/ogg"
 }
 
 # Lock to prevent concurrent transcriptions (OOM protection and race condition avoidance)
@@ -387,7 +388,7 @@ async def _background_process(
 # Audio upload + transcription
 # ---------------------------------------------------------------------------
 
-@router.post("/{session_id}/upload-audio/")
+@router.post("/{session_id}/upload-audio")
 async def upload_audio(
     session_id: str,
     background_tasks: BackgroundTasks,

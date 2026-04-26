@@ -10,7 +10,7 @@ async function uploadAudio(sessionId, filePath, speakerId, sessionStartTime, chu
     const form = new FormData();
     form.append('file', fs.createReadStream(filePath), {
         filename: filePath,
-        contentType: 'audio/wav',
+        contentType: 'audio/ogg',
     });
     
     if (speakerId) {
