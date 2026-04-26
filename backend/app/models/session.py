@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.common import MessageType, SessionStatus
+from app.models.common import MessageType, SessionStatus, ScriptDensity, NarrativePerspective
 
 
 class TranscriptionSegment(BaseModel):
@@ -59,6 +59,8 @@ class Session(BaseModel):
     chunk_duration_minutes: int = 20
     diary_metadata: Optional[Dict[str, Any]] = None
     review_metadata: Optional[Dict[str, Any]] = None
+    script_density: ScriptDensity = ScriptDensity.STANDARD
+    narrative_perspective: NarrativePerspective = NarrativePerspective.THIRD_PERSON_EPIC
 
 
 class SessionCreate(BaseModel):
@@ -66,6 +68,8 @@ class SessionCreate(BaseModel):
     game_system: str = "D&D 5e"
     cover_image_url: Optional[str] = None
     chunk_duration_minutes: int = 20
+    script_density: ScriptDensity = ScriptDensity.STANDARD
+    narrative_perspective: NarrativePerspective = NarrativePerspective.THIRD_PERSON_EPIC
 
 
 class SessionUpdate(BaseModel):
@@ -76,3 +80,10 @@ class SessionUpdate(BaseModel):
     technical_diary: Optional[List[TechnicalDiaryEntry]] = None
     cover_image_url: Optional[str] = None
     chunk_duration_minutes: Optional[int] = None
+    script_density: Optional[ScriptDensity] = None
+    narrative_perspective: Optional[NarrativePerspective] = None
+
+
+class SessionProcessRequest(BaseModel):
+    script_density: ScriptDensity = ScriptDensity.STANDARD
+    narrative_perspective: NarrativePerspective = NarrativePerspective.THIRD_PERSON_EPIC

@@ -49,14 +49,13 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
   *   *Nota: Atualmente aceita um arquivo por vez e mantém o formato original (sem conversão para .ogg no upload).*
 - [x] **Exportação e Integração**: Exportação de Diário e Roteiro em formatos PDF e Markdown.
   *   *Bônus:* Implementada integração direta com **Notion.so** para envio automatizado de notas de sessão.
+- [x] **Configurações de Roteiro**: Implementação de controle de **Densidade** (Curto, Padrão, Alternativo, Detalhado) e **Perspectiva Narrativa** (1ª, 2ª, 3ª Pessoa, Relatório Tático) para personalização do resumo gerado por IA.
 
 ## Prioritized Backlog
 
 ### P1 (High Priority)
 - [ ] **Ajuste Global de Termos (Legacy: Find & Replace)**: Ferramenta para correção em massa de nomes e termos em todos os textos gerados (Resumo, Diário e Roteiro) antes da narração. Deve incluir suporte a *Match Case* e *Whole Word* para precisão cirúrgica em nomes de fantasia.
 - [ ] **Glossário de Spelling (Fantasy Names)**: Sistema para garantir que a IA aprenda a grafia correta de nomes próprios do mundo de RPG (Injeção de contexto no STT/LLM).
-- [ ] **Controle de Densidade do Roteiro**: Interface para gerar roteiros de diferentes extensões: **"Roteiro Curto"**, **"Roteiro Padrão"**, **"Roteiro Alternativo"** e **"Roteiro Detalhado"**. Isso ajustará o prompt do LLM para ser mais conciso ou mais descritivo/épico.
-- [ ] **Perspectiva Narrativa**: Seleção de ponto de vista para o resumo (1ª pessoa, 2ª pessoa "Você", 3ª pessoa épica, relatório tático).
 - [ ] **Expansão do Diário Técnico**: Incluir detecção automática de **Facções**, **Quests** (Objetivos) e **Ações Notáveis de Personagens**.
 - [ ] **Visibilidade de Regeração (Diferencial Competitivo)**: Garantir que os botões de **"Regenerar Resumo"** e **"Regenerar Narração (Local)"** sejam proeminentes na UI de Detalhes da Sessão. O objetivo é permitir experimentação ilimitada (custo zero no motor local), ao contrário da concorrência que limita a uma única tentativa.
 - [ ] **Melhorias no Upload Manual**: Suporte a múltiplos arquivos simultâneos e conversão automática para `.ogg` (Opus) no servidor para economia de espaço.
@@ -119,13 +118,13 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Notebook.ai**: *Pendente de análise*. Especializado em criação de personagens e world-building assistido por IA.
 - [ ] **Kanka.io**: *Referência de UX*. Focado em gestão de campanhas com interface limpa e eficiente para organização de entidades.
 
-### 2. Ferramentas de Escrita Criativa (Foco em Narrativa)
+### Ferramentas de Escrita Criativa (Foco em Narrativa)
 *Úteis para insights sobre expansão de texto, descrições sensoriais e estilo de escrita.*
 - [ ] **Sudowrite**: Referência em expansão de ideias e descrições sensoriais (olfato, tato, visão).
 - [ ] **NovelAI**: Excelente para estilos de escrita customizáveis e narrativa de longa duração.
 - [ ] **Squibler**: Foco em estruturação de capítulos e esboço de histórias.
 
-### 3. Ferramentas de Suporte Visual e Estruturação
+### Ferramentas de Suporte Visual e Estruturação
 *Foco em planejamento espacial e gestão de conhecimento.*
 - [ ] **Inkarnate**: Referência em visualização de mundo (mapas) e estética de fantasia.
 - [ ] **Obsidian (com plugins)**: Referência em "Cérebro Digital" (PKM). Estudar exportação compatível com plugins de RPG do Obsidian.

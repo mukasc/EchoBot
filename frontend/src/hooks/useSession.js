@@ -90,10 +90,10 @@ export const useSession = (sessionId) => {
     }
   };
 
-  const processWithAI = async () => {
+  const processWithAI = async (options = {}) => {
     setProcessing(true);
     try {
-      const response = await api.post(`/sessions/${sessionId}/process/`);
+      const response = await api.post(`/sessions/${sessionId}/process/`, options);
       toast.success("Processamento iniciado em segundo plano!");
       if (response.data.status) {
         setSession(prev => ({ ...prev, status: response.data.status }));

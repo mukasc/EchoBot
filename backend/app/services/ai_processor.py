@@ -35,7 +35,7 @@ Você é um cronista de RPG especializado. Sua tarefa é analisar transcrições
    - Eventos importantes
 
 3. GERAR ROTEIRO DE REVISÃO:
-   - Texto em prosa clara e factual
+   - Texto em prosa conforme as instruções de estilo fornecidas
    - Substituir nomes de jogadores por nomes de personagens
    - Manter a narrativa coerente
    - Marcar termos incertos como [Termo Incerto: fonética]
@@ -65,6 +65,8 @@ class AIProcessorService:
         game_system: str,
         mapping_context: str,
         app_settings: AppSettings,
+        script_density: str = "standard",
+        narrative_perspective: str = "3p_epic",
     ) -> Dict[str, Any]:
         """
         Send transcription to the configured LLM and parse the structured response.
@@ -73,7 +75,13 @@ class AIProcessorService:
         Returns the parsed JSON dict with keys:
             technical_diary, review_script, filtered_segments
         """
-        prompt = self._build_prompt(raw_transcription, game_system, mapping_context)
+        prompt = self._build_prompt(
+            raw_transcription, 
+            game_system, 
+            mapping_context,
+            script_density,
+            narrative_perspective
+        )
         
         # Build the chain of attempts: (provider, model, specific_api_key)
         attempts = []
@@ -198,12 +206,34 @@ class AIProcessorService:
         raw_transcription: str,
         game_system: str,
         mapping_context: str,
+        script_density: str = "standard",
+        narrative_perspective: str = "3p_epic",
     ) -> str:
+        # Instruction for density
+        density_instructions = {
+            "short": "Gere um roteiro conciso, focando apenas nos pontos cruciais e resumindo diálogos longos.",
+            "standard": "Gere um roteiro equilibrado, mantendo o fluxo natural da história sem ser excessivamente longo.",
+            "alternative": "Gere um roteiro com foco em diálogos e interações emocionais entre os personagens.",
+            "detailed": "Gere um roteiro detalhado, épico e ricamente descritivo, capturando a atmosfera e nuances da sessão."
+        }
+        
+        # Instruction for perspective
+        perspective_instructions = {
+            "1p": "Escreva o roteiro em 1ª pessoa (do ponto de vista de um dos personagens ou de um narrador observador que participa da cena).",
+            "2p": "Escreva o roteiro em 2ª pessoa (usando 'Você', como se contasse a história diretamente para os jogadores).",
+            "3p_epic": "Escreva o roteiro em 3ª pessoa com um tom épico, lendário e solene.",
+            "tactical": "Escreva o roteiro como um relatório tático ou diário de missão oficial, focado em fatos, ordens, posicionamentos e resultados, de forma burocrática e direta."
+        }
+
+        density_text = density_instructions.get(script_density, density_instructions["standard"])
+        perspective_text = perspective_instructions.get(narrative_perspective, perspective_instructions["3p_epic"])
+
         return (
             f"Analise esta transcrição de sessão de RPG ({game_system}):\n\n"
             f"MAPEAMENTO DE JOGADORES:\n{mapping_context}\n\n"
+            f"INSTRUÇÕES DE ESTILO:\n- DENSIDADE: {density_text}\n- PERSPECTIVA: {perspective_text}\n\n"
             f"TRANSCRIÇÃO:\n{raw_transcription}\n\n"
-            "Processe e retorne o JSON estruturado."
+            "Processe e retorne o JSON estruturado conforme o SYSTEM PROMPT."
         )
 
     async def _call_llm_direct(

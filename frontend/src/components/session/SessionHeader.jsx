@@ -68,6 +68,15 @@ const SessionHeader = ({
   const [editedChunkDuration, setEditedChunkDuration] = useState(session.chunk_duration_minutes || 20);
 
   const [copied, setCopied] = useState(false);
+  const [selectedDensity, setSelectedDensity] = useState(session.script_density || "standard");
+  const [selectedPerspective, setSelectedPerspective] = useState(session.narrative_perspective || "3p_epic");
+
+  const handleProcess = () => {
+    onProcess({
+      script_density: selectedDensity,
+      narrative_perspective: selectedPerspective
+    });
+  };
 
   const handleSave = async () => {
     await onUpdate({ 
@@ -226,8 +235,34 @@ const SessionHeader = ({
             Upload Áudio
           </Button>
           
+          <div className="hidden sm:flex items-center gap-2">
+            <Select value={selectedDensity} onValueChange={setSelectedDensity}>
+              <SelectTrigger className="input-dark w-32 bg-transparent border-white/10 h-9 text-xs">
+                <SelectValue placeholder="Densidade" />
+              </SelectTrigger>
+              <SelectContent className="bg-rpg-surface border-white/10">
+                <SelectItem value="short">Curto</SelectItem>
+                <SelectItem value="standard">Padrão</SelectItem>
+                <SelectItem value="alternative">Alternativo</SelectItem>
+                <SelectItem value="detailed">Detalhado</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedPerspective} onValueChange={setSelectedPerspective}>
+              <SelectTrigger className="input-dark w-40 bg-transparent border-white/10 h-9 text-xs">
+                <SelectValue placeholder="Perspectiva" />
+              </SelectTrigger>
+              <SelectContent className="bg-rpg-surface border-white/10">
+                <SelectItem value="1p">1ª Pessoa</SelectItem>
+                <SelectItem value="2p">2ª Pessoa (Você)</SelectItem>
+                <SelectItem value="3p_epic">3ª Pessoa Épica</SelectItem>
+                <SelectItem value="tactical">Relatório Tático</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
-            onClick={onProcess}
+            onClick={handleProcess}
             disabled={uploading || !session.raw_transcription}
             className="btn-gold"
           >

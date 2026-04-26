@@ -45,6 +45,7 @@ from app.models.session import (
     TranscriptionSegment,
     TranscriptionSegmentUpdate,
     MessageType,
+    SessionProcessRequest,
 )
 from app.models.settings import AppSettings
 from app.services.ai_processor import AIProcessorService
@@ -316,6 +317,8 @@ async def _background_process(
     app_settings: AppSettings,
     db: AsyncIOMotorDatabase,
     settings: Settings,
+    script_density: str = "standard",
+    narrative_perspective: str = "3p_epic",
 ):
     logger.info("Background AI processing started for session %s", session_id)
     try:
@@ -330,6 +333,8 @@ async def _background_process(
             game_system=game_system,
             mapping_context=mapping_context,
             app_settings=app_settings,
+            script_density=script_density,
+            narrative_perspective=narrative_perspective,
         )
 
         # Build diary entries
@@ -479,6 +484,7 @@ async def upload_audio(
 async def process_session(
     session_id: str,
     background_tasks: BackgroundTasks,
+    payload: SessionProcessRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -518,6 +524,8 @@ async def process_session(
         app_settings=app_settings,
         db=db,
         settings=settings,
+        script_density=payload.script_density,
+        narrative_perspective=payload.narrative_perspective,
     )
 
     return {

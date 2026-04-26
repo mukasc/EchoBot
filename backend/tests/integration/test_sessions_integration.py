@@ -62,7 +62,7 @@ class TestSessionsIntegration:
         # Mock character mappings
         mock_db.character_mappings.find.return_value.to_list.return_value = []
 
-        response = client.post(f"/api/sessions/{session_id}/process")
+        response = client.post(f"/api/sessions/{session_id}/process/", json={})
         
         assert response.status_code == 200
         assert response.json()["status"] == "processing"
@@ -82,6 +82,6 @@ class TestSessionsIntegration:
             "status": "awaiting_review"
         }
         
-        response = client.post(f"/api/sessions/{session_id}/process")
+        response = client.post(f"/api/sessions/{session_id}/process/", json={})
         assert response.status_code == 400
         assert "No transcription available" in response.json()["detail"]

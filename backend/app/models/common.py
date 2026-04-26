@@ -22,3 +22,17 @@ class LLMProvider(str, Enum):
     ANTHROPIC = "anthropic"
     OPENROUTER = "openrouter"
     GROQ = "groq"
+
+
+class ScriptDensity(str, Enum):
+    SHORT = "short"
+    STANDARD = "standard"
+    ALTERNATIVE = "alternative"
+    DETAILED = "detailed"
+
+
+class NarrativePerspective(str, Enum):
+    FIRST_PERSON = "1p"
+    SECOND_PERSON = "2p"
+    THIRD_PERSON_EPIC = "3p_epic"
+    TACTICAL_REPORT = "tactical"

@@ -40,7 +40,7 @@ async def get_elevenlabs_voices(
     api_key: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    settings = await _load_settings(db)
+    settings = await load_settings(db)
     target_key = api_key or settings.elevenlabs_api_key
     
     if not target_key:
@@ -60,7 +60,7 @@ async def get_elevenlabs_usage(
     api_key: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    settings = await _load_settings(db)
+    settings = await load_settings(db)
     target_key = api_key or settings.elevenlabs_api_key
     
     if not target_key:
@@ -81,7 +81,7 @@ async def get_deepgram_voices(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     from app.services.deepgram import DeepgramService
-    settings = await _load_settings(db)
+    settings = await load_settings(db)
     target_key = api_key or settings.deepgram_api_key
     
     try:
@@ -99,7 +99,7 @@ async def get_deepgram_usage(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     from app.services.deepgram import DeepgramService
-    settings = await _load_settings(db)
+    settings = await load_settings(db)
     target_key = api_key or settings.deepgram_api_key
     
     try:
@@ -155,7 +155,7 @@ async def get_kokoro_voices(
 ):
     from app.services.kokoro import KokoroService
     from app.models.settings import TTSProvider
-    settings = await _load_settings(db)
+    settings = await load_settings(db)
     
     # If the provider is already set to Kokoro, we can return the local voices directly
     if settings.tts_provider == TTSProvider.KOKORO:
@@ -187,7 +187,7 @@ async def list_tts_voices(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Retorna a lista de vozes disponíveis para um provedor específico."""
-    app_settings = await _load_settings(db)
+    app_settings = await load_settings(db)
     
     if provider == TTSProvider.ELEVENLABS:
         from app.services.elevenlabs import ElevenLabsService
@@ -216,7 +216,7 @@ async def list_openrouter_models(db: AsyncIOMotorDatabase = Depends(get_db)):
     import httpx
     try:
         # Tenta carregar a chave salva no banco
-        settings = await _load_settings(db)
+        settings = await load_settings(db)
         api_key = settings.openrouter_api_key
         
         headers = {}
@@ -247,7 +247,7 @@ async def list_groq_models(db: AsyncIOMotorDatabase = Depends(get_db)):
     import httpx
     try:
         # Tenta carregar a chave salva no banco
-        settings = await _load_settings(db)
+        settings = await load_settings(db)
         api_key = settings.groq_api_key
         
         if not api_key:
