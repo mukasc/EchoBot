@@ -27,6 +27,7 @@
 
 ---
 
+
 ## 🏛️ Arquitetura do Sistema
 
 O EchoBot é composto por três serviços principais que trabalham em harmonia:
@@ -104,15 +105,27 @@ graph TD
 
 ## 🔊 Kokoro TTS (Híbrido)
 
-O EchoBot suporta o motor de voz **Kokoro** de duas formas:
+O EchoBot suporta o motor de voz **Kokoro v1.0** de duas formas:
 
-1.  **Nativo (Local)**: Na primeira vez que você solicitar uma narração via Kokoro Local, o sistema baixará automaticamente o modelo ONNX (~300MB) para a pasta `backend/models/kokoro/`. Funciona offline e com custo zero.
-2.  **Web (API)**: Conecte-se a uma instância remota do Kokoro (compatível com o protocolo OpenAI) para delegar o processamento e economizar recursos locais.
+1.  **Nativo (Local)**: O sistema roda o modelo ONNX (~300MB) nativamente via Python. Funciona offline, com custo zero e qualidade comparável a serviços pagos (como ElevenLabs).
+2.  **Web (API)**: Conecte-se a uma instância remota (compatível com OpenAI) para delegar o processamento.
 
 - **Vantagens**: 
-  - 100% gratuito e privado (no modo local).
-  - Qualidade comparável a serviços pagos de elite.
-  - Não requer ativação de virtualização (BIOS) ou Docker para rodar localmente.
+  - 100% gratuito e privado no modo local.
+  - Não requer ativação de virtualização (BIOS) ou Docker.
+  - Ideal para sessões longas onde o custo de APIs de TTS cloud seria proibitivo.
+
+---
+
+## 🗺️ Roadmap (Próximos Passos)
+
+O EchoBot está em constante evolução. Nossos próximos marcos incluem:
+
+- [ ] **Busca Semântica**: Localize eventos, nomes ou falas específicas em todo o seu histórico de campanhas usando busca por significado (vetores).
+- [ ] **Memória de Longo Prazo (RAG)**: O bot consultará crônicas de sessões passadas para manter a consistência narrativa em novas gerações.
+- [ ] **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas ou Aventuras.
+- [ ] **Glossário de Pronúncia**: Sistema para ensinar a IA a grafia e pronúncia correta de nomes próprios do seu cenário.
+- [ ] **Mixagem de Trilha Sonora**: Adição automática de trilha ambiente baseada no tom da cena narrada.
 
 ---
 
@@ -244,12 +257,12 @@ npm test
 
 ---
 
-## 🎧 Comandos no Discord
+## 🎧 Comandos no Discord (Slash Commands)
 
-Após o bot estar online e convidado para o seu servidor:
+Após o bot estar online e convidado para o seu servidor, utilize os comandos de barra:
 
--   `!entrar <ID_SESSÃO>`: O bot entra no seu canal de voz atual e inicia a captura vinculada à sessão especificada.
--   `!sair`: O bot encerra a gravação, desconecta-se e envia os áudios finais para o backend iniciar o processamento.
+-   `/entrar sessao_id:<ID_SESSÃO>`: O bot entra no seu canal de voz atual e inicia a captura vinculada à sessão especificada.
+-   `/sair`: O bot encerra a gravação, desconecta-se e envia os áudios finais para o backend iniciar o processamento.
 
 ---
 
