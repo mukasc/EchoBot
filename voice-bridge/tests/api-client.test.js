@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { getSession, getSettings } from './api-client';
+import { getSession, getSettings } from '../src/api-client';
 
 // Mock config
-vi.mock('./config', () => ({
+vi.mock('../src/config', () => ({
   apiUrl: 'http://localhost:8000/api'
 }));
 

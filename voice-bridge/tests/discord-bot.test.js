@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { Events } = require('discord.js');
-const DiscordBot = require('./discord-bot');
+const DiscordBot = require('../src/discord-bot');
 
 // Mock discord.js
 vi.mock('discord.js', () => {

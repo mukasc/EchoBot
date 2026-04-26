@@ -23,7 +23,7 @@ vi.mock('prism-media', () => ({
   },
 }));
 
-vi.mock('./config', () => ({
+vi.mock('../src/config', () => ({
   ffmpegPath: 'ffmpeg-mock',
   tempDir: '/tmp',
 }));
@@ -36,7 +36,7 @@ const execSpy = vi.spyOn(cp, 'exec').mockImplementation((cmd, cb) => {
 });
 
 // Import audioManager
-const audioManager = require('./audio-manager');
+const audioManager = require('../src/audio-manager');
 
 describe('AudioManager', () => {
   beforeEach(() => {
