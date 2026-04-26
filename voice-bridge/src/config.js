@@ -15,8 +15,6 @@ module.exports = {
     // Discord Intents
     intents: [
         'Guilds',
-        'GuildMessages',
-        'MessageContent',
         'GuildVoiceStates',
     ]
 };

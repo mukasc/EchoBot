@@ -1,4 +1,4 @@
-const { Events, ChannelType } = require('discord.js');
+const { Events, ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Colors } = require('discord.js');
 const { joinVoiceChannel, VoiceConnectionStatus } = require('@discordjs/voice');
 const fs = require('fs');
 const { PassThrough } = require('stream');
@@ -19,87 +19,136 @@ class DiscordBot {
             console.log(`--- [BRIDGE] Online: ${this.client.user.tag} ---`);
         });
 
-        this.client.on(Events.MessageCreate, async (message) => {
-            if (message.author.bot) return;
+        this.client.on(Events.InteractionCreate, async (interaction) => {
+            // Handle Slash Commands
+            if (interaction.isChatInputCommand()) {
+                const command = this.client.commands.get(interaction.commandName);
+                if (!command) return;
 
-            if (message.content.startsWith('!entrar')) {
-                await this.handleJoin(message);
-            } else if (message.content.startsWith('!sair')) {
-                await this.handleLeave(message);
+                try {
+                    await command.execute(interaction, this);
+                } catch (error) {
+                    console.error(error);
+                    const reply = { content: 'Ocorreu um erro ao executar este comando!', ephemeral: true };
+                    if (interaction.replied || interaction.deferred) await interaction.followUp(reply);
+                    else await interaction.reply(reply);
+                }
+            }
+            
+            // Handle Buttons
+            if (interaction.isButton()) {
+                if (interaction.customId === 'stop_session') {
+                    await this.handleLeave(interaction);
+                }
             }
         });
     }
 
-    async handleJoin(message) {
-        if (this.activeSessions.has(message.guild.id)) {
-            return message.reply('⚠️ Já estou gravando nesta sala! Use !sair para parar.');
+    async handleJoin(interaction) {
+        const guildId = interaction.guildId;
+        const sessionId = interaction.options.getString('sessao_id');
+
+        if (this.activeSessions.has(guildId)) {
+            return interaction.reply({ 
+                content: '⚠️ Já estou gravando nesta sala! Finalize a sessão atual primeiro.', 
+                ephemeral: true 
+            });
         }
 
-        const parts = message.content.split(' ');
-        const sessionId = parts[1];
-        if (!sessionId) return message.reply('Uso: !entrar <SESSAO_ID>');
+        const voiceChannel = interaction.member?.voice.channel;
+        if (!voiceChannel) {
+            return interaction.reply({ 
+                content: '❌ Você precisa entrar num canal de voz primeiro!', 
+                ephemeral: true 
+            });
+        }
 
-        const voiceChannel = message.member?.voice.channel;
-        if (!voiceChannel) return message.reply('Entre num canal de voz primeiro!');
+        // Defer response as joining and fetching session might take time
+        await interaction.deferReply();
 
-        const connection = joinVoiceChannel({
-            channelId: voiceChannel.id,
-            guildId: voiceChannel.guild.id,
-            adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-            selfDeaf: false,
-            selfMute: false,
-        });
+        try {
+            const sessionData = await apiClient.getSession(sessionId);
+            const chunkDuration = sessionData?.chunk_duration_minutes || 20;
 
-        connection.on(VoiceConnectionStatus.Ready, async () => {
-            console.log(`✅ Conexão estabelecida para Sessão: ${sessionId}`);
-            message.reply(`🎙️ **[Sessão Iniciada] Gravando áudio em blocos...**`);
-
-            let chunkDuration = 20;
-            try {
-                const sessionData = await apiClient.getSession(sessionId);
-                chunkDuration = sessionData?.chunk_duration_minutes || 20;
-                console.log(`⏲️ [Config] Duração do chunk: ${chunkDuration} minutos.`);
-            } catch (err) {
-                console.warn(`⚠️ [Config] Erro ao buscar config da sessão, usando padrão de 20min.`);
-            }
-
-            const sessionStartTime = new Date().toISOString();
-            const pcmFile = path.join(config.tempDir, `temp_${sessionId}.pcm`);
-            const outStream = fs.createWriteStream(pcmFile);
-            const centralStream = new PassThrough();
-            centralStream.pipe(outStream);
-
-            const receiver = connection.receiver;
-            const subscribedUsers = new Map();
-
-            receiver.speaking.on('start', (userId) => {
-                audioManager.subscribeUser(receiver, userId, sessionId, subscribedUsers);
+            const connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: guildId,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+                selfDeaf: false,
+                selfMute: false,
             });
 
-            const session = {
-                sessionId,
-                sessionStartTime,
-                pcmFile,
-                outStream,
-                centralStream,
-                connection,
-                subscribedUsers,
-                chunkIndex: 1,
-                chunkDuration,
-                rotationTimer: null
-            };
+            connection.on(VoiceConnectionStatus.Ready, async () => {
+                console.log(`✅ Conexão estabelecida para Sessão: ${sessionId}`);
 
-            this.activeSessions.set(message.guild.id, session);
-            this.startRotationTimer(message.guild.id, message.channel);
-        });
+                const embed = new EmbedBuilder()
+                    .setTitle('🎙️ Sessão de Gravação Iniciada')
+                    .setDescription(`O bot está ouvindo e gravando o áudio deste canal para a sessão **${sessionId}**.`)
+                    .setColor(Colors.Green)
+                    .addFields(
+                        { name: 'Sessão ID', value: sessionId, inline: true },
+                        { name: 'Canal', value: voiceChannel.name, inline: true },
+                        { name: 'Rotação', value: `${chunkDuration} minutos`, inline: true }
+                    )
+                    .setTimestamp()
+                    .setFooter({ text: 'EchoBot Voice Bridge', iconURL: this.client.user.displayAvatarURL() });
 
-        connection.on(VoiceConnectionStatus.Disconnected, () => {
-            console.log('🔇 Bot desconectado do canal.');
-            this.handleLeave(message);
-        });
+                const row = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('stop_session')
+                            .setLabel('Parar Gravação')
+                            .setStyle(ButtonStyle.Danger)
+                            .setEmoji('🛑')
+                    );
+
+                await interaction.editReply({ embeds: [embed], components: [row] });
+
+                const sessionStartTime = new Date().toISOString();
+                const pcmFile = path.join(config.tempDir, `temp_${sessionId}.pcm`);
+                const outStream = fs.createWriteStream(pcmFile);
+                const centralStream = new PassThrough();
+                centralStream.pipe(outStream);
+
+                const receiver = connection.receiver;
+                const subscribedUsers = new Map();
+
+                receiver.speaking.on('start', (userId) => {
+                    audioManager.subscribeUser(receiver, userId, sessionId, subscribedUsers);
+                });
+
+                const session = {
+                    sessionId,
+                    sessionStartTime,
+                    pcmFile,
+                    outStream,
+                    centralStream,
+                    connection,
+                    subscribedUsers,
+                    chunkIndex: 1,
+                    chunkDuration,
+                    rotationTimer: null,
+                    interactionChannelId: interaction.channelId
+                };
+
+                this.activeSessions.set(guildId, session);
+                this.startRotationTimer(guildId);
+            });
+
+            connection.on(VoiceConnectionStatus.Disconnected, () => {
+                console.log('🔇 Bot desconectado do canal.');
+                if (this.activeSessions.has(guildId)) {
+                    this.handleLeave(null, guildId);
+                }
+            });
+
+        } catch (err) {
+            console.error('❌ Erro ao iniciar sessão:', err);
+            await interaction.editReply({ content: `❌ Erro ao buscar sessão: ${err.message}` });
+        }
     }
 
-    startRotationTimer(guildId, channel) {
+    startRotationTimer(guildId) {
         const session = this.activeSessions.get(guildId);
         if (!session) return;
 
@@ -132,71 +181,74 @@ class DiscordBot {
             
             currentSession.pcmFile = newPcmFile;
             currentSession.outStream = newOutStream;
-            // Calcula o offset do chunk atual (em segundos)
-            const chunkOffset = (currentSession.chunkIndex - 1) * currentSession.chunkDuration * 60;
             
+            const chunkOffset = (currentSession.chunkIndex - 1) * currentSession.chunkDuration * 60;
             currentSession.chunkIndex++;
             
             filesToProcess.push({ file: oldPcmFile, stream: oldOutStream, userId: null });
 
-            // Processa o bloco anterior em background
+            // Processa o bloco anterior em background (não espera)
             this.processChunk(currentSession.sessionId, filesToProcess, currentSession.sessionStartTime, chunkOffset);
-            // channel.send(`📦 Bloco finalizado e enviado para processamento.`);
 
         }, intervalMs);
     }
 
     async processChunk(sessionId, filesToProcess, sessionStartTime, chunkOffset = 0) {
         for (const item of filesToProcess) {
-            item.stream.end();
-            
-            // Pequeno delay para garantir que o arquivo foi fechado
-            setTimeout(async () => {
+            // Aguarda o evento 'finish' para ter certeza que o arquivo está pronto
+            item.stream.on('finish', async () => {
                 const timestamp = new Date().getTime();
                 const suffix = item.userId ? `user_${item.userId}` : 'central';
                 const oggFile = path.join(config.tempDir, `chunk_${sessionId}_${suffix}_${timestamp}.ogg`);
                 
                 try {
-                    // Verifica se o arquivo PCM tem conteúdo (pelo menos 1KB)
+                    // Pequena pausa para garantir que o SO liberou o arquivo
+                    await new Promise(r => setTimeout(r, 500));
+
                     if (!fs.existsSync(item.file) || fs.statSync(item.file).size < 100) {
-                        console.log(`⏩ [Rotation] Pulando arquivo vazio ou muito pequeno: ${item.file}`);
+                        console.log(`⏩ [Rotation] Pulando arquivo vazio: ${item.file}`);
                         audioManager.cleanup([item.file]);
                         return;
                     }
 
                     await audioManager.convertToOpus(item.file, oggFile);
                     
-                    // Verifica se a conversão gerou um arquivo válido
                     if (fs.existsSync(oggFile) && fs.statSync(oggFile).size > 100) {
                         await apiClient.uploadAudio(sessionId, oggFile, item.userId, sessionStartTime, chunkOffset);
-                    } else {
-                        console.warn(`⚠️ [Rotation] Arquivo convertido inválido ou vazio: ${oggFile}`);
                     }
                     
                     audioManager.cleanup([item.file, oggFile]);
                 } catch (err) {
-                    console.error(`❌ [Rotation] Erro ao processar arquivo ${item.file}:`, err.message);
+                    console.error(`❌ [Rotation] Erro ao processar bloco ${item.file}:`, err.message);
+                    audioManager.cleanup([item.file]);
                 }
-            }, 2000);
+            });
+
+            // Garante que o stream seja fechado
+            item.stream.end();
         }
     }
 
-    async handleLeave(message) {
-        const session = this.activeSessions.get(message.guild.id);
-        if (!session) return;
+    async handleLeave(interaction, guildIdFromEvent = null) {
+        const guildId = interaction ? interaction.guildId : guildIdFromEvent;
+        const session = this.activeSessions.get(guildId);
+        if (!session) {
+            if (interaction) await interaction.reply({ content: 'Não há nenhuma sessão ativa.', ephemeral: true });
+            return;
+        }
 
-        const { sessionId, sessionStartTime, pcmFile, outStream, centralStream, connection, subscribedUsers, rotationTimer } = session;
+        const { sessionId, sessionStartTime, pcmFile, outStream, centralStream, connection, subscribedUsers, rotationTimer, interactionChannelId } = session;
         console.log(`🛑 Finalizando sessão ${sessionId}...`);
 
         if (rotationTimer) clearInterval(rotationTimer);
-        this.activeSessions.delete(message.guild.id);
+        this.activeSessions.delete(guildId);
         
         // Finaliza streams
         centralStream.unpipe(outStream);
         centralStream.end();
         outStream.end();
 
-        // Processa o último bloco de todos (Usuários + Central)
+        // Processa o último bloco
         const lastFiles = [];
         lastFiles.push({ file: pcmFile, stream: outStream, userId: null });
         
@@ -206,18 +258,31 @@ class DiscordBot {
             }
         }
 
-        setTimeout(async () => {
-            try {
-                const finalOffset = (session.chunkIndex - 1) * session.chunkDuration * 60;
-                await this.processChunk(sessionId, lastFiles, sessionStartTime, finalOffset);
-                message.channel.send(`✅ Sessão **${sessionId}** finalizada! Últimos blocos em processamento.`);
-            } catch (err) {
-                console.error('❌ Erro ao finalizar sessão:', err);
-                message.channel.send(`❌ Ocorreu um erro ao finalizar o processamento.`);
-            } finally {
-                connection.destroy();
+        // Se veio de um botão, atualizamos a mensagem original
+        if (interaction && interaction.isButton()) {
+            await interaction.update({ 
+                content: `🛑 Gravação da sessão **${sessionId}** finalizada.`, 
+                embeds: [], 
+                components: [] 
+            });
+        } else if (interaction) {
+            await interaction.reply(`🛑 Finalizando gravação da sessão **${sessionId}**...`);
+        }
+
+        // Processa os últimos arquivos
+        const finalOffset = (session.chunkIndex - 1) * session.chunkDuration * 60;
+        this.processChunk(sessionId, lastFiles, sessionStartTime, finalOffset);
+
+        // Desconecta após um breve momento
+        setTimeout(() => {
+            if (connection) connection.destroy();
+            
+            // Se não foi uma interação, tenta avisar no canal
+            if (!interaction && interactionChannelId) {
+                const channel = this.client.channels.cache.get(interactionChannelId);
+                if (channel) channel.send(`✅ Sessão **${sessionId}** finalizada com sucesso.`);
             }
-        }, 2000);
+        }, 1000);
     }
 }
 

@@ -20,6 +20,8 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
 const DiscordBot = require('./discord-bot');
 const { getSettings } = require('./api-client');
+const fs = require('fs');
+const path = require('path');
 
 async function start() {
     console.log('⏳ [Voice Bridge] Aguardando configurações do Backend...');
@@ -54,6 +56,20 @@ async function start() {
     const client = new Client({
         intents: config.intents.map(intent => GatewayIntentBits[intent]),
     });
+
+    // Carrega comandos
+    client.commands = new Map();
+    const commandsPath = path.join(__dirname, 'commands');
+    if (fs.existsSync(commandsPath)) {
+        const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+        for (const file of commandFiles) {
+            const filePath = path.join(commandsPath, file);
+            const command = require(filePath);
+            if ('data' in command && 'execute' in command) {
+                client.commands.set(command.data.name, command);
+            }
+        }
+    }
 
     // Inicializa a lógica do Bot
     const bot = new DiscordBot(client);
