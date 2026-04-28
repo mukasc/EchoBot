@@ -74,6 +74,12 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Política de Privacidade Ativa**: Implementar deleção automática de áudios brutos após transcrição bem-sucedida para garantir segurança de dados.
 - [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitar a distribuição On-Premises.
 
+### Arquitetura de Alta Disponibilidade (Escalabilidade)
+- [ ] **Fila de Processamento Assíncrono (Task Queue)**: Migrar a fila em memória atual (`BackgroundTasks`) para um Message Broker robusto e leve (ex: **Redis** via Celery ou RQ).
+  - *Objetivo*: Evitar perdas de processamento (transcrição, LLM, TTS) em caso de reinicialização do backend. Permite ao bot do Discord responder imediatamente (sem timeouts) e delegar a carga pesada para *workers* controlados, evitando gargalos de CPU/GPU.
+- [ ] **Camada de Cache e Persistência de Estado (State Management)**: Utilizar o mesmo Redis para armazenar o status das sessões em tempo real, metadados de transcrições pendentes e fazer cache estruturado dos resultados dos LLMs.
+  - *Objetivo*: Criar uma "memória de curto prazo" ultra-rápida. Torna a arquitetura tolerante a falhas (resiliente a restarts) e reduz drasticamente o consumo de tokens/tempo ao evitar requisições duplicadas de informações já processadas.
+
 ### P3 (Low Priority)
 - [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
 - [ ] **Integração com Roll20**.
