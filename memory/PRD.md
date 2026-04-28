@@ -81,6 +81,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Sistema de Login & Multi-Usuário**: Autenticação básica e isolamento de dados (o usuário só vê seus próprios registros).
 - [ ] **Mensuração de Consumo**: Painel para rastrear uso de tokens (LLM) e tempo de áudio (TTS/STT) por usuário.
 - [ ] **App Mobile Companion** para consulta rápida do Diário Técnico durante o jogo presencial.
+- [ ] **Suporte Multi-Idioma (i18n)**: Implementar internacionalização na interface e nos prompts da IA, iniciando com Inglês (EUA) e Português (PT-BR).
 
 ## Next Action Items
 1. Implementar serviço de exportação de Roteiros e Diários (Markdown/PDF).
