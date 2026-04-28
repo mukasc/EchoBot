@@ -74,6 +74,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Video Recap (Discord-Ready)**: Geração de vídeo MP4 otimizado (limite 10MB) com áudio e imagem estática para compartilhamento rápido no Discord.
 - [ ] **Política de Privacidade Ativa**: Implementar deleção automática de áudios brutos após transcrição bem-sucedida para garantir segurança de dados.
 - [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitar a distribuição On-Premises.
+  - *Migração de Banco de Dados (Portabilidade)*: Substituir a obrigatoriedade do MongoDB por um banco de dados local "zero-config" (como **SQLite** ou banco baseado em arquivos *flat-file* como o do Foundry). Isso permite que o usuário não precise instalar servidores de banco de dados, e o backup seja apenas "copiar e colar" a pasta do projeto.
 - [ ] **Múltiplos Formatos de Roteiro (Presets)**: Oferecer opções de tamanho e foco estrutural para a crônica (ex: Roteiro Curto, Padrão, Focado em Combate, Detalhado).
 - [ ] **Upload de Transcrições em Texto (.txt/.md)**: Permitir ingestão de sessões já transcritas por outros meios, pulando a etapa de STT e indo direto para o LLM.
 - [ ] **Amostras de Áudio na UI (Previews)**: Botões de reprodução rápida para testar os narradores (TTS) e as trilhas sonoras antes de confirmar a geração do áudio.
