@@ -79,7 +79,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Amostras de Áudio na UI (Previews)**: Botões de reprodução rápida para testar os narradores (TTS) e as trilhas sonoras antes de confirmar a geração do áudio.
 - [ ] **Sistema de Aliases para Entidades**: Configurar apelidos para PCs/NPCs para que a IA agrupe menções variadas sob a mesma entidade no Diário Técnico (ex: "O Mago" -> "Gandalf").
 - [ ] **Exportação de Áudio Isolado (Stems)**: Download da faixa de narração pura (sem a música de fundo) para usuários que desejam realizar a própria edição de vídeo/podcast.
-
+- [ ] **Voice Bridge em Modo Standalone**: Permitir que o bot do Discord seja usado de forma autônoma, sem exigir um `session_id`. Comandos dedicados fariam o bot gravar a call separando o áudio por usuário (multi-track/chunks) e salvando diretamente em uma pasta local configurável, funcionando como um gravador de podcast independente.
 ### Arquitetura de Alta Disponibilidade (Escalabilidade)
 - [ ] **Fila de Processamento Assíncrono (Task Queue)**: Migrar a fila em memória atual (`BackgroundTasks`) para um Message Broker robusto e leve (ex: **Redis** via Celery ou RQ).
   - *Objetivo*: Evitar perdas de processamento (transcrição, LLM, TTS) em caso de reinicialização do backend. Permite ao bot do Discord responder imediatamente (sem timeouts) e delegar a carga pesada para *workers* controlados, evitando gargalos de CPU/GPU.
