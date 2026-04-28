@@ -147,6 +147,11 @@ Veja [Estratégia SaaS](file:///c:/Users/mukas/.gemini/antigravity/scratch/EchoB
 
 ---
 
+### Comunidade e Estratégia (Non-Dev)
+- [ ] **Criar Servidor Oficial no Discord**: Estabelecer uma comunidade para comunicação direta entre os desenvolvedores, apoiadores e usuários finais.
+  - *Objetivo*: Criar um ciclo rápido de feedback, suporte técnico para instâncias On-Premises, divulgação de atualizações (changelogs) e fomentar o engajamento com mestres/jogadores que utilizam a ferramenta.
+
+---
 ## Pesquisa & Benchmarking
 
 ### Concorrentes Analisados
