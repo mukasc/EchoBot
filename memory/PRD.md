@@ -61,7 +61,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 ### P1 (High Priority)
 - [ ] **Ajuste Global de Termos (Legacy: Find & Replace)**: Ferramenta para correção em massa de nomes e termos em todos os textos gerados (Resumo, Diário e Roteiro) antes da narração. Deve incluir suporte a *Match Case* e *Whole Word* para precisão cirúrgica em nomes de fantasia.
 - [ ] **Glossário de Spelling (Fantasy Names)**: Sistema para garantir que a IA aprenda a grafia correta de nomes próprios do mundo de RPG (Injeção de contexto no STT/LLM).
-- [ ] **Expansão do Diário Técnico**: Incluir detecção automática de **Facções**, **Quests** (Objetivos) e **Ações Notáveis de Personagens**.
+- [ ] **Expansão do Diário Técnico**: Incluir detecção automática de **Facções**, **Quests** (Objetivos) e **Ações Notáveis de Personagens**. Para as *Quests*, detectar dinamicamente o status (ex: Ativa, Concluída, Falha, Abandonada).
 - [ ] **Visibilidade de Regeração (Diferencial Competitivo)**: Garantir que os botões de **"Regenerar Resumo"** e **"Regenerar Narração (Local)"** sejam proeminentes na UI de Detalhes da Sessão. O objetivo é permitir experimentação ilimitada (custo zero no motor local), ao contrário da concorrência que limita a uma única tentativa.
 - [ ] **Melhorias no Upload Manual**: Suporte a múltiplos arquivos simultâneos e conversão automática para `.ogg` (Opus) no servidor para economia de espaço.
 
@@ -74,6 +74,11 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Video Recap (Discord-Ready)**: Geração de vídeo MP4 otimizado (limite 10MB) com áudio e imagem estática para compartilhamento rápido no Discord.
 - [ ] **Política de Privacidade Ativa**: Implementar deleção automática de áudios brutos após transcrição bem-sucedida para garantir segurança de dados.
 - [ ] **Pacote Executável**: Empacotamento do sistema em um instalador único (standalone) para facilitar a distribuição On-Premises.
+- [ ] **Múltiplos Formatos de Roteiro (Presets)**: Oferecer opções de tamanho e foco estrutural para a crônica (ex: Roteiro Curto, Padrão, Focado em Combate, Detalhado).
+- [ ] **Upload de Transcrições em Texto (.txt/.md)**: Permitir ingestão de sessões já transcritas por outros meios, pulando a etapa de STT e indo direto para o LLM.
+- [ ] **Amostras de Áudio na UI (Previews)**: Botões de reprodução rápida para testar os narradores (TTS) e as trilhas sonoras antes de confirmar a geração do áudio.
+- [ ] **Sistema de Aliases para Entidades**: Configurar apelidos para PCs/NPCs para que a IA agrupe menções variadas sob a mesma entidade no Diário Técnico (ex: "O Mago" -> "Gandalf").
+- [ ] **Exportação de Áudio Isolado (Stems)**: Download da faixa de narração pura (sem a música de fundo) para usuários que desejam realizar a própria edição de vídeo/podcast.
 
 ### Arquitetura de Alta Disponibilidade (Escalabilidade)
 - [ ] **Fila de Processamento Assíncrono (Task Queue)**: Migrar a fila em memória atual (`BackgroundTasks`) para um Message Broker robusto e leve (ex: **Redis** via Celery ou RQ).
@@ -85,7 +90,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [ ] **Integração com Foundry VTT**: Foco inicial em World of Darkness (V20/v12) via MCP Ouroboros (Criar atores, rolar dados, atualizar stats).
 - [ ] **Integração com Roll20**.
 - [ ] **Temas visuais alternativos** (Ex: Cyberpunk, Sci-fi).
-- [ ] **Sistema de Login & Multi-Usuário**: Autenticação básica e isolamento de dados (o usuário só vê seus próprios registros).
+- [ ] **Sistema de Login, Multi-Usuário & Colaboração**: Autenticação básica, isolamento de dados e opção de **Compartilhar Campanha** (permitindo que jogadores leiam os diários ou enviem áudios para a campanha do Mestre).
 - [ ] **Mensuração de Consumo**: Painel para rastrear uso de tokens (LLM) e tempo de áudio (TTS/STT) por usuário.
 - [ ] **App Mobile Companion** para consulta rápida do Diário Técnico durante o jogo presencial.
 - [ ] **Suporte Multi-Idioma (i18n)**: Implementar internacionalização na interface e nos prompts da IA, iniciando com Inglês (EUA) e Português (PT-BR).
