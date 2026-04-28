@@ -87,8 +87,9 @@ graph TD
 -   **Upload Manual**: Ingestão de arquivos de áudio externos diretamente pela interface web para processamento de sessões gravadas fora do Discord.
 -   **Timestamp Absoluto**: Registra o horário real de cada fala (ex: 14:32:15), facilitando a sincronização com a sessão.
 -   **Transcrição Híbrida**: Prioriza o uso do **Faster Whisper (Local)** para economia, com fallback para APIs de cloud (OpenAI/Gemini).
+-   **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas/Aventuras, com uma visão consolidada de todo o histórico.
 -   **Processamento Narrativo Inteligente**: Separa automaticamente falas *In-Character* (IC) de conversas *Out-of-Character* (OOC).
--   **Diário Técnico Automático**: Extração de NPCs, Itens, Locais, Eventos e sugestão de XP.
+-   **Diário Técnico Automático & Geral**: Extração de NPCs, Itens, Locais e Eventos por sessão, consolidando tudo no **Diário Técnico Geral** da Campanha.
 -   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão.
 -   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs**, **Deepgram (Aura)** ou **Kokoro** (Nativo Python ou Servidor API).
 -   **Multi-Provider LLM & Fallback**: Suporte integrado para **OpenRouter** e **Groq** com um sistema inteligente de contingência (fallbacks) que alterna automaticamente entre provedores em caso de falha.
@@ -123,7 +124,7 @@ O EchoBot está em constante evolução. Nossos próximos marcos incluem:
 
 - [ ] **Busca Semântica**: Localize eventos, nomes ou falas específicas em todo o seu histórico de campanhas usando busca por significado (vetores).
 - [ ] **Memória de Longo Prazo (RAG)**: O bot consultará crônicas de sessões passadas para manter a consistência narrativa em novas gerações.
-- [ ] **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas ou Aventuras.
+- [x] **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas ou Aventuras.
 - [ ] **Glossário de Pronúncia**: Sistema para ensinar a IA a grafia e pronúncia correta de nomes próprios do seu cenário.
 - [ ] **Mixagem de Trilha Sonora**: Adição automática de trilha ambiente baseada no tom da cena narrada.
 

@@ -15,6 +15,7 @@ def mock_db():
     db.sessions.insert_one = AsyncMock()
     db.sessions.update_one = AsyncMock()
     db.sessions.delete_one = AsyncMock()
+    db.sessions.aggregate.return_value.to_list = AsyncMock()
     
     # Settings collection
     db.settings = MagicMock()
@@ -24,6 +25,14 @@ def mock_db():
     # Character Mappings collection
     db.character_mappings = MagicMock()
     db.character_mappings.find.return_value.to_list = AsyncMock()
+    
+    # Campaigns collection
+    db.campaigns = MagicMock()
+    db.campaigns.find.return_value.sort.return_value.to_list = AsyncMock()
+    db.campaigns.find_one = AsyncMock()
+    db.campaigns.insert_one = AsyncMock()
+    db.campaigns.update_one = AsyncMock()
+    db.campaigns.delete_one = AsyncMock()
     
     return db
 

@@ -3,7 +3,8 @@ import { Toaster } from "sonner";
 import "@/App.css";
 
 // Pages
-import Dashboard from "./pages/Dashboard";
+import CampaignsPage from "./pages/CampaignsPage";
+import CampaignDetailsPage from "./pages/CampaignDetailsPage";
 import SessionDetail from "./pages/SessionDetail";
 import CharacterMappings from "./pages/CharacterMappings";
 import Settings from "./pages/Settings";
@@ -29,7 +30,8 @@ function App() {
         <Header />
         <main className="pt-16">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<CampaignsPage />} />
+            <Route path="/campaign/:id" element={<CampaignDetailsPage />} />
             <Route path="/session/:id" element={<SessionDetail />} />
             <Route path="/characters" element={<CharacterMappings />} />
             <Route path="/settings" element={<Settings />} />

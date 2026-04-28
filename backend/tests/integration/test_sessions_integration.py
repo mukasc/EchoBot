@@ -28,7 +28,7 @@ class TestSessionsIntegration:
 
     def test_create_session(self, client, mock_db):
         """Test POST /api/sessions/"""
-        payload = {"name": "New Session", "game_system": "Vampire"}
+        payload = {"campaign_id": "c1", "name": "New Session", "game_system": "Vampire"}
         
         response = client.post("/api/sessions/", json=payload)
         

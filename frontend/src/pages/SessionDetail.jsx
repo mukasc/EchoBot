@@ -1,5 +1,5 @@
-import { useParams } from "react-router-dom";
-import { Loader2, MessageSquare, Package, Edit3 } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Loader2, MessageSquare, Package, Edit3, ChevronLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
 // Custom Hooks
@@ -14,6 +14,7 @@ import ReviewScript from "../components/session/ReviewScript";
 
 const SessionDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   
   // Logic extracted to custom hooks
   const { 
@@ -49,6 +50,13 @@ const SessionDetail = () => {
   return (
     <div className="min-h-screen bg-rpg-void">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
+        <button 
+          onClick={() => navigate(session.campaign_id ? `/campaign/${session.campaign_id}` : "/")}
+          className="flex items-center text-[#A0A5B5] hover:text-rpg-gold transition-colors mb-6 text-sm"
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" /> {session.campaign_id ? "Voltar para Campanha" : "Voltar para Home"}
+        </button>
+
         <SessionHeader 
           session={session}
           saving={saving}

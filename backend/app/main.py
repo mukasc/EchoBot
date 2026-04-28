@@ -34,7 +34,7 @@ from pathlib import Path
 from app.config import get_settings
 from app.database import close_db, init_db
 from app.exceptions import register_exception_handlers
-from app.routers import characters, demo, sessions, settings, tts
+from app.routers import campaigns, characters, demo, sessions, settings, tts
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -88,6 +88,7 @@ def create_app() -> FastAPI:
 
     # Routers — all mounted under /api prefix
     api_prefix = "/api"
+    app.include_router(campaigns.router, prefix=api_prefix)
     app.include_router(demo.router, prefix=api_prefix)
     app.include_router(sessions.router, prefix=api_prefix)
     app.include_router(characters.router, prefix=api_prefix)

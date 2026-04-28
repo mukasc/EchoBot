@@ -42,6 +42,7 @@ class Session(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    campaign_id: Optional[str] = None
     name: str
     game_system: str = "D&D 5e"
     status: SessionStatus = SessionStatus.AWAITING_REVIEW
@@ -64,6 +65,7 @@ class Session(BaseModel):
 
 
 class SessionCreate(BaseModel):
+    campaign_id: str
     name: str
     game_system: str = "D&D 5e"
     cover_image_url: Optional[str] = None
@@ -73,6 +75,7 @@ class SessionCreate(BaseModel):
 
 
 class SessionUpdate(BaseModel):
+    campaign_id: Optional[str] = None
     name: Optional[str] = None
     game_system: Optional[str] = None
     status: Optional[SessionStatus] = None

@@ -53,6 +53,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 - [x] **Navegação Fluida**: Implementação de Header flutuante e interativo.
 - [x] **Feedback do Usuário Moderno**: Substituição de alertas nativos por diálogos de confirmação (`AlertDialog`) do Radix UI.
 - [x] **Estabilização de Testes Frontend**: Suite de testes Vitest atualizada para cobrir interações complexas de UI (UserEvent) e mocks de APIs do navegador (`ResizeObserver`, etc.).
+- [x] **Gestão de Campanhas (Crônicas)**: Implementada a hierarquia onde sessões são agrupadas dentro de Campanhas, com visualização de Diário Técnico Geral consolidado.
 - [x] **Acessibilidade & Semântica**: Auditoria completa de labels, roles e hierarquia de cabeçalhos.
 
 ## Prioritized Backlog
@@ -67,7 +68,7 @@ Bot de Discord para RPG de mesa que captura áudio de canais de voz, transcreve 
 ### P2 (Medium Priority)
 - [ ] **Memória de Longo Prazo (RAG)**: Usar o Diário Técnico de sessões passadas como contexto para o LLM em novas sessões.
 - [ ] **Busca Semântica**: Localizar eventos ou nomes específicos em todo o histórico de transcrições.
-- [ ] **Gestão de Crônicas/Aventuras**: Implementar hierarquia onde as sessões são agrupadas dentro de uma "Crônica" ou "Campanha".
+- [x] **Gestão de Crônicas/Aventuras**: Implementar hierarquia onde as sessões são agrupadas dentro de uma "Crônica" ou "Campanha".
 - [ ] **Mixagem de Trilha Sonora**: Opção de adicionar trilha sonora de fundo (ambiente) automaticamente na geração do áudio narrado (TTS). Focar em curadoria de trilhas "human-made" para diferenciação ética.
 - [ ] **Video Recap (Discord-Ready)**: Geração de vídeo MP4 otimizado (limite 10MB) com áudio e imagem estática para compartilhamento rápido no Discord.
 - [ ] **Política de Privacidade Ativa**: Implementar deleção automática de áudios brutos após transcrição bem-sucedida para garantir segurança de dados.
