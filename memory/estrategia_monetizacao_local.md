@@ -52,8 +52,10 @@ Para não inviabilizar o projeto no longo prazo, atualizações *premium* (novos
 
 ## 4. Proteção da Propriedade Intelectual
 
-Para impedir a pirataria da licença vitalícia em distribuições On-Premises:
-- **Hardware ID Binding:** Durante a instalação, o bot gera uma hash (Identificador Único) baseada na placa-mãe/processador da máquina do usuário. A licença vitalícia se "amarra" a esse hardware. O uso simultâneo em outra máquina com a mesma chave será bloqueado.
-- **Ping de Validação Simples:** O software realiza uma verificação HTTP ultraleve (`GET api.echobot.com/v1/check-license?key=XXX&hwid=YYY`). 
+Para impedir a pirataria da licença vitalícia em distribuições On-Premises, você pode usar uma solução pronta ou criar a sua própria:
+
+- **Plataformas Profissionais (ex: LicenseSpring):** Utilizar serviços prontos como o LicenseSpring, que oferecem SDKs completos para gerenciar chaves, atrelar a hardwares específicos (node-locking) e revogar acessos, sem precisar programar a lógica de DRM do zero.
+- **Sistema Customizado (Ping de Validação Simples):** Se não quiser usar o LicenseSpring, você pode fazer uma solução caseira onde o software realiza uma verificação HTTP ultraleve (`GET api.echobot.com/v1/check-license?key=XXX&hwid=YYY`). 
+  - **Hardware ID Binding:** Durante a instalação, o bot gera uma hash (Identificador Único) baseada na placa-mãe/processador da máquina do usuário. A licença vitalícia se "amarra" a esse hardware. O uso simultâneo em outra máquina com a mesma chave será bloqueado.
   - Retorno `200`: Funcionalidades Pro ativadas.
   - Retorno `403`: Downgrade automático para gravação básica (ou bloqueio do motor avançado).
