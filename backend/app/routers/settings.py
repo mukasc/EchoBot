@@ -270,9 +270,75 @@ async def list_groq_models(db: AsyncIOMotorDatabase = Depends(get_db)):
                 {"value": m["id"], "label": m["id"]}
                 for m in data.get("data", [])
             ]
-    except Exception as e:
+    except Exception:
         # Se falhar a busca dinâmica (ex: chave inválida), retorna os modelos padrão
         return [
             {"value": "llama3-70b-8192", "label": "Llama 3 70B (Default)"},
             {"value": "mixtral-8x7b-32768", "label": "Mixtral 8x7B (Default)"},
+        ]
+
+
+@router.get("/llm/openai/models/")
+async def list_openai_models(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Busca a lista de modelos disponíveis diretamente da OpenAI."""
+    import httpx
+    try:
+        settings = await load_settings(db)
+        api_key = settings.openai_api_key
+        
+        if not api_key:
+            return [
+                {"value": "gpt-4o", "label": "GPT-4o"},
+                {"value": "gpt-4o-mini", "label": "GPT-4o Mini"},
+                {"value": "o1-preview", "label": "O1 Preview"},
+            ]
+
+        async with httpx.AsyncClient() as client:
+            headers = {"Authorization": f"Bearer {api_key}"}
+            response = await client.get("https://api.openai.com/v1/models", headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            # Filtra apenas os modelos de chat (gpt-*)
+            return [
+                {"value": m["id"], "label": m["id"]}
+                for m in data.get("data", [])
+                if m["id"].startswith("gpt") or m["id"].startswith("o1")
+            ]
+    except Exception:
+        return [
+            {"value": "gpt-4o", "label": "GPT-4o"},
+            {"value": "gpt-4o-mini", "label": "GPT-4o Mini"},
+        ]
+
+
+@router.get("/llm/gemini/models/")
+async def list_gemini_models(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Busca a lista de modelos disponíveis diretamente do Google Gemini."""
+    import httpx
+    try:
+        settings = await load_settings(db)
+        api_key = settings.google_api_key
+        
+        if not api_key:
+            return [
+                {"value": "gemini-1.5-pro", "label": "Gemini 1.5 Pro"},
+                {"value": "gemini-1.5-flash", "label": "Gemini 1.5 Flash"},
+                {"value": "gemini-2.0-flash-exp", "label": "Gemini 2.0 Flash Exp"},
+            ]
+
+        async with httpx.AsyncClient() as client:
+            # Gemini usa o parâmetro 'key' na URL
+            response = await client.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}")
+            response.raise_for_status()
+            data = response.json()
+            # Filtra apenas os modelos que suportam geração de conteúdo
+            return [
+                {"value": m["name"].split("/")[-1], "label": m["displayName"]}
+                for m in data.get("models", [])
+                if "generateContent" in m.get("supportedGenerationMethods", [])
+            ]
+    except Exception:
+        return [
+            {"value": "gemini-1.5-pro", "label": "Gemini 1.5 Pro"},
+            {"value": "gemini-1.5-flash", "label": "Gemini 1.5 Flash"},
         ]

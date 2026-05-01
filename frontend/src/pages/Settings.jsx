@@ -39,7 +39,7 @@ import { useTranslation } from "react-i18next";
 const llmModels = {
   openai: { label: 'settings.providerNames.openai', models: ['gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini'] },
   anthropic: { label: 'settings.providerNames.anthropic', models: ['claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-20240229'] },
-  google: { label: 'settings.providerNames.google', models: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-exp'] },
+  gemini: { label: 'settings.providerNames.google', models: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-exp'] },
   groq: { label: 'settings.providerNames.groq', models: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'] },
   openrouter: { label: 'settings.providerNames.openrouter', models: ['deepseek/deepseek-chat', 'anthropic/claude-3.5-sonnet', 'google/gemini-pro-1.5'] }
 };
@@ -49,8 +49,8 @@ const Settings = () => {
   const { settings, loading, saving, saveSettings } = useSettings();
   
   const [formData, setFormData] = useState({
-    llm_provider: "google",
-    primary_llm_model: "gemini-1.5-flash",
+    llm_provider: "gemini",
+    llm_model: "gemini-1.5-flash",
     openai_api_key: "",
     google_api_key: "",
     anthropic_api_key: "",
@@ -71,7 +71,7 @@ const Settings = () => {
     kokoro_voice: "af_heart",
     tts_provider: "elevenlabs",
     llm_fallbacks: [],
-    primary_llm_enabled: true,
+    llm_primary_enabled: true,
     notion_api_key: "",
     notion_page_id: "",
     visual_theme: "dark_fantasy"
@@ -88,6 +88,8 @@ const Settings = () => {
   const [fetchingDgVoices, setFetchingDgVoices] = useState(false);
   const [koVoices, setKoVoices] = useState([]);
   const [fetchingKoVoices, setFetchingKoVoices] = useState(false);
+  const [dynamicModels, setDynamicModels] = useState({});
+  const [fetchingModels, setFetchingModels] = useState(false);
 
   const toggleVisibility = (field) => {
     setVisibleFields(prev => ({ ...prev, [field]: !prev[field] }));
@@ -96,8 +98,8 @@ const Settings = () => {
   useEffect(() => {
     if (settings) {
       setFormData({
-        llm_provider: settings.llm_provider || "google",
-        primary_llm_model: settings.primary_llm_model || "gemini-1.5-flash",
+        llm_provider: settings.llm_provider || "gemini",
+        llm_model: settings.llm_model || "gemini-1.5-flash",
         openai_api_key: settings.openai_api_key || "",
         google_api_key: settings.google_api_key || "",
         anthropic_api_key: settings.anthropic_api_key || "",
@@ -118,7 +120,7 @@ const Settings = () => {
         kokoro_voice: settings.kokoro_voice || "af_heart",
         tts_provider: settings.tts_provider || "elevenlabs",
         llm_fallbacks: Array.isArray(settings.llm_fallbacks) ? settings.llm_fallbacks : [],
-        primary_llm_enabled: settings.primary_llm_enabled ?? true,
+        llm_primary_enabled: settings.llm_primary_enabled ?? true,
         notion_api_key: settings.notion_api_key || "",
         notion_page_id: settings.notion_page_id || "",
         visual_theme: settings.visual_theme || "dark_fantasy",
@@ -220,6 +222,36 @@ const Settings = () => {
     fetchKoVoices();
   }, [formData.elevenlabs_api_key, formData.deepgram_api_key, formData.kokoro_base_url, t]);
 
+  useEffect(() => {
+    const fetchModels = async (provider) => {
+      if (!['openai', 'gemini', 'groq', 'openrouter'].includes(provider)) return;
+      
+      setFetchingModels(true);
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/settings/llm/${provider}/models/`);
+        if (res.ok) {
+          const data = await res.json();
+          setDynamicModels(prev => ({ ...prev, [provider]: data }));
+        }
+      } catch (error) {
+        console.error(`Erro ao buscar modelos para ${provider}:`, error);
+      } finally {
+        setFetchingModels(false);
+      }
+    };
+
+    fetchModels(formData.llm_provider);
+    
+    // Also check if any fallbacks need model fetching
+    formData.llm_fallbacks.forEach(fb => {
+      if (fb.provider && !dynamicModels[fb.provider]) {
+        fetchModels(fb.provider);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.llm_provider, formData.llm_fallbacks, formData.openai_api_key, formData.google_api_key, formData.groq_api_key, formData.openrouter_api_key]);
+
   const addFallback = () => {
     setFormData({
       ...formData,
@@ -285,8 +317,8 @@ const Settings = () => {
               <div className="flex items-center gap-2">
                 <Switch 
                   id="primary-llm-enable"
-                  checked={formData.primary_llm_enabled}
-                  onCheckedChange={(val) => setFormData({...formData, primary_llm_enabled: val})}
+                  checked={formData.llm_primary_enabled}
+                  onCheckedChange={(val) => setFormData({...formData, llm_primary_enabled: val})}
                 />
                 <Label htmlFor="primary-llm-enable" className="text-xs font-bold text-[var(--muted-foreground)] uppercase cursor-pointer">
                   {t('settings.enablePrimary')}
@@ -295,7 +327,7 @@ const Settings = () => {
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            {!formData.primary_llm_enabled && (
+            {!formData.llm_primary_enabled && (
               <div className="bg-amber-500/10 border border-amber-500/20 rounded p-3 mb-4">
                 <span className="text-amber-200 text-xs flex items-center gap-2">
                   <AlertCircle className="w-3 h-3" />
@@ -304,7 +336,7 @@ const Settings = () => {
               </div>
             )}
             
-            <div className={`space-y-6 transition-all duration-200 ${!formData.primary_llm_enabled ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+            <div className={`space-y-6 transition-all duration-200 ${!formData.llm_primary_enabled ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="primary-provider" className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">{t('settings.provider')}</Label>
@@ -325,17 +357,19 @@ const Settings = () => {
                 <div className="space-y-2">
                   <Label htmlFor="primary-model" className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">{t('settings.model')}</Label>
                   <Select 
-                    value={formData.primary_llm_model} 
-                    onValueChange={(val) => setFormData({...formData, primary_llm_model: val})}
+                    value={formData.llm_model} 
+                    onValueChange={(val) => setFormData({...formData, llm_model: val})}
                   >
                     <SelectTrigger id="primary-model" className="bg-rpg-onyx/50 border-border text-[var(--foreground)] font-mono text-sm">
-                      <SelectValue placeholder={t('settings.model')} />
+                      <SelectValue placeholder={fetchingModels ? t('settings.loading') : t('settings.model')} />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1A1C23] border-border text-[var(--foreground)] shadow-xl z-[100]">
-                      {formData.llm_provider && llmModels[formData.llm_provider] ? (
-                        llmModels[formData.llm_provider].models.map((m) => (
-                          <SelectItem key={m} value={m}>{m}</SelectItem>
-                        ))
+                      {formData.llm_provider && (dynamicModels[formData.llm_provider] || (llmModels[formData.llm_provider] && llmModels[formData.llm_provider].models)) ? (
+                        (dynamicModels[formData.llm_provider] || llmModels[formData.llm_provider].models).map((m) => {
+                          const val = typeof m === 'string' ? m : m.value;
+                          const lab = typeof m === 'string' ? m : m.label;
+                          return <SelectItem key={val} value={val}>{lab}</SelectItem>;
+                        })
                       ) : (
                         <SelectItem value="none" disabled>{t('settings.noModelsFound')}</SelectItem>
                       )}
@@ -351,9 +385,9 @@ const Settings = () => {
                   <Input 
                     id="primary-api-key"
                     type={visibleFields.primary_api_key ? "text" : "password"}
-                    value={formData[`${formData.llm_provider === 'google' ? 'google' : formData.llm_provider}_api_key`] || ""}
+                    value={formData[`${formData.llm_provider === 'gemini' ? 'google' : formData.llm_provider}_api_key`] || ""}
                     onChange={(e) => {
-                      const providerKey = `${formData.llm_provider === 'google' ? 'google' : formData.llm_provider}_api_key`;
+                      const providerKey = `${formData.llm_provider === 'gemini' ? 'google' : formData.llm_provider}_api_key`;
                       setFormData({...formData, [providerKey]: e.target.value});
                     }}
                     className="pl-10 pr-10 input-dark font-mono text-sm"
@@ -398,7 +432,7 @@ const Settings = () => {
             <div className="space-y-4">
               {formData.llm_fallbacks.length === 0 ? (
                 <div className="text-center py-6 border border-dashed border-border rounded-lg">
-                  <p className="text-sm text-[var(--muted-foreground)]">Nenhum provedor de fallback configurado</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">{t('settings.noFallbacks')}</p>
                 </div>
               ) : (
                 formData.llm_fallbacks.map((fb, index) => (
@@ -438,9 +472,15 @@ const Settings = () => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-[#1A1C23] border-border text-[var(--foreground)] shadow-xl z-[100]">
-                            {llmModels[fb.provider]?.models.map((m) => (
-                              <SelectItem key={m} value={m}>{m}</SelectItem>
-                            ))}
+                            {(dynamicModels[fb.provider] || (llmModels[fb.provider] && llmModels[fb.provider].models)) ? (
+                              (dynamicModels[fb.provider] || llmModels[fb.provider].models).map((m) => {
+                                const val = typeof m === 'string' ? m : m.value;
+                                const lab = typeof m === 'string' ? m : m.label;
+                                return <SelectItem key={val} value={val}>{lab}</SelectItem>;
+                              })
+                            ) : (
+                              <SelectItem value="none" disabled>{t('settings.noModelsFound')}</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
