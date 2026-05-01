@@ -330,6 +330,7 @@ async def _background_process(
     script_density: str = "standard",
     narrative_perspective: str = "3p_epic",
     target_language: str = "pt-BR",
+    scope: str = "all",
 ):
     logger.info("Background AI processing started for session %s", session_id)
     try:
@@ -347,43 +348,49 @@ async def _background_process(
             script_density=script_density,
             narrative_perspective=narrative_perspective,
             target_language=target_language,
+            scope=scope,
         )
 
-        # Build diary entries
-        diary_entries = [
-            _serialize_datetime(
-                TechnicalDiaryEntry(
-                    category=entry.get("category", "event"),
-                    name=entry.get("name", ""),
-                    description=entry.get("description"),
-                ).model_dump()
-            )
-            for entry in ai_result.get("technical_diary", [])
-        ]
-
-        # Apply IC/OOC classification to existing segments
-        segments = session.get("transcription_segments", [])
-        filtered = ai_result.get("filtered_segments", [])
-        for i, seg in enumerate(segments):
-            if i < len(filtered):
-                seg["message_type"] = filtered[i].get("type", "ic")
-                if filtered[i].get("character"):
-                    seg["speaker_character_name"] = filtered[i]["character"]
+        update_fields = {
+            "status": SessionStatus.AWAITING_REVIEW.value,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
 
         llm_metadata = ai_result.get("metadata", {})
+
+        # Selective update based on scope
+        if scope in ("all", "diary"):
+            # Build diary entries
+            diary_entries = [
+                _serialize_datetime(
+                    TechnicalDiaryEntry(
+                        category=entry.get("category", "event"),
+                        name=entry.get("name", ""),
+                        description=entry.get("description"),
+                    ).model_dump()
+                )
+                for entry in ai_result.get("technical_diary", [])
+            ]
+            update_fields["technical_diary"] = diary_entries
+            update_fields["diary_metadata"] = llm_metadata
+            
+            # Apply IC/OOC classification only if we have diary/all scope
+            segments = session.get("transcription_segments", [])
+            filtered = ai_result.get("filtered_segments", [])
+            for i, seg in enumerate(segments):
+                if i < len(filtered):
+                    seg["message_type"] = filtered[i].get("type", "ic")
+                    if filtered[i].get("character"):
+                        seg["speaker_character_name"] = filtered[i]["character"]
+            update_fields["transcription_segments"] = segments
+
+        if scope in ("all", "script"):
+            update_fields["review_script"] = ai_result.get("review_script", raw_transcription)
+            update_fields["review_metadata"] = llm_metadata
+
         await db.sessions.update_one(
             {"id": session_id},
-            {
-                "$set": {
-                    "technical_diary": diary_entries,
-                    "review_script": ai_result.get("review_script", raw_transcription),
-                    "transcription_segments": segments,
-                    "diary_metadata": llm_metadata,
-                    "review_metadata": llm_metadata,
-                    "status": SessionStatus.AWAITING_REVIEW.value,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                }
-            },
+            {"$set": update_fields},
         )
         logger.info("Background AI processing successfully completed for session %s", session_id)
 
@@ -544,6 +551,7 @@ async def process_session(
         script_density=payload.script_density,
         narrative_perspective=payload.narrative_perspective,
         target_language=app_settings.language or accept_language,
+        scope=payload.scope,
     )
 
     return {

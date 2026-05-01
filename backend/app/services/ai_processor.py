@@ -57,6 +57,7 @@ class AIProcessorService:
         script_density: str = "standard",
         narrative_perspective: str = "3p_epic",
         target_language: str = "pt-BR",
+        scope: str = "all",
     ) -> Dict[str, Any]:
         """
         Send transcription to the configured LLM and parse the structured response.
@@ -71,7 +72,8 @@ class AIProcessorService:
             mapping_context,
             script_density,
             narrative_perspective,
-            target_language
+            target_language,
+            scope
         )
         system_prompt = get_system_prompt(target_language)
         
@@ -194,6 +196,7 @@ class AIProcessorService:
         script_density: str = "standard",
         narrative_perspective: str = "3p_epic",
         target_language: str = "pt-BR",
+        scope: str = "all",
     ) -> str:
         # Instruction for density
         density_key = f"ai.density.{script_density}"
@@ -202,12 +205,19 @@ class AIProcessorService:
         # Instruction for perspective
         perspective_key = f"ai.perspective.{narrative_perspective}"
         perspective_text = t(perspective_key, target_language)
+        
+        scope_instruction = ""
+        if scope == "diary":
+            scope_instruction = "FOCO: Gere APENAS o diário técnico. O roteiro de revisão pode ser deixado vazio ou curto."
+        elif scope == "script":
+            scope_instruction = "FOCO: Gere APENAS o roteiro de revisão. O diário técnico pode ser deixado vazio."
 
         if target_language == "pt-BR":
             return (
                 f"Analise esta transcrição de sessão de RPG ({game_system}):\n\n"
                 f"MAPEAMENTO DE JOGADORES:\n{mapping_context}\n\n"
-                f"INSTRUÇÕES DE ESTILO:\n- DENSIDADE: {density_text}\n- PERSPECTIVA: {perspective_text}\n\n"
+                f"INSTRUÇÕES DE ESTILO:\n- DENSIDADE: {density_text}\n- PERSPECTIVA: {perspective_text}\n"
+                f"{scope_instruction}\n\n"
                 f"TRANSCRIÇÃO:\n{raw_transcription}\n\n"
                 "Processe e retorne o JSON estruturado conforme o SYSTEM PROMPT."
             )

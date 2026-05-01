@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Edit3, Save, X, Loader2, Mic, Volume2, FileCode, FileText, ExternalLink } from "lucide-react";
+import { Edit3, Save, X, Loader2, Mic, Volume2, FileCode, FileText, ExternalLink, Zap, Info } from "lucide-react";
 import api from "../../lib/api";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -13,6 +13,7 @@ const ReviewScript = ({
   metadata,
   onSave, 
   onGenerateNarration,
+  onRegenerateScript,
   onExportMD,
   onExportPDF,
   onExportNotion,
@@ -111,6 +112,24 @@ const ReviewScript = ({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {!isEditing && initialScript && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRegenerateScript}
+              disabled={processing}
+              className="border-primary/30 text-primary hover:bg-primary/5 h-8 bg-primary/5 transition-all duration-300 hover:shadow-[0_0_15px_rgba(197,160,89,0.2)] hover:border-primary/50"
+              title={t('components.reviewScript.regenerateDesc')}
+            >
+              {processing ? (
+                <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+              ) : (
+                <Edit3 className="w-3.5 h-3.5 mr-2" />
+              )}
+              {t('components.reviewScript.regenerateScript')}
+            </Button>
+          )}
+          
           {!isEditing ? (
             <>
               {initialScript && !narrationUrl && (
@@ -148,20 +167,46 @@ const ReviewScript = ({
                     </select>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerate}
-                    disabled={processing || loadingVoices || !selectedVoice}
-                    className="border-primary/20 text-primary hover:bg-primary/10 mt-auto h-8"
-                  >
-                    {processing ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Mic className="w-4 h-4 mr-2" />
-                    )}
-                    {t('components.reviewScript.generate')}
-                  </Button>
+                  {selectedProvider === 'kokoro' && (
+                    <div className="w-full mt-1 mb-1 p-2 rounded-md bg-green-500/5 border border-green-500/10 flex items-start gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                      <Zap className="w-3 h-3 text-green-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-[9px] text-green-500 font-bold uppercase tracking-wider">
+                          {t('components.reviewScript.unlimited')} • {t('components.reviewScript.offline')}
+                        </p>
+                        <p className="text-[9px] text-green-500/70 leading-tight">
+                          {t('components.reviewScript.localProviderDesc')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerate}
+                      disabled={processing || loadingVoices || !selectedVoice}
+                      className={`h-9 px-6 transition-all duration-300 relative overflow-hidden group ${
+                        selectedProvider === 'kokoro' 
+                          ? 'border-green-500/40 text-green-400 hover:bg-green-500/10 shadow-[0_0_20px_rgba(34,197,94,0.15)] hover:shadow-[0_0_30px_rgba(34,197,94,0.25)]' 
+                          : 'border-primary/20 text-primary hover:bg-primary/10'
+                      }`}
+                    >
+                      {processing ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Mic className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                      )}
+                      <span className="flex flex-col items-start leading-none">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">{t('components.reviewScript.generate')}</span>
+                        {selectedProvider === 'kokoro' && (
+                          <span className="text-[8px] opacity-70 uppercase tracking-tighter font-medium">{t('components.reviewScript.costFree')}</span>
+                        )}
+                      </span>
+                      {selectedProvider === 'kokoro' && !processing && (
+                        <span className="absolute inset-0 bg-green-500/5 animate-pulse pointer-events-none" />
+                      )}
+                    </Button>
                 </div>
               )}
               <Button
@@ -240,7 +285,12 @@ const ReviewScript = ({
                 <Volume2 className="w-6 h-6" />
               </div>
               <div className="flex-1 w-full">
-                <p className="text-xs text-primary font-medium mb-2 uppercase tracking-wider">{t('components.reviewScript.epicNarration')}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-primary font-medium uppercase tracking-wider">{t('components.reviewScript.epicNarration')}</p>
+                  <span className="text-[10px] text-[var(--muted-foreground)] italic hidden sm:inline">
+                    {t('components.reviewScript.epicNarrationDesc')}
+                  </span>
+                </div>
                 <audio 
                   controls 
                   className="w-full h-10 accent-primary"
@@ -273,13 +323,27 @@ const ReviewScript = ({
                 ))}
               </select>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={handleGenerate}
                 disabled={processing || loadingVoices}
-                className="text-xs text-[var(--muted-foreground)] hover:text-primary"
+                className={`h-8 px-3 transition-all duration-300 ${
+                  selectedProvider === 'kokoro' 
+                    ? 'border-green-500/30 text-green-400 hover:bg-green-500/10' 
+                    : 'text-[var(--muted-foreground)] hover:text-primary hover:border-primary/30'
+                }`}
               >
-                {t('components.reviewScript.regenerate')}
+                {processing ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                ) : (
+                  <Mic className="w-3.5 h-3.5 mr-2" />
+                )}
+                <span className="flex flex-col items-start leading-none text-left">
+                  <span className="text-[10px] font-bold">{t('components.reviewScript.regenerate')}</span>
+                  {selectedProvider === 'kokoro' && (
+                    <span className="text-[7px] opacity-70 uppercase tracking-tighter">{t('components.reviewScript.offline')}</span>
+                  )}
+                </span>
               </Button>
             </div>
           </div>

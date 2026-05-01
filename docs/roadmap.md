@@ -25,6 +25,7 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [x] Criação autônoma do Diário Técnico baseado em identificação IC/OOC.
 - [x] Ingestão via UI para upload manual de *assets* brutos e integração de exportação de dados com Notion.
 - [x] Implantação da Licença Proprietária com documento rigoroso de atribuições de uso cruzado de libs (`NOTICE`).
+- [x] **Acesso Intuitivo de Regeração:** Implementação de processamento seletivo (escopo) e interface persuasiva para uso ilimitado de IA local (Kokoro).
 
 ---
 
@@ -34,7 +35,6 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [x] **Ajuste Global de Termos (Find & Replace Avançado):** Cirurgia de nomes próprios com funções nativas *Match Case* / *Whole Word* englobando Transcrição, Diário e Roteiro simultaneamente.
 - [ ] **Glossário de Spelling Ativo:** Treino estático persistente (*Injeção de Prompt/Contexto*) instruindo o STT/LLM nas cartilhas de grafia únicas da campanha.
 - [ ] **Expansão Profunda do Diário Técnico:** Detecção automatizada de *status* dinâmicos de Quests (Abandonada, Falha, Concluída) e enumeração de interações notáveis por jogador.
-- [ ] **Acesso Intuitivo de Regeração:** Fortalecimento visual (UI) para instigar a regeração do Roteiro e da Narração usando provedores offline sem medos econômicos.
 - [ ] **Refatoração no Upload:** Permissão para *bulk uploads* de arquivos, implementando uma sanitização severa no servidor convertendo tudo para Opus (Ogg) silenciosamente.
 
 ### 🟡 P2 (Prioridade Média - Estrutura Imbatível)

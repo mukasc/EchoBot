@@ -1,4 +1,4 @@
-import { Package, User, MapPin, Zap, Star, FileCode, FileText, ExternalLink } from "lucide-react";
+import { Package, User, MapPin, Zap, Star, FileCode, FileText, ExternalLink, RefreshCw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -12,7 +12,7 @@ const categoryIcons = {
   event: Zap
 };
 
-const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNotion }) => {
+const TechnicalDiary = ({ entries, metadata, onRegenerate, processing, onExportMD, onExportPDF, onExportNotion }) => {
   const { t } = useTranslation();
 
   return (
@@ -34,6 +34,24 @@ const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNo
         </div>
 
         <div className="flex items-center gap-2">
+          {entries?.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRegenerate}
+              disabled={processing}
+              className="border-primary/30 text-primary hover:bg-primary/5 h-8 bg-primary/5 transition-all duration-300 hover:shadow-[0_0_15px_rgba(197,160,89,0.2)] hover:border-primary/50"
+              title={t('components.technicalDiary.regenerateDesc')}
+            >
+              {processing ? (
+                <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5 mr-2" />
+              )}
+              {t('components.technicalDiary.regenerateDiary')}
+            </Button>
+          )}
+          <div className="h-4 w-px bg-border mx-1" />
           <Button 
             variant="outline" 
             size="sm" 

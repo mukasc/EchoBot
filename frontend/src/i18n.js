@@ -240,7 +240,9 @@ const ptBR = {
         "emptyDesc": "Processe a transcrição com IA para gerar automaticamente.",
         "exportMD": "Exportar Markdown",
         "exportPDF": "Exportar PDF",
-        "syncNotion": "Sincronizar com Notion"
+        "syncNotion": "Sincronizar com Notion",
+        "regenerateDiary": "Regerar Diário",
+        "regenerateDesc": "Recria as entradas do diário técnico baseadas na transcrição."
       },
       "reviewScript": {
         "title": "Roteiro de Revisão",
@@ -255,7 +257,14 @@ const ptBR = {
         "empty": "Nenhum roteiro de revisão ainda.",
         "emptyDesc": "Processe com IA ou escreva manualmente.",
         "tryOther": "Tentar com outro:",
-        "noVoices": "Nenhuma voz disponível"
+        "noVoices": "Nenhuma voz disponível",
+        "regenerateScript": "Regerar Roteiro",
+        "regenerateDesc": "Cria uma nova versão do roteiro baseada na transcrição.",
+        "offline": "Offline",
+        "costFree": "Sem custos",
+        "unlimited": "Ilimitado",
+        "localProviderDesc": "Este provedor roda 100% no seu hardware. Sinta-se livre para testar quantas vezes quiser!",
+        "epicNarrationDesc": "Converta seu roteiro em uma narração épica sem medos econômicos usando IA local."
       }
     },
     "settings": {
@@ -669,7 +678,9 @@ const enUS = {
         "emptyDesc": "Process the transcription with AI to generate entries automatically.",
         "exportMD": "Export Markdown",
         "exportPDF": "Export PDF",
-        "syncNotion": "Sync with Notion"
+        "syncNotion": "Sync with Notion",
+        "regenerateDiary": "Regenerate Diary",
+        "regenerateDesc": "Recreates technical diary entries based on the transcription."
       },
       "reviewScript": {
         "title": "Review Script",
@@ -684,7 +695,14 @@ const enUS = {
         "empty": "No review script yet.",
         "emptyDesc": "Process with AI or write manually.",
         "tryOther": "Try with another:",
-        "noVoices": "No voices available"
+        "noVoices": "No voices available",
+        "regenerateScript": "Regenerate Script",
+        "regenerateDesc": "Creates a new version of the script based on the transcription.",
+        "offline": "Offline",
+        "costFree": "No costs",
+        "unlimited": "Unlimited",
+        "localProviderDesc": "This provider runs 100% on your hardware. Feel free to test as many times as you want!",
+        "epicNarrationDesc": "Convert your script into an epic narration without economic fears using local AI."
       }
     },
     "settings": {

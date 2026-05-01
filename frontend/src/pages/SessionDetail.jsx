@@ -115,6 +115,8 @@ const SessionDetail = () => {
             <TechnicalDiary 
               entries={session.technical_diary} 
               metadata={session.diary_metadata}
+              onRegenerate={() => processWithAI({ scope: 'diary' })}
+              processing={processing}
               onExportMD={exportMarkdown}
               onExportPDF={exportPDF}
               onExportNotion={exportNotion}
@@ -128,6 +130,7 @@ const SessionDetail = () => {
               metadata={session.review_metadata}
               onSave={updateSession}
               onGenerateNarration={generateNarration}
+              onRegenerateScript={() => processWithAI({ scope: 'script' })}
               onExportMD={exportMarkdown}
               onExportPDF={exportPDF}
               onExportNotion={exportNotion}

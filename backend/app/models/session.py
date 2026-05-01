@@ -90,6 +90,7 @@ class SessionUpdate(BaseModel):
 class SessionProcessRequest(BaseModel):
     script_density: ScriptDensity = ScriptDensity.STANDARD
     narrative_perspective: NarrativePerspective = NarrativePerspective.THIRD_PERSON_EPIC
+    scope: str = "all"  # all, diary, script
 
 
 class SessionFindReplaceRequest(BaseModel):
