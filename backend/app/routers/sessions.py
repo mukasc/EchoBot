@@ -23,6 +23,7 @@ import asyncio
 import gzip
 import io
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -46,6 +47,7 @@ from app.models.session import (
     TranscriptionSegmentUpdate,
     MessageType,
     SessionProcessRequest,
+    SessionFindReplaceRequest,
 )
 from app.models.settings import AppSettings
 from app.services.ai_processor import AIProcessorService
@@ -748,6 +750,77 @@ async def _background_reprocess_all(
                 {"id": session_id},
                 {"$set": {"status": SessionStatus.AWAITING_REVIEW.value}}
             )
+
+
+@router.post("/{session_id}/find-replace")
+async def find_replace(
+    session_id: str,
+    payload: SessionFindReplaceRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    Globally find and replace terms in transcription, diary and script.
+    """
+    doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not doc:
+        raise NotFoundException("Session", session_id)
+
+    find_term = payload.find_term
+    replace_term = payload.replace_term
+    match_case = payload.match_case
+    whole_word = payload.whole_word
+
+    if not find_term:
+        raise BadRequestException("Find term cannot be empty")
+
+    # Helper for regex replacement
+    flags = 0 if match_case else re.IGNORECASE
+    pattern_str = re.escape(find_term)
+    if whole_word:
+        pattern_str = rf"\b{pattern_str}\b"
+    
+    pattern = re.compile(pattern_str, flags=flags)
+
+    def _replace(text: Optional[str]) -> str:
+        if not text:
+            return ""
+        return pattern.sub(replace_term, text)
+
+    # 1. Update Transcription Segments
+    segments = doc.get("transcription_segments", [])
+    for seg in segments:
+        if "text" in seg:
+            seg["text"] = _replace(seg["text"])
+
+    # 2. Update Technical Diary
+    diary = doc.get("technical_diary", [])
+    for entry in diary:
+        if "name" in entry:
+            entry["name"] = _replace(entry["name"])
+        if "description" in entry:
+            entry["description"] = _replace(entry["description"])
+
+    # 3. Update Review Script
+    review_script = _replace(doc.get("review_script", ""))
+
+    # 4. Update Raw Transcription
+    raw_transcription = _replace(doc.get("raw_transcription", ""))
+
+    # Save to DB
+    await db.sessions.update_one(
+        {"id": session_id},
+        {
+            "$set": {
+                "transcription_segments": segments,
+                "technical_diary": diary,
+                "review_script": review_script,
+                "raw_transcription": raw_transcription,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
+
+    return {"message": "Terms updated successfully"}
 
 
 @router.post("/{session_id}/narration/")

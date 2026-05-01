@@ -31,7 +31,7 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 ## 2. Prioritized Backlog
 
 ### 🔴 P1 (Prioridade Crítica - O Refinamento)
-- [ ] **Ajuste Global de Termos (Find & Replace Avançado):** Cirurgia de nomes próprios com funções nativas *Match Case* / *Whole Word* englobando Transcrição, Diário e Roteiro simultaneamente.
+- [x] **Ajuste Global de Termos (Find & Replace Avançado):** Cirurgia de nomes próprios com funções nativas *Match Case* / *Whole Word* englobando Transcrição, Diário e Roteiro simultaneamente.
 - [ ] **Glossário de Spelling Ativo:** Treino estático persistente (*Injeção de Prompt/Contexto*) instruindo o STT/LLM nas cartilhas de grafia únicas da campanha.
 - [ ] **Expansão Profunda do Diário Técnico:** Detecção automatizada de *status* dinâmicos de Quests (Abandonada, Falha, Concluída) e enumeração de interações notáveis por jogador.
 - [ ] **Acesso Intuitivo de Regeração:** Fortalecimento visual (UI) para instigar a regeração do Roteiro e da Narração usando provedores offline sem medos econômicos.

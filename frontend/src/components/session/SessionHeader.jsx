@@ -14,7 +14,8 @@ import {
   Download,
   FileText,
   FileCode,
-  ExternalLink
+  ExternalLink,
+  Replace
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -36,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import FindReplaceDialog from "./FindReplaceDialog";
 
 const SessionHeader = ({ 
   session, 
@@ -49,7 +51,8 @@ const SessionHeader = ({
   onReprocess,
   onExportMD,
   onExportPDF,
-  onExportNotion
+  onExportNotion,
+  onFindReplace
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -62,6 +65,7 @@ const SessionHeader = ({
   const [copied, setCopied] = useState(false);
   const [selectedDensity, setSelectedDensity] = useState(session.script_density || "standard");
   const [selectedPerspective, setSelectedPerspective] = useState(session.narrative_perspective || "3p_epic");
+  const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
 
   const handleProcess = () => {
     onProcess({
@@ -89,6 +93,11 @@ const SessionHeader = ({
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) onUpload(file);
+  };
+
+  const handleFindReplace = async (payload) => {
+    await onFindReplace(payload);
+    setIsFindReplaceOpen(false);
   };
 
   return (
@@ -258,6 +267,17 @@ const SessionHeader = ({
 
             <Button
               variant="outline"
+              size="icon"
+              onClick={() => setIsFindReplaceOpen(true)}
+              disabled={uploading || processing}
+              className="w-9 h-9 border-border text-[var(--muted-foreground)] hover:bg-rpg-surface-hover hover:text-primary transition-all"
+              title={t('session.findReplaceTitle', 'Ajuste Global de Termos')}
+            >
+              <Replace className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
@@ -319,6 +339,13 @@ const SessionHeader = ({
           </div>
         </div>
       </div>
+
+      <FindReplaceDialog 
+        isOpen={isFindReplaceOpen}
+        onClose={() => setIsFindReplaceOpen(false)}
+        onConfirm={handleFindReplace}
+        loading={saving}
+      />
     </div>
   );
 };

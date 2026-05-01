@@ -219,6 +219,21 @@ export const useSession = (sessionId) => {
     }
   };
 
+  const findReplace = async (payload) => {
+    setSaving(true);
+    try {
+      const response = await api.post(`/sessions/${sessionId}/find-replace`, payload);
+      toast.success(response.data.message || "Termos atualizados!");
+      await fetchSession();
+      return response.data;
+    } catch (error) {
+      const detail = error.response?.data?.detail || "Erro ao atualizar termos";
+      toast.error(detail);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const isBackgroundProcessing = session?.status === "transcribing" || session?.status === "processing";
 
   return {
@@ -238,6 +253,7 @@ export const useSession = (sessionId) => {
     exportMarkdown,
     exportPDF,
     exportNotion,
+    findReplace,
     refresh: fetchSession
   };
 };

@@ -34,7 +34,8 @@ const SessionDetail = () => {
     reprocessTranscription,
     exportMarkdown,
     exportPDF,
-    exportNotion
+    exportNotion,
+    findReplace
   } = useSession(id);
   
   const { getSpeakerInfo, loading: mappingsLoading } = useCharacterMappings();
@@ -72,6 +73,7 @@ const SessionDetail = () => {
           onExportMD={exportMarkdown}
           onExportPDF={exportPDF}
           onExportNotion={exportNotion}
+          onFindReplace={findReplace}
         />
 
 

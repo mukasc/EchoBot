@@ -90,3 +90,10 @@ class SessionUpdate(BaseModel):
 class SessionProcessRequest(BaseModel):
     script_density: ScriptDensity = ScriptDensity.STANDARD
     narrative_perspective: NarrativePerspective = NarrativePerspective.THIRD_PERSON_EPIC
+
+
+class SessionFindReplaceRequest(BaseModel):
+    find_term: str
+    replace_term: str
+    match_case: bool = False
+    whole_word: bool = False
