@@ -1,4 +1,14 @@
 /** @type {import('tailwindcss').Config} */
+function withOpacity(variableName, fallback) {
+  return ({ opacityValue }) => {
+    const color = fallback ? `var(${variableName}, ${fallback})` : `var(${variableName})`;
+    if (opacityValue !== undefined) {
+      return `color-mix(in srgb, ${color}, transparent ${Math.round((1 - opacityValue) * 100)}%)`;
+    }
+    return color;
+  };
+}
+
 module.exports = {
     darkMode: ["class"],
     content: [
@@ -59,17 +69,18 @@ module.exports = {
   				'5': 'hsl(var(--chart-5))'
   			},
   			rpg: {
-  				void: '#0B0C10',
-  				surface: '#13141A',
-  				'surface-hover': '#1A1B23',
-  				'surface-active': '#22242C',
-  				gold: '#D4AF37',
-  				'gold-hover': '#F0C74B',
-  				crimson: '#8C1C13',
-  				ic: '#D4AF37',
-  				ooc: '#6C7280',
-  				success: '#2D7A4D',
-  				info: '#3A6C97',
+  				void: withOpacity('--rpg-void'),
+  				surface: withOpacity('--rpg-surface'),
+  				'surface-hover': withOpacity('--rpg-surface-hover'),
+  				'surface-active': withOpacity('--rpg-surface-active'),
+  				gold: withOpacity('--rpg-gold'),
+  				'gold-hover': withOpacity('--rpg-gold-hover'),
+  				crimson: withOpacity('--rpg-crimson'),
+  				ic: withOpacity('--rpg-ic', 'var(--rpg-gold)'),
+  				ooc: withOpacity('--rpg-ooc', 'var(--muted-foreground)'),
+  				success: withOpacity('--rpg-success', '#22C55E'),
+  				info: withOpacity('--rpg-info', '#3B82F6'),
+  				onyx: withOpacity('--rpg-void', '#0F0F0F'),
   			}
   		},
   		keyframes: {

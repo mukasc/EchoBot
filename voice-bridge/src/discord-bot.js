@@ -6,6 +6,7 @@ const path = require('path');
 const config = require('./config');
 const audioManager = require('./audio-manager');
 const apiClient = require('./api-client');
+const { t, getLocale } = require('./i18n');
 
 class DiscordBot {
     constructor(client) {
@@ -16,10 +17,12 @@ class DiscordBot {
 
     setupEvents() {
         this.client.on(Events.ClientReady, () => {
-            console.log(`--- [BRIDGE] Online: ${this.client.user.tag} ---`);
+            console.log(t('bot.online', 'en-US', { tag: this.client.user.tag }));
         });
 
         this.client.on(Events.InteractionCreate, async (interaction) => {
+            const locale = getLocale(interaction);
+
             // Handle Slash Commands
             if (interaction.isChatInputCommand()) {
                 const command = this.client.commands.get(interaction.commandName);
@@ -29,7 +32,7 @@ class DiscordBot {
                     await command.execute(interaction, this);
                 } catch (error) {
                     console.error(error);
-                    const reply = { content: 'Ocorreu um erro ao executar este comando!', ephemeral: true };
+                    const reply = { content: t('error.generic', locale), ephemeral: true };
                     if (interaction.replied || interaction.deferred) await interaction.followUp(reply);
                     else await interaction.reply(reply);
                 }
@@ -47,10 +50,11 @@ class DiscordBot {
     async handleJoin(interaction) {
         const guildId = interaction.guildId;
         const sessionId = interaction.options.getString('sessao_id');
+        const locale = getLocale(interaction);
 
         if (this.activeSessions.has(guildId)) {
             return interaction.reply({ 
-                content: '⚠️ Já estou gravando nesta sala! Finalize a sessão atual primeiro.', 
+                content: t('join.already_recording', locale), 
                 ephemeral: true 
             });
         }
@@ -58,7 +62,7 @@ class DiscordBot {
         const voiceChannel = interaction.member?.voice.channel;
         if (!voiceChannel) {
             return interaction.reply({ 
-                content: '❌ Você precisa entrar num canal de voz primeiro!', 
+                content: t('join.must_be_in_voice', locale), 
                 ephemeral: true 
             });
         }
@@ -79,16 +83,16 @@ class DiscordBot {
             });
 
             connection.on(VoiceConnectionStatus.Ready, async () => {
-                console.log(`✅ Conexão estabelecida para Sessão: ${sessionId}`);
+                console.log(`✅ Connection established for Session: ${sessionId}`);
 
                 const embed = new EmbedBuilder()
-                    .setTitle('🎙️ Sessão de Gravação Iniciada')
-                    .setDescription(`O bot está ouvindo e gravando o áudio deste canal para a sessão **${sessionId}**.`)
+                    .setTitle(t('join.success_title', locale))
+                    .setDescription(t('join.success_desc', locale, { sessionId }))
                     .setColor(Colors.Green)
                     .addFields(
-                        { name: 'Sessão ID', value: sessionId, inline: true },
-                        { name: 'Canal', value: voiceChannel.name, inline: true },
-                        { name: 'Rotação', value: `${chunkDuration} minutos`, inline: true }
+                        { name: t('join.field_session_id', locale), value: sessionId, inline: true },
+                        { name: t('join.field_channel', locale), value: voiceChannel.name, inline: true },
+                        { name: t('join.field_rotation', locale), value: t('join.field_rotation_value', locale, { minutes: chunkDuration }), inline: true }
                     )
                     .setTimestamp()
                     .setFooter({ text: 'EchoBot Voice Bridge', iconURL: this.client.user.displayAvatarURL() });
@@ -97,7 +101,7 @@ class DiscordBot {
                     .addComponents(
                         new ButtonBuilder()
                             .setCustomId('stop_session')
-                            .setLabel('Parar Gravação')
+                            .setLabel(t('join.btn_stop', locale))
                             .setStyle(ButtonStyle.Danger)
                             .setEmoji('🛑')
                     );
@@ -128,7 +132,8 @@ class DiscordBot {
                     chunkIndex: 1,
                     chunkDuration,
                     rotationTimer: null,
-                    interactionChannelId: interaction.channelId
+                    interactionChannelId: interaction.channelId,
+                    locale // Store locale for non-interaction events
                 };
 
                 this.activeSessions.set(guildId, session);
@@ -136,15 +141,15 @@ class DiscordBot {
             });
 
             connection.on(VoiceConnectionStatus.Disconnected, () => {
-                console.log('🔇 Bot desconectado do canal.');
+                console.log(t('bot.disconnected', locale));
                 if (this.activeSessions.has(guildId)) {
                     this.handleLeave(null, guildId);
                 }
             });
 
         } catch (err) {
-            console.error('❌ Erro ao iniciar sessão:', err);
-            await interaction.editReply({ content: `❌ Erro ao buscar sessão: ${err.message}` });
+            console.error('❌ Error starting session:', err);
+            await interaction.editReply({ content: t('api.error_session', locale, { message: err.message }) });
         }
     }
 
@@ -158,10 +163,10 @@ class DiscordBot {
             const currentSession = this.activeSessions.get(guildId);
             if (!currentSession) return;
 
-            console.log(`🔄 [Rotation] Rotacionando bloco ${currentSession.chunkIndex} para sessão ${currentSession.sessionId}...`);
+            console.log(t('rotation.log', 'en-US', { index: currentSession.chunkIndex, sessionId: currentSession.sessionId }));
             const filesToProcess = [];
 
-            // Rotaciona usuários individuais
+            // Rotates individual users
             for (const [userId, userData] of currentSession.subscribedUsers) {
                 const rotated = audioManager.rotateUserStream(userId, currentSession.sessionId, currentSession.subscribedUsers, currentSession.chunkIndex + 1);
                 if (rotated) {
@@ -169,7 +174,7 @@ class DiscordBot {
                 }
             }
 
-            // Rotaciona stream central
+            // Rotates central stream
             const oldPcmFile = currentSession.pcmFile;
             const oldOutStream = currentSession.outStream;
             
@@ -187,7 +192,7 @@ class DiscordBot {
             
             filesToProcess.push({ file: oldPcmFile, stream: oldOutStream, userId: null });
 
-            // Processa o bloco anterior em background (não espera)
+            // Processes previous chunk in background
             this.processChunk(currentSession.sessionId, filesToProcess, currentSession.sessionStartTime, chunkOffset);
 
         }, intervalMs);
@@ -195,18 +200,16 @@ class DiscordBot {
 
     async processChunk(sessionId, filesToProcess, sessionStartTime, chunkOffset = 0) {
         for (const item of filesToProcess) {
-            // Aguarda o evento 'finish' para ter certeza que o arquivo está pronto
             item.stream.on('finish', async () => {
                 const timestamp = new Date().getTime();
                 const suffix = item.userId ? `user_${item.userId}` : 'central';
                 const oggFile = path.join(config.tempDir, `chunk_${sessionId}_${suffix}_${timestamp}.ogg`);
                 
                 try {
-                    // Pequena pausa para garantir que o SO liberou o arquivo
                     await new Promise(r => setTimeout(r, 500));
 
                     if (!fs.existsSync(item.file) || fs.statSync(item.file).size < 100) {
-                        console.log(`⏩ [Rotation] Pulando arquivo vazio: ${item.file}`);
+                        console.log(t('rotation.skip_empty', 'en-US', { file: item.file }));
                         audioManager.cleanup([item.file]);
                         return;
                     }
@@ -219,12 +222,11 @@ class DiscordBot {
                     
                     audioManager.cleanup([item.file, oggFile]);
                 } catch (err) {
-                    console.error(`❌ [Rotation] Erro ao processar bloco ${item.file}:`, err.message);
+                    console.error(t('rotation.error', 'en-US', { file: item.file, message: err.message }));
                     audioManager.cleanup([item.file]);
                 }
             });
 
-            // Garante que o stream seja fechado
             item.stream.end();
         }
     }
@@ -232,23 +234,25 @@ class DiscordBot {
     async handleLeave(interaction, guildIdFromEvent = null) {
         const guildId = interaction ? interaction.guildId : guildIdFromEvent;
         const session = this.activeSessions.get(guildId);
+        const interactionLocale = interaction ? getLocale(interaction) : null;
+        
         if (!session) {
-            if (interaction) await interaction.reply({ content: 'Não há nenhuma sessão ativa.', ephemeral: true });
+            if (interaction) await interaction.reply({ content: t('leave.no_active_session', interactionLocale || 'en-US'), ephemeral: true });
             return;
         }
 
-        const { sessionId, sessionStartTime, pcmFile, outStream, centralStream, connection, subscribedUsers, rotationTimer, interactionChannelId } = session;
-        console.log(`🛑 Finalizando sessão ${sessionId}...`);
+        const { sessionId, sessionStartTime, pcmFile, outStream, centralStream, connection, subscribedUsers, rotationTimer, interactionChannelId, locale } = session;
+        const finalLocale = interactionLocale || locale || 'en-US';
+        
+        console.log(`🛑 Finishing session ${sessionId}...`);
 
         if (rotationTimer) clearInterval(rotationTimer);
         this.activeSessions.delete(guildId);
         
-        // Finaliza streams
         centralStream.unpipe(outStream);
         centralStream.end();
         outStream.end();
 
-        // Processa o último bloco
         const lastFiles = [];
         lastFiles.push({ file: pcmFile, stream: outStream, userId: null });
         
@@ -258,29 +262,25 @@ class DiscordBot {
             }
         }
 
-        // Se veio de um botão, atualizamos a mensagem original
         if (interaction && interaction.isButton()) {
             await interaction.update({ 
-                content: `🛑 Gravação da sessão **${sessionId}** finalizada.`, 
+                content: t('leave.finished_msg', finalLocale, { sessionId }), 
                 embeds: [], 
                 components: [] 
             });
         } else if (interaction) {
-            await interaction.reply(`🛑 Finalizando gravação da sessão **${sessionId}**...`);
+            await interaction.reply(t('leave.finishing_msg', finalLocale, { sessionId }));
         }
 
-        // Processa os últimos arquivos
         const finalOffset = (session.chunkIndex - 1) * session.chunkDuration * 60;
         this.processChunk(sessionId, lastFiles, sessionStartTime, finalOffset);
 
-        // Desconecta após um breve momento
         setTimeout(() => {
             if (connection) connection.destroy();
             
-            // Se não foi uma interação, tenta avisar no canal
             if (!interaction && interactionChannelId) {
                 const channel = this.client.channels.cache.get(interactionChannelId);
-                if (channel) channel.send(`✅ Sessão **${sessionId}** finalizada com sucesso.`);
+                if (channel) channel.send(t('leave.success_announcement', finalLocale, { sessionId }));
             }
         }, 1000);
     }

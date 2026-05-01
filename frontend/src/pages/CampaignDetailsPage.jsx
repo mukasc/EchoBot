@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ChevronLeft, Plus, Scroll, Book, Edit3 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { useTranslation } from "react-i18next";
 
 import { useCampaignDetails } from "../hooks/useCampaigns";
 import { useSessions } from "../hooks/useSessions";
@@ -13,6 +14,7 @@ import EditCampaignDialog from "../components/dashboard/EditCampaignDialog";
 const CampaignDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { campaign, sessions: campaignSessions, technicalDiary, loading, refresh, updateCampaign } = useCampaignDetails(id);
   const { createSession, deleteSession } = useSessions();
 
@@ -40,8 +42,8 @@ const CampaignDetailsPage = () => {
     return (
       <div className="min-h-screen bg-rpg-void flex items-center justify-center">
         <div className="text-center">
-          <Scroll className="w-12 h-12 text-rpg-gold mx-auto animate-pulse" />
-          <p className="text-[#6C7280] mt-4">Carregando campanha...</p>
+          <Scroll className="w-12 h-12 text-primary mx-auto animate-pulse" />
+          <p className="text-[var(--muted-foreground)] mt-4">{t('campaigns.loadingCampaign')}</p>
         </div>
       </div>
     );
@@ -51,8 +53,8 @@ const CampaignDetailsPage = () => {
     return (
       <div className="min-h-screen bg-rpg-void flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-[#EDEDED] font-serif mb-2">Campanha não encontrada</h2>
-          <Button onClick={() => navigate("/")} className="btn-gold mt-4">Voltar para Home</Button>
+          <h2 className="text-2xl font-bold text-[var(--foreground)] font-serif mb-2">{t('campaigns.notFound')}</h2>
+          <Button onClick={() => navigate("/")} className="btn-gold mt-4">{t('session.backToHome')}</Button>
         </div>
       </div>
     );
@@ -66,28 +68,28 @@ const CampaignDetailsPage = () => {
         <div className="mb-8">
           <button 
             onClick={() => navigate("/")}
-            className="flex items-center text-[#A0A5B5] hover:text-rpg-gold transition-colors mb-4 text-sm"
+            className="flex items-center text-[var(--muted-foreground)] hover:text-primary transition-colors mb-4 text-sm"
           >
-            <ChevronLeft className="w-4 h-4 mr-1" /> Voltar para Campanhas
+            <ChevronLeft className="w-4 h-4 mr-1" /> {t('campaigns.backToCampaigns')}
           </button>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-[#EDEDED] font-serif flex items-center gap-3">
+              <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] font-serif flex items-center gap-3">
                 {campaign.name}
                 <button 
                   onClick={() => setEditDialogOpen(true)}
-                  className="p-2 rounded-full hover:bg-white/5 text-[#A0A5B5] hover:text-rpg-gold transition-colors"
-                  title="Editar Campanha"
+                  className="p-2 rounded-full hover:bg-white/5 text-[var(--muted-foreground)] hover:text-primary transition-colors"
+                  title={t('campaigns.editCampaign')}
                 >
                   <Edit3 className="w-5 h-5" />
                 </button>
               </h1>
-              <p className="text-[#A0A5B5] mt-1">{campaign.game_system} • {campaign.description || "Sem descrição"}</p>
+              <p className="text-[var(--muted-foreground)] mt-1">{campaign.game_system} • {campaign.description || ""}</p>
             </div>
             <div className="flex gap-3">
               <Button onClick={() => setCreateDialogOpen(true)} className="btn-gold">
                 <Plus className="w-4 h-4 mr-2" />
-                Nova Sessão
+                {t('dashboard.newSession')}
               </Button>
             </div>
           </div>
@@ -95,23 +97,23 @@ const CampaignDetailsPage = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="sessions" className="w-full">
-          <TabsList className="bg-rpg-surface border border-white/10 p-1 mb-6">
-            <TabsTrigger value="sessions" className="data-[state=active]:bg-rpg-void data-[state=active]:text-rpg-gold">
-              Sessões
+          <TabsList className="bg-rpg-surface border border-border p-1 mb-6">
+            <TabsTrigger value="sessions" className="data-[state=active]:bg-rpg-void data-[state=active]:text-primary">
+              {t('common.sessions')}
             </TabsTrigger>
-            <TabsTrigger value="diary" className="data-[state=active]:bg-rpg-void data-[state=active]:text-rpg-gold">
-              Diário Técnico Geral
+            <TabsTrigger value="diary" className="data-[state=active]:bg-rpg-void data-[state=active]:text-primary">
+              {t('session.technicalDiary')}
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="sessions">
             {campaignSessions.length === 0 ? (
               <div className="bg-rpg-surface border border-white/5 rounded-xl p-12 text-center">
-                <Scroll className="w-16 h-16 text-rpg-gold/50 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-[#EDEDED] font-serif mb-2">Nenhuma sessão ainda</h2>
-                <p className="text-[#A0A5B5] mb-6 max-w-md mx-auto">Crie sua primeira sessão para esta campanha.</p>
+                <Scroll className="w-16 h-16 text-primary/50 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-[var(--foreground)] font-serif mb-2">{t('campaigns.noSessions')}</h2>
+                <p className="text-[var(--muted-foreground)] mb-6 max-w-md mx-auto">{t('campaigns.noSessionsDesc')}</p>
                 <Button onClick={() => setCreateDialogOpen(true)} className="btn-gold">
-                  <Plus className="w-4 h-4 mr-2" /> Nova Sessão
+                  <Plus className="w-4 h-4 mr-2" /> {t('dashboard.newSession')}
                 </Button>
               </div>
             ) : (
@@ -126,30 +128,30 @@ const CampaignDetailsPage = () => {
           <TabsContent value="diary">
             {!technicalDiary || Object.keys(technicalDiary).length === 0 ? (
               <div className="bg-rpg-surface border border-white/5 rounded-xl p-12 text-center">
-                <Book className="w-16 h-16 text-rpg-gold/50 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-[#EDEDED] font-serif mb-2">Diário Vazio</h2>
-                <p className="text-[#A0A5B5] mb-6 max-w-md mx-auto">
-                  Grave e processe sessões para que as informações (NPCs, Locais, Itens) apareçam aqui agrupadas.
+                <Book className="w-16 h-16 text-primary/50 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-[var(--foreground)] font-serif mb-2">{t('session.diary.empty')}</h2>
+                <p className="text-[var(--muted-foreground)] mb-6 max-w-md mx-auto">
+                  {t('session.diary.empty')}
                 </p>
               </div>
             ) : (
               <div className="space-y-8 animate-in-fade">
                 {Object.entries(technicalDiary).map(([category, entries]) => (
-                  <div key={category} className="bg-rpg-surface border border-white/10 rounded-xl p-6">
-                    <h3 className="text-xl font-bold text-rpg-gold font-serif mb-4 capitalize">
+                  <div key={category} className="bg-rpg-surface border border-border rounded-xl p-6">
+                    <h3 className="text-xl font-bold text-primary font-serif mb-4 capitalize">
                       {category === "npc" ? "NPCs" : category}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {entries.map((entry) => (
                         <div key={entry.id} className="bg-rpg-void border border-white/5 rounded-lg p-4">
                           <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold text-[#EDEDED]">{entry.name}</h4>
-                            <span className="text-xs text-[#6C7280] bg-white/5 px-2 py-1 rounded">
-                              Visto em: {entry.session_name}
+                            <h4 className="font-semibold text-[var(--foreground)]">{entry.name}</h4>
+                            <span className="text-xs text-[var(--muted-foreground)] bg-white/5 px-2 py-1 rounded">
+                              {entry.session_name}
                             </span>
                           </div>
                           {entry.description && (
-                            <p className="text-sm text-[#A0A5B5] mt-2 whitespace-pre-wrap">
+                            <p className="text-sm text-[var(--muted-foreground)] mt-2 whitespace-pre-wrap">
                               {entry.description}
                             </p>
                           )}
@@ -181,3 +183,4 @@ const CampaignDetailsPage = () => {
 };
 
 export default CampaignDetailsPage;
+

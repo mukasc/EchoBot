@@ -10,6 +10,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { useTranslation } from "react-i18next";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
 import { Textarea } from "../ui/textarea";
 
 const EditCampaignDialog = ({ open, onOpenChange, campaign, onSubmit }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: "",
     game_system: "D&D 5e",
@@ -45,62 +47,62 @@ const EditCampaignDialog = ({ open, onOpenChange, campaign, onSubmit }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-rpg-surface border-white/10 text-[#EDEDED]">
+      <DialogContent className="bg-rpg-surface border-border text-[var(--foreground)]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-serif">Editar Campanha</DialogTitle>
-          <DialogDescription className="text-[#A0A5B5]">
-            Atualize as informações da sua campanha
+          <DialogTitle className="text-xl font-serif">{t('components.editCampaign.title')}</DialogTitle>
+          <DialogDescription className="text-[var(--muted-foreground)]">
+            {t('components.editCampaign.subtitle')}
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="campaign-name">Nome da Campanha</Label>
+            <Label htmlFor="campaign-name">{t('components.createCampaign.name')}</Label>
             <Input
               id="campaign-name"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              placeholder="Ex: A Maldição de Strahd"
+              placeholder={t('components.createCampaign.namePlaceholder')}
               className="input-dark"
               required
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="game-system">Sistema de Jogo</Label>
+            <Label htmlFor="game-system">{t('components.createCampaign.gameSystem')}</Label>
             <Select
               value={formData.game_system}
               onValueChange={(value) => setFormData({...formData, game_system: value})}
             >
               <SelectTrigger className="input-dark">
-                <SelectValue />
+                <SelectValue placeholder={t('components.createCampaign.selectSystem')} />
               </SelectTrigger>
-              <SelectContent className="bg-rpg-surface border-white/10">
-                {["D&D 5e", "Pathfinder 2e", "Call of Cthulhu", "Tormenta 20", "Vampiro: A Máscara", "Outro"].map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+              <SelectContent className="bg-rpg-surface border-border">
+                {["dnd5e", "pf2e", "cthulhu", "t20", "vtm", "other"].map(s => (
+                  <SelectItem key={s} value={t(`common.systems.${s}`)}>{t(`common.systems.${s}`)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="campaign-description">Descrição (opcional)</Label>
+            <Label htmlFor="campaign-description">{t('components.createCampaign.description')}</Label>
             <Textarea
               id="campaign-description"
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
-              placeholder="Uma breve descrição da sua aventura..."
+              placeholder={t('components.createCampaign.descriptionPlaceholder')}
               className="input-dark resize-none h-20"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="campaign-image">URL da Capa (opcional)</Label>
+            <Label htmlFor="campaign-image">{t('components.createCampaign.imageUrl')}</Label>
             <Input
               id="campaign-image"
               value={formData.cover_image_url}
               onChange={(e) => setFormData({...formData, cover_image_url: e.target.value})}
-              placeholder="https://..."
+              placeholder={t('components.createCampaign.imageUrlPlaceholder')}
               className="input-dark"
             />
           </div>
@@ -110,12 +112,12 @@ const EditCampaignDialog = ({ open, onOpenChange, campaign, onSubmit }) => {
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-white/10 text-[#A0A5B5] hover:bg-rpg-surface-hover"
+              className="border-border text-[var(--muted-foreground)] hover:bg-rpg-surface-hover"
             >
-              Cancelar
+              {t('components.createCampaign.cancel')}
             </Button>
             <Button type="submit" className="btn-gold">
-              Salvar Alterações
+              {t('components.editCampaign.save')}
             </Button>
           </DialogFooter>
         </form>
@@ -125,3 +127,4 @@ const EditCampaignDialog = ({ open, onOpenChange, campaign, onSubmit }) => {
 };
 
 export default EditCampaignDialog;
+

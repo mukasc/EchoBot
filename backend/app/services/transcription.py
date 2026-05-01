@@ -142,6 +142,8 @@ class TranscriptionService:
 
                 logger.info("Transcribing %s …", file_path)
                 
+                from app.utils.i18n import t
+                
                 lang_code = target_language.split("-")[0].lower() if target_language else "pt"
                 
                 segments_gen, info = model.transcribe(
@@ -149,7 +151,7 @@ class TranscriptionService:
                     language=lang_code,
                     beam_size=5,
                     vad_filter=True,
-                    initial_prompt="Esta é uma sessão de RPG de mesa.", # Helps with RPG context
+                    initial_prompt=t('stt.initial_prompt', target_language), # Helps with RPG context
                 )
                 raw_segments = list(segments_gen)
                 lang = info.language or "pt"

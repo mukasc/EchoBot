@@ -16,6 +16,20 @@ class TTSProvider(str, Enum):
     KOKORO = "kokoro"
 
 
+class VisualTheme(str, Enum):
+    DARK_FANTASY = "dark_fantasy"
+    CYBERPUNK = "cyberpunk"
+    SCIENCE_FICTION = "science_fiction"
+    WILD_WEST = "wild_west"
+    HIGH_FANTASY = "high_fantasy"
+    HORROR = "horror"
+    COSMIC_HORROR = "cosmic_horror"
+    POST_APOCALYPTIC = "post_apocalyptic"
+    STEAMPUNK = "steampunk"
+    SUPERHEROES = "superheroes"
+    WEIRD_WEST = "weird_west"
+
+
 class LLMConfig(BaseModel):
     label: str = "Fallback"
     provider: LLMProvider
@@ -61,6 +75,10 @@ class AppSettings(BaseModel):
     notion_api_key: Optional[str] = None
     notion_page_id: Optional[str] = None
     
+    # Appearance
+    visual_theme: VisualTheme = VisualTheme.DARK_FANTASY
+    language: str = "en-US"
+    
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -93,3 +111,5 @@ class AppSettingsUpdate(BaseModel):
     tts_provider: Optional[TTSProvider] = None
     notion_api_key: Optional[str] = None
     notion_page_id: Optional[str] = None
+    visual_theme: Optional[VisualTheme] = None
+    language: Optional[str] = None

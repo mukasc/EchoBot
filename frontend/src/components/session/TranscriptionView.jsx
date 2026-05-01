@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Textarea } from "../ui/textarea";
+import { useTranslation } from "react-i18next";
 import {
   Select,
   SelectContent,
@@ -13,13 +14,8 @@ import {
   SelectValue,
 } from "../ui/select";
 
-const typeLabels = {
-  ic: "In-Character",
-  ooc: "Out-of-Character",
-  narration: "Narração"
-};
-
 const TranscriptionView = ({ segments, getSpeakerInfo, onUpdateSegment, onUploadClick }) => {
+  const { t, i18n } = useTranslation();
   const [editingId, setEditingId] = useState(null);
 
   const sortedSegments = [...(segments || [])].sort((a, b) => 
@@ -39,7 +35,7 @@ const TranscriptionView = ({ segments, getSpeakerInfo, onUpdateSegment, onUpload
   const formatAbsoluteTimestamp = (isoString) => {
     if (!isoString) return null;
     try {
-      return new Date(isoString).toLocaleTimeString('pt-BR', { 
+      return new Date(isoString).toLocaleTimeString(i18n.language, { 
         hour: '2-digit', minute: '2-digit', second: '2-digit'
       });
     } catch { return null; }
@@ -47,10 +43,10 @@ const TranscriptionView = ({ segments, getSpeakerInfo, onUpdateSegment, onUpload
 
   return (
     <Card className="card-rpg">
-      <CardHeader className="border-b border-white/10">
-        <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-rpg-gold" />
-          Transcrição da Sessão
+      <CardHeader className="border-b border-border">
+        <CardTitle className="text-[var(--foreground)] font-serif flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-primary" />
+          {t('components.transcriptionView.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
@@ -74,15 +70,15 @@ const TranscriptionView = ({ segments, getSpeakerInfo, onUpdateSegment, onUpload
           </ScrollArea>
         ) : (
           <div className="p-12 text-center">
-            <FileAudio className="w-12 h-12 text-[#6C7280] mx-auto mb-4" />
-            <p className="text-[#A0A5B5] mb-4">Nenhuma transcrição disponível ainda</p>
+            <FileAudio className="w-12 h-12 text-[var(--muted-foreground)] mx-auto mb-4" />
+            <p className="text-[var(--muted-foreground)] mb-4">{t('components.transcriptionView.empty')}</p>
             <Button
               variant="outline"
               onClick={onUploadClick}
-              className="border-rpg-gold/30 text-rpg-gold hover:bg-rpg-gold/10"
+              className="border-primary/30 text-primary hover:bg-primary/10"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Fazer Upload de Áudio
+              {t('components.transcriptionView.uploadAudio')}
             </Button>
           </div>
         )}
@@ -94,6 +90,7 @@ const TranscriptionView = ({ segments, getSpeakerInfo, onUpdateSegment, onUpload
 const SegmentItem = ({ 
   segment, isEditing, setEditing, getSpeakerInfo, onUpdate, formatTimestamp, formatAbsoluteTimestamp 
 }) => {
+  const { t } = useTranslation();
   const [text, setText] = useState(segment.text);
   const [type, setType] = useState(segment.message_type);
   const speaker = getSpeakerInfo(segment.speaker_discord_id);
@@ -112,19 +109,19 @@ const SegmentItem = ({
     }`}>
       <div className="flex items-center gap-3 mb-2">
         <Badge className={`badge-${segment.message_type}`}>
-          {typeLabels[segment.message_type]}
+          {t(`session.segmentType.${segment.message_type}`, { defaultValue: segment.message_type })}
         </Badge>
         
-        <span className="text-sm font-semibold text-rpg-gold">
-          {characterName || speaker.discordName || "Desconhecido"}
-          {characterName && speaker.discordName && <span className="text-[#6C7280] font-normal"> | {speaker.discordName}</span>}
+        <span className="text-sm font-semibold text-primary">
+          {characterName || speaker.discordName || t('components.transcriptionView.unknownSpeaker')}
+          {characterName && speaker.discordName && <span className="text-[var(--muted-foreground)] font-normal"> | {speaker.discordName}</span>}
         </span>
 
         {segment.timestamp_start >= 0 && (
-          <span className="text-xs text-[#6C7280]">
+          <span className="text-xs text-[var(--muted-foreground)]">
             {formatTimestamp(segment.timestamp_start)}
             {segment.timestamp_absolute_start && (
-              <span className="ml-1 text-rpg-gold">
+              <span className="ml-1 text-primary">
                 ({formatAbsoluteTimestamp(segment.timestamp_absolute_start)})
               </span>
             )}
@@ -133,7 +130,8 @@ const SegmentItem = ({
         
         <button
           onClick={() => setEditing(isEditing ? null : segment.id)}
-          className="ml-auto text-[#6C7280] hover:text-rpg-gold transition-colors"
+          className="ml-auto text-[var(--muted-foreground)] hover:text-primary transition-colors"
+          title={t('common.edit')}
         >
           <Edit3 className="w-4 h-4" />
         </button>
@@ -151,22 +149,22 @@ const SegmentItem = ({
               <SelectTrigger className="input-dark w-40">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-rpg-surface border-white/10">
-                <SelectItem value="ic">In-Character</SelectItem>
-                <SelectItem value="ooc">Out-of-Character</SelectItem>
-                <SelectItem value="narration">Narração</SelectItem>
+              <SelectContent className="bg-rpg-surface border-border">
+                <SelectItem value="ic">{t('session.segmentType.ic')}</SelectItem>
+                <SelectItem value="ooc">{t('session.segmentType.ooc')}</SelectItem>
+                <SelectItem value="narration">{t('session.segmentType.narration')}</SelectItem>
               </SelectContent>
             </Select>
-            <Button size="sm" onClick={handleSave} className="btn-gold" aria-label="Salvar alteração">
+            <Button size="sm" onClick={handleSave} className="btn-gold" aria-label={t('common.save')}>
               <Check className="w-4 h-4" />
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setEditing(null)} className="border-white/10" aria-label="Cancelar edição">
+            <Button size="sm" variant="outline" onClick={() => setEditing(null)} className="border-border" aria-label={t('common.cancel')}>
               <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
       ) : (
-        <p className={`text-base leading-relaxed tracking-wide ${segment.message_type === 'ooc' ? 'text-[#6C7280]' : 'text-[#EDEDED]'}`}>
+        <p className={`text-base leading-relaxed tracking-wide ${segment.message_type === 'ooc' ? 'text-[var(--muted-foreground)]' : 'text-[var(--foreground)]'}`}>
           {segment.text}
         </p>
       )}
@@ -175,7 +173,7 @@ const SegmentItem = ({
         <div className="mt-2 flex gap-2 flex-wrap">
           {segment.uncertain_terms.map((term, i) => (
             <Badge key={i} variant="outline" className="text-yellow-500 border-yellow-500/30">
-              [Incerto: {term}]
+              [{t('components.transcriptionView.uncertain')}: {term}]
             </Badge>
           ))}
         </div>
@@ -185,3 +183,4 @@ const SegmentItem = ({
 };
 
 export default TranscriptionView;
+

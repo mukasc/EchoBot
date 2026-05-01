@@ -2,6 +2,7 @@ import { Package, User, MapPin, Zap, Star, FileCode, FileText, ExternalLink } fr
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { useTranslation } from "react-i18next";
 
 const categoryIcons = {
   npc: User,
@@ -11,27 +12,21 @@ const categoryIcons = {
   event: Zap
 };
 
-const categoryLabels = {
-  npc: "NPC",
-  location: "Local",
-  item: "Item",
-  xp: "XP",
-  event: "Evento"
-};
-
 const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNotion }) => {
+  const { t } = useTranslation();
+
   return (
     <Card className="card-rpg">
-      <CardHeader className="border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <CardHeader className="border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-            <Package className="w-5 h-5 text-rpg-gold" />
-            Diário Técnico
+          <CardTitle className="text-[var(--foreground)] font-serif flex items-center gap-2">
+            <Package className="w-5 h-5 text-primary" />
+            {t('components.technicalDiary.title')}
           </CardTitle>
           {metadata && (
             <div className="flex items-center gap-2 ml-7">
-              <span className="text-[10px] text-[#6C7280] uppercase">Processado por:</span>
-              <Badge variant="outline" className="text-[10px] bg-white/5 border-white/10 text-[#A0A5B5] capitalize">
+              <span className="text-[10px] text-[var(--muted-foreground)] uppercase">{t('components.technicalDiary.processedBy')}</span>
+              <Badge variant="outline" className="text-[10px] bg-white/5 border-border text-[var(--muted-foreground)] capitalize">
                 {metadata.provider} • {metadata.model}
               </Badge>
             </div>
@@ -43,8 +38,8 @@ const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNo
             variant="outline" 
             size="sm" 
             onClick={onExportMD}
-            className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
-            title="Exportar Markdown"
+            className="h-8 border-border text-[var(--muted-foreground)] hover:text-primary hover:border-primary/50"
+            title={t('components.technicalDiary.exportMD')}
           >
             <FileCode className="w-3.5 h-3.5 mr-1.5" />
             MD
@@ -53,8 +48,8 @@ const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNo
             variant="outline" 
             size="sm" 
             onClick={onExportPDF}
-            className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
-            title="Exportar PDF"
+            className="h-8 border-border text-[var(--muted-foreground)] hover:text-primary hover:border-primary/50"
+            title={t('components.technicalDiary.exportPDF')}
           >
             <FileText className="w-3.5 h-3.5 mr-1.5" />
             PDF
@@ -63,8 +58,8 @@ const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNo
             variant="outline" 
             size="sm" 
             onClick={onExportNotion}
-            className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
-            title="Sincronizar com Notion"
+            className="h-8 border-border text-[var(--muted-foreground)] hover:text-primary hover:border-primary/50"
+            title={t('components.technicalDiary.syncNotion')}
           >
             <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
             Notion
@@ -80,18 +75,18 @@ const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNo
                 <Card key={entry.id || index} className="bg-rpg-surface-hover border-white/5">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      <div className="p-2 rounded-lg bg-rpg-gold/10">
-                        <Icon className="w-4 h-4 text-rpg-gold" />
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Icon className="w-4 h-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Badge className="text-xs mb-2 bg-rpg-surface-active text-[#A0A5B5] border-0">
-                          {categoryLabels[entry.category]}
+                        <Badge className="text-xs mb-2 bg-rpg-surface-active text-[var(--muted-foreground)] border-0">
+                          {t(`session.diaryCategory.${entry.category}`, { defaultValue: entry.category })}
                         </Badge>
-                        <h4 className="text-[#EDEDED] font-semibold truncate">
+                        <h4 className="text-[var(--foreground)] font-semibold truncate">
                           {entry.name}
                         </h4>
                         {entry.description && (
-                          <p className="text-sm text-[#6C7280] mt-1 line-clamp-2">
+                          <p className="text-sm text-[var(--muted-foreground)] mt-1 line-clamp-2">
                             {entry.description}
                           </p>
                         )}
@@ -104,10 +99,10 @@ const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNo
           </div>
         ) : (
           <div className="text-center py-8">
-            <Package className="w-12 h-12 text-[#6C7280] mx-auto mb-4" />
-            <p className="text-[#A0A5B5]">Nenhuma entrada no diário técnico ainda.</p>
-            <p className="text-sm text-[#6C7280] mt-2">
-              Processe a transcrição com IA para gerar automaticamente.
+            <Package className="w-12 h-12 text-[var(--muted-foreground)] mx-auto mb-4" />
+            <p className="text-[var(--muted-foreground)]">{t('components.technicalDiary.empty')}</p>
+            <p className="text-sm text-[var(--muted-foreground)] mt-2">
+              {t('components.technicalDiary.emptyDesc')}
             </p>
           </div>
         )}
@@ -117,3 +112,4 @@ const TechnicalDiary = ({ entries, metadata, onExportMD, onExportPDF, onExportNo
 };
 
 export default TechnicalDiary;
+

@@ -10,8 +10,10 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { useTranslation } from "react-i18next";
 
 const MappingDialog = ({ open, onOpenChange, onSubmit, editingMapping }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     discord_user_id: "",
     discord_username: "",
@@ -47,19 +49,19 @@ const MappingDialog = ({ open, onOpenChange, onSubmit, editingMapping }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-rpg-surface border-white/10 text-[#EDEDED]">
+      <DialogContent className="bg-rpg-surface border-border text-[var(--foreground)]">
         <DialogHeader>
           <DialogTitle className="text-xl font-serif">
-            {editingMapping ? "Editar Mapeamento" : "Novo Mapeamento"}
+            {editingMapping ? t('characterMappings.dialog.editTitle') : t('characterMappings.dialog.newTitle')}
           </DialogTitle>
-          <DialogDescription className="text-[#A0A5B5]">
-            Vincule um usuário do Discord a um personagem de RPG
+          <DialogDescription className="text-[var(--muted-foreground)]">
+            {t('characterMappings.dialog.desc')}
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="discord-id" className="text-[#EDEDED]">Discord User ID *</Label>
+            <Label htmlFor="discord-id" className="text-[var(--foreground)]">{t('characterMappings.dialog.discordIdLabel')}</Label>
             <Input
               id="discord-id"
               value={formData.discord_user_id}
@@ -68,11 +70,11 @@ const MappingDialog = ({ open, onOpenChange, onSubmit, editingMapping }) => {
               className="input-dark"
               required
             />
-            <p className="text-xs text-[#6C7280]">Ative o Modo de Desenvolvedor no Discord para copiar IDs</p>
+            <p className="text-xs text-[var(--muted-foreground)]">{t('characterMappings.dialog.discordIdHint')}</p>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="discord-username" className="text-[#EDEDED]">Nome de Usuário Discord *</Label>
+            <Label htmlFor="discord-username" className="text-[var(--foreground)]">{t('characterMappings.dialog.usernameLabel')}</Label>
             <Input
               id="discord-username"
               value={formData.discord_username}
@@ -84,7 +86,7 @@ const MappingDialog = ({ open, onOpenChange, onSubmit, editingMapping }) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="character-name" className="text-[#EDEDED]">Nome do Personagem *</Label>
+            <Label htmlFor="character-name" className="text-[var(--foreground)]">{t('characterMappings.dialog.characterNameLabel')}</Label>
             <Input
               id="character-name"
               value={formData.character_name}
@@ -96,7 +98,7 @@ const MappingDialog = ({ open, onOpenChange, onSubmit, editingMapping }) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="character-role" className="text-[#EDEDED]">Função/Classe</Label>
+            <Label htmlFor="character-role" className="text-[var(--foreground)]">{t('characterMappings.dialog.roleLabel')}</Label>
             <Input
               id="character-role"
               value={formData.character_role}
@@ -107,7 +109,7 @@ const MappingDialog = ({ open, onOpenChange, onSubmit, editingMapping }) => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="avatar-url" className="text-[#EDEDED]">URL do Avatar</Label>
+            <Label htmlFor="avatar-url" className="text-[var(--foreground)]">{t('characterMappings.dialog.avatarUrlLabel')}</Label>
             <Input
               id="avatar-url"
               value={formData.avatar_url}
@@ -122,12 +124,12 @@ const MappingDialog = ({ open, onOpenChange, onSubmit, editingMapping }) => {
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-white/10 text-[#A0A5B5] hover:bg-rpg-surface-hover"
+              className="border-border text-[var(--muted-foreground)] hover:bg-rpg-surface-hover"
             >
-              Cancelar
+              {t('characterMappings.dialog.cancel')}
             </Button>
             <Button type="submit" className="btn-gold">
-              {editingMapping ? "Atualizar" : "Criar"}
+              {editingMapping ? t('characterMappings.dialog.update') : t('characterMappings.dialog.create')}
             </Button>
           </DialogFooter>
         </form>
@@ -137,3 +139,4 @@ const MappingDialog = ({ open, onOpenChange, onSubmit, editingMapping }) => {
 };
 
 export default MappingDialog;
+

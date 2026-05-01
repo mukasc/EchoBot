@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Manrope:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&family=Cinzel:wght@400;700;900&family=Orbitron:wght@400;700;900&family=Special+Elite&family=Creepster&family=Metal+Mania&family=Bangers&family=UnifrakturMaguntia&family=Rye&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,38 +6,27 @@
 
 @layer base {
   :root {
-    /* RPG Cronista Dark Fantasy Theme */
+    --radius: 0.5rem;
+    --font-serif: 'Playfair Display', serif;
+    --font-sans: 'Manrope', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  /* DARK FANTASY (Default) */
+  [data-theme='dark_fantasy'], :root:not([data-theme]) {
     --background: 220 14% 4%;
     --foreground: 0 0% 93%;
-    
     --card: 225 14% 8%;
     --card-foreground: 0 0% 93%;
-    
-    --popover: 225 14% 8%;
-    --popover-foreground: 0 0% 93%;
-    
     --primary: 45 69% 52%;
     --primary-foreground: 220 14% 4%;
-    
     --secondary: 220 10% 14%;
-    --secondary-foreground: 0 0% 93%;
-    
     --muted: 220 10% 14%;
     --muted-foreground: 220 10% 50%;
-    
     --accent: 220 10% 14%;
-    --accent-foreground: 0 0% 93%;
-    
-    --destructive: 0 70% 35%;
-    --destructive-foreground: 0 0% 93%;
-    
     --border: 220 10% 14%;
-    --input: 220 10% 14%;
     --ring: 45 69% 52%;
-    
-    --radius: 0.5rem;
-    
-    /* Custom RPG Colors */
+
     --rpg-void: #0B0C10;
     --rpg-surface: #13141A;
     --rpg-surface-hover: #1A1B23;
@@ -46,24 +35,334 @@
     --rpg-gold-hover: #F0C74B;
     --rpg-crimson: #8C1C13;
     --rpg-ic: #D4AF37;
-    --rpg-ooc: #6C7280;
+    --rpg-ooc: #888888;
     --rpg-success: #2D7A4D;
     --rpg-info: #3A6C97;
+    
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Manrope', sans-serif;
+  }
+
+  /* CYBERPUNK */
+  [data-theme='cyberpunk'] {
+    --background: 260 100% 2%;
+    --foreground: 180 100% 50%;
+    --card: 260 100% 4%;
+    --card-foreground: 180 100% 50%;
+    --primary: 320 100% 50%; /* Neon Pink */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 260 100% 10%;
+    --muted: 260 100% 10%;
+    --muted-foreground: 180 100% 30%;
+    --accent: 180 100% 50%; /* Cyan */
+    --border: 320 100% 50% / 0.3;
+    --ring: 320 100% 50%;
+
+    --rpg-void: #05000A;
+    --rpg-surface: #0D001A;
+    --rpg-surface-hover: #150026;
+    --rpg-surface-active: #1D0033;
+    --rpg-gold: #FF00FF; /* Neon Pink as Gold substitute */
+    --rpg-gold-hover: #00FFFF;
+    --rpg-crimson: #FFFF00; /* Neon Yellow */
+    --rpg-ic: #00FFFF;
+    --rpg-ooc: #FF00FF;
+    --rpg-success: #39FF14;
+    --rpg-info: #00BFFF;
+    
+    --font-heading: 'Orbitron', sans-serif;
+    --font-body: 'JetBrains Mono', monospace;
+  }
+
+  /* SCIENCE FICTION (Space Opera) */
+  [data-theme='science_fiction'] {
+    --background: 220 40% 5%;
+    --foreground: 210 20% 98%;
+    --card: 220 40% 8%;
+    --card-foreground: 210 20% 98%;
+    --primary: 200 100% 50%; /* Electric Blue */
+    --primary-foreground: 220 40% 5%;
+    --secondary: 220 20% 15%;
+    --muted: 220 20% 15%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 190 100% 50%;
+    --border: 220 20% 20%;
+    --ring: 200 100% 50%;
+
+    --rpg-void: #060B14;
+    --rpg-surface: #0C1421;
+    --rpg-surface-hover: #121D2D;
+    --rpg-surface-active: #182639;
+    --rpg-gold: #4CC9FE;
+    --rpg-gold-hover: #A0E9FF;
+    --rpg-crimson: #FF3D00;
+    --rpg-ic: #4CC9FE;
+    --rpg-ooc: #94A3B8;
+    --rpg-success: #2DD4BF;
+    --rpg-info: #38BDF8;
+    
+    --font-heading: 'Manrope', sans-serif;
+    --font-body: 'Manrope', sans-serif;
+  }
+
+  /* WILD WEST */
+  [data-theme='wild_west'] {
+    --background: 30 20% 10%;
+    --foreground: 40 30% 90%;
+    --card: 30 20% 15%;
+    --card-foreground: 40 30% 90%;
+    --primary: 35 60% 45%; /* Copper/Brown */
+    --primary-foreground: 30 20% 10%;
+    --secondary: 30 15% 20%;
+    --muted: 30 15% 20%;
+    --muted-foreground: 30 10% 50%;
+    --accent: 45 50% 60%;
+    --border: 30 15% 25%;
+    --ring: 35 60% 45%;
+
+    --rpg-void: #1A1510;
+    --rpg-surface: #261F18;
+    --rpg-surface-hover: #332920;
+    --rpg-surface-active: #403328;
+    --rpg-gold: #A67C52;
+    --rpg-gold-hover: #D9B38C;
+    --rpg-crimson: #631908;
+    --rpg-ic: #A67C52;
+    --rpg-ooc: #736752;
+    --rpg-success: #4D593D;
+    --rpg-info: #5E738C;
+    
+    --font-heading: 'Rye', cursive;
+    --font-body: 'Special Elite', cursive;
+  }
+
+  /* HIGH FANTASY */
+  [data-theme='high_fantasy'] {
+    --background: 140 30% 5%;
+    --foreground: 60 30% 95%;
+    --card: 140 30% 10%;
+    --card-foreground: 60 30% 95%;
+    --primary: 140 50% 40%; /* Emerald */
+    --primary-foreground: 60 30% 95%;
+    --secondary: 260 40% 20%; /* Royal Purple */
+    --muted: 140 20% 15%;
+    --muted-foreground: 140 10% 60%;
+    --accent: 45 100% 50%; /* Pure Gold */
+    --border: 140 20% 20%;
+    --ring: 140 50% 40%;
+
+    --rpg-void: #050F0A;
+    --rpg-surface: #0A1E14;
+    --rpg-surface-hover: #0F2D1E;
+    --rpg-surface-active: #143C28;
+    --rpg-gold: #FFD700;
+    --rpg-gold-hover: #FFF066;
+    --rpg-crimson: #7B1FA2;
+    --rpg-ic: #FFD700;
+    --rpg-ooc: #C0C0C0;
+    --rpg-success: #10B981;
+    --rpg-info: #3B82F6;
+    
+    --font-heading: 'Cinzel', serif;
+    --font-body: 'Manrope', sans-serif;
+  }
+
+  /* HORROR */
+  [data-theme='horror'] {
+    --background: 0 0% 2%;
+    --foreground: 0 0% 70%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 70%;
+    --primary: 0 100% 20%; /* Blood Red */
+    --primary-foreground: 0 0% 90%;
+    --secondary: 0 0% 10%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 50%;
+    --border: 0 100% 20% / 0.5;
+    --ring: 0 100% 20%;
+
+    --rpg-void: #050505;
+    --rpg-surface: #0D0D0D;
+    --rpg-surface-hover: #141414;
+    --rpg-surface-active: #1A1A1A;
+    --rpg-gold: #4A0404;
+    --rpg-gold-hover: #800000;
+    --rpg-crimson: #3D0000;
+    --rpg-ic: #800000;
+    --rpg-ooc: #444444;
+    --rpg-success: #1A3D1A;
+    --rpg-info: #1A1A3D;
+    
+    --font-heading: 'Creepster', cursive;
+    --font-body: 'Special Elite', cursive;
+  }
+
+  /* COSMIC HORROR */
+  [data-theme='cosmic_horror'] {
+    --background: 280 50% 2%;
+    --foreground: 120 40% 70%;
+    --card: 280 50% 5%;
+    --card-foreground: 120 40% 70%;
+    --primary: 150 100% 30%; /* Eldritch Green */
+    --primary-foreground: 280 50% 2%;
+    --secondary: 280 30% 10%;
+    --muted: 280 30% 10%;
+    --muted-foreground: 280 10% 40%;
+    --accent: 300 100% 50%; /* Void Purple */
+    --border: 150 100% 30% / 0.3;
+    --ring: 150 100% 30%;
+
+    --rpg-void: #050208;
+    --rpg-surface: #0F0614;
+    --rpg-surface-hover: #190A21;
+    --rpg-surface-active: #230E2D;
+    --rpg-gold: #1DB954;
+    --rpg-gold-hover: #21E661;
+    --rpg-crimson: #B026FF;
+    --rpg-ic: #1DB954;
+    --rpg-ooc: #7B1FA2;
+    --rpg-success: #00FF41;
+    --rpg-info: #9D00FF;
+    
+    --font-heading: 'Metal Mania', cursive;
+    --font-body: 'JetBrains Mono', monospace;
+  }
+
+  /* POST APOCALYPTIC */
+  [data-theme='post_apocalyptic'] {
+    --background: 25 15% 6%;
+    --foreground: 45 10% 75%;
+    --card: 25 15% 10%;
+    --card-foreground: 45 10% 75%;
+    --primary: 25 50% 35%; /* Rust */
+    --primary-foreground: 45 10% 90%;
+    --secondary: 0 0% 15%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 50 100% 40%; /* Caution Yellow */
+    --border: 25 30% 20%;
+    --ring: 25 50% 35%;
+
+    --rpg-void: #12100E;
+    --rpg-surface: #1C1916;
+    --rpg-surface-hover: #26221E;
+    --rpg-surface-active: #302B26;
+    --rpg-gold: #8E4B28;
+    --rpg-gold-hover: #B56034;
+    --rpg-crimson: var(--rpg-gold); /* Yellowish */
+    --rpg-ic: #B56034;
+    --rpg-ooc: #4A4A4A;
+    --rpg-success: #4D593D;
+    --rpg-info: #5E738C;
+    
+    --font-heading: 'Special Elite', cursive;
+    --font-body: 'JetBrains Mono', monospace;
+  }
+
+  /* STEAMPUNK */
+  [data-theme='steampunk'] {
+    --background: 25 30% 5%;
+    --foreground: 40 40% 85%;
+    --card: 25 30% 10%;
+    --card-foreground: 40 40% 85%;
+    --primary: 25 60% 45%; /* Brass/Copper */
+    --primary-foreground: 25 30% 5%;
+    --secondary: 25 20% 15%;
+    --muted: 25 20% 15%;
+    --muted-foreground: 25 10% 50%;
+    --accent: 40 80% 60%;
+    --border: 25 40% 20%;
+    --ring: 25 60% 45%;
+
+    --rpg-void: #120D0A;
+    --rpg-surface: #1D1510;
+    --rpg-surface-hover: #281D16;
+    --rpg-surface-active: #33251C;
+    --rpg-gold: #B87333;
+    --rpg-gold-hover: #CD7F32;
+    --rpg-crimson: #4E342E;
+    --rpg-ic: #B87333;
+    --rpg-ooc: #4E342E;
+    --rpg-success: #3D5A45;
+    --rpg-info: #3A6C97;
+    
+    --font-heading: 'UnifrakturMaguntia', cursive;
+    --font-body: 'Special Elite', cursive;
+  }
+
+  /* SUPERHEROES */
+  [data-theme='superheroes'] {
+    --background: 220 100% 5%;
+    --foreground: 0 0% 100%;
+    --card: 220 100% 10%;
+    --card-foreground: 0 0% 100%;
+    --primary: 0 100% 50%; /* Hero Red */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 100% 30%; /* Deep Blue */
+    --muted: 220 100% 15%;
+    --muted-foreground: 220 50% 60%;
+    --accent: 50 100% 50%; /* Comic Yellow */
+    --border: 0 100% 50% / 0.5;
+    --ring: 0 100% 50%;
+
+    --rpg-void: #000B1A;
+    --rpg-surface: #001533;
+    --rpg-surface-hover: #001F4D;
+    --rpg-surface-active: #002966;
+    --rpg-gold: #FFCC00;
+    --rpg-gold-hover: #FFEE00;
+    --rpg-crimson: #E60000;
+    --rpg-ic: #FFCC00;
+    --rpg-ooc: #3B82F6;
+    --rpg-success: #22C55E;
+    --rpg-info: #60A5FA;
+    
+    --font-heading: 'Bangers', cursive;
+    --font-body: 'Manrope', sans-serif;
+  }
+
+  /* WEIRD WEST */
+  [data-theme='weird_west'] {
+    --background: 280 20% 5%;
+    --foreground: 40 20% 80%;
+    --card: 280 20% 10%;
+    --card-foreground: 40 20% 80%;
+    --primary: 280 40% 30%; /* Dusty Purple */
+    --primary-foreground: 40 20% 95%;
+    --secondary: 30 20% 15%;
+    --muted: 280 10% 15%;
+    --muted-foreground: 280 5% 50%;
+    --accent: 150 50% 40%; /* Ghostly Green */
+    --border: 280 20% 20%;
+    --ring: 280 40% 30%;
+
+    --rpg-void: #100C12;
+    --rpg-surface: #1A141E;
+    --rpg-surface-hover: #241C2A;
+    --rpg-surface-active: #2E2436;
+    --rpg-gold: #8B5CF6; /* Dusty Purple */
+    --rpg-gold-hover: #A78BFA;
+    --rpg-crimson: #7C3AED;
+    --rpg-ic: #8B5CF6;
+    --rpg-ooc: #9CA3AF;
+    --rpg-success: #059669;
+    --rpg-info: #2563EB;
+    
+    --font-heading: 'Rye', cursive;
+    --font-body: 'Special Elite', cursive;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  
   body {
-    @apply bg-rpg-void text-[#EDEDED] antialiased;
-    font-family: 'Manrope', sans-serif;
+    @apply bg-background text-foreground antialiased transition-colors duration-500;
+    font-family: var(--font-body);
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif;
+    font-family: var(--font-heading);
+    @apply tracking-tight;
   }
   
   code, pre {
@@ -109,33 +408,58 @@
 
 /* IC/OOC Badge Styles */
 .badge-ic {
-  @apply bg-rpg-ic/15 text-rpg-ic border-rpg-ic/30 px-2 py-0.5 rounded text-xs font-medium;
+  background-color: color-mix(in srgb, var(--rpg-ic), transparent 85%);
+  color: var(--rpg-ic);
+  border: 1px solid color-mix(in srgb, var(--rpg-ic), transparent 70%);
+  @apply px-2 py-0.5 rounded text-xs font-medium;
 }
 
 .badge-ooc {
-  @apply bg-rpg-ooc/15 text-rpg-ooc border-rpg-ooc/30 px-2 py-0.5 rounded text-xs font-medium;
+  background-color: color-mix(in srgb, var(--rpg-ooc), transparent 85%);
+  color: var(--rpg-ooc);
+  border: 1px solid color-mix(in srgb, var(--rpg-ooc), transparent 70%);
+  @apply px-2 py-0.5 rounded text-xs font-medium;
 }
 
 .badge-narration {
-  @apply bg-rpg-info/15 text-rpg-info border-rpg-info/30 px-2 py-0.5 rounded text-xs font-medium;
+  background-color: color-mix(in srgb, var(--rpg-info), transparent 85%);
+  color: var(--rpg-info);
+  border: 1px solid color-mix(in srgb, var(--rpg-info), transparent 70%);
+  @apply px-2 py-0.5 rounded text-xs font-medium;
 }
 
 /* Card RPG Style */
 .card-rpg {
-  @apply bg-rpg-surface border border-white/10 rounded-xl transition-all duration-300 shadow-lg;
+  @apply bg-rpg-surface border border-border rounded-xl transition-all duration-300 shadow-lg;
 }
 
 .card-rpg:hover {
-  @apply bg-rpg-surface-hover border-rpg-gold/40 shadow-rpg-gold/10 -translate-y-1;
+  @apply border-primary/40 shadow-primary/10 -translate-y-1;
+  background-color: var(--rpg-surface-hover);
 }
 
 /* Glass Effect Premium */
 .glass-header {
-  @apply backdrop-blur-xl bg-rpg-void/80 border border-white/10 shadow-2xl;
+  @apply backdrop-blur-xl border border-border shadow-2xl;
+  background-color: color-mix(in srgb, var(--rpg-void), transparent 20%);
+}
+
+/* Premium Component Utilities */
+.btn-gold {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 font-bold shadow-rpg-gold active:scale-95;
+}
+
+.btn-outline-gold {
+  @apply border border-primary text-primary hover:bg-primary/10 transition-all duration-300 font-bold active:scale-95;
+}
+
+.input-dark {
+  @apply bg-rpg-surface border-border text-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all;
 }
 
 .glass-card {
-  @apply backdrop-blur-md bg-white/[0.03] border border-white/10;
+  @apply backdrop-blur-md border border-border;
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 /* Pulse Animation for Processing */
@@ -171,7 +495,7 @@
 }
 
 .status-awaiting_review {
-  @apply bg-rpg-gold/20 text-rpg-gold border-rpg-gold/30 px-2.5 py-0.5 rounded-full;
+  @apply bg-primary/20 text-primary border-primary/30 px-2.5 py-0.5 rounded-full;
 }
 
 .status-completed {
@@ -219,3 +543,4 @@
     animation: none;
   }
 }
+

@@ -10,19 +10,31 @@ import CharacterMappings from "./pages/CharacterMappings";
 import Settings from "./pages/Settings";
 import BotSetup from "./pages/BotSetup";
 
-// Components
 import Header from "./components/Header";
+import { useSettings } from "./hooks/useSettings";
+import { useEffect } from "react";
 
 function App() {
+  const { settings } = useSettings();
+
+  useEffect(() => {
+    if (settings?.visual_theme) {
+      document.documentElement.setAttribute('data-theme', settings.visual_theme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark_fantasy');
+    }
+  }, [settings?.visual_theme]);
+
   return (
-    <div className="App min-h-screen bg-rpg-void">
+    <div className="App min-h-screen bg-background text-foreground">
       <Toaster 
         position="top-right" 
         toastOptions={{
+          className: "card-rpg",
           style: {
-            background: '#13141A',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: '#EDEDED',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            color: 'var(--foreground)',
           },
         }}
       />

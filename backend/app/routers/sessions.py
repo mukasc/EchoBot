@@ -107,10 +107,15 @@ async def list_sessions(db: AsyncIOMotorDatabase = Depends(get_db)):
 
 
 @router.get("/{session_id}", response_model=Session)
-async def get_session(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def get_session(
+    session_id: str, 
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    accept_language: str = Header("pt-BR", alias="Accept-Language"),
+):
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:
-        raise NotFoundException("Session", session_id)
+        from app.utils.i18n import t
+        raise NotFoundException(t('error.session_not_found', accept_language), session_id)
     return _deserialize_session(doc)
 
 
@@ -435,6 +440,8 @@ async def upload_audio(
         {"$set": update_data},
     )
 
+    app_settings = await _get_app_settings(db)
+
     try:
         audio_content = await file.read()
 
@@ -465,7 +472,7 @@ async def upload_audio(
             session_start_dt=session_start_dt,
             db=db,
             settings=settings,
-            target_language=accept_language,
+            target_language=app_settings.language or accept_language,
         )
 
         return {
@@ -534,7 +541,7 @@ async def process_session(
         settings=settings,
         script_density=payload.script_density,
         narrative_perspective=payload.narrative_perspective,
-        target_language=accept_language,
+        target_language=app_settings.language or accept_language,
     )
 
     return {
@@ -569,6 +576,8 @@ async def reprocess_transcription(
             }
         },
     )
+
+    app_settings = await _get_app_settings(db)
 
     # 2. Find all audio files for this session
     audio_files = list(_UPLOAD_DIR.glob(f"session_{session_id}_*"))
@@ -605,7 +614,7 @@ async def reprocess_transcription(
         audio_files=audio_files,
         db=db,
         settings=settings,
-        target_language=accept_language,
+        target_language=app_settings.language or accept_language,
     )
 
     return {

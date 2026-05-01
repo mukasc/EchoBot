@@ -6,18 +6,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+} from "../components/ui/dropdown-menu";
+import { Button } from "../components/ui/button";
 
 const Header = () => {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   
   const navItems = [
-    { path: "/", label: t("Sessões"), icon: Home },
-    { path: "/characters", label: t("Personagens"), icon: Users },
-    { path: "/bot-setup", label: t("Bot Discord"), icon: Bot },
-    { path: "/settings", label: t("Configurações"), icon: Settings },
+    { path: "/", label: t("header.sessions"), icon: Home },
+    { path: "/characters", label: t("header.characters"), icon: Users },
+    { path: "/bot-setup", label: t("header.botDiscord"), icon: Bot },
+    { path: "/settings", label: t("header.settings"), icon: Settings },
   ];
 
   const isActive = (path) => {
@@ -27,6 +27,7 @@ const Header = () => {
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
+    localStorage.setItem("i18nextLng", lng);
   };
 
   return (
@@ -35,15 +36,15 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="p-2 rounded-lg bg-rpg-gold/10 group-hover:bg-rpg-gold/20 transition-colors">
-              <Scroll className="w-6 h-6 text-rpg-gold" strokeWidth={1.5} />
+            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Scroll className="w-6 h-6 text-primary" strokeWidth={1.5} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-[#EDEDED] font-serif">
-                {t("RPG Cronista")}
+              <h1 className="text-xl font-bold text-[var(--foreground)] font-serif">
+                {t("header.appTitle")}
               </h1>
-              <p className="text-[10px] text-[#6C7280] hidden sm:block uppercase tracking-wider">
-                {t("Crônicas de Aventura")}
+              <p className="text-[10px] text-[var(--muted-foreground)] hidden sm:block uppercase tracking-wider">
+                {t("header.appSubtitle")}
               </p>
             </div>
           </Link>
@@ -62,8 +63,8 @@ const Header = () => {
                       flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
                       transition-all duration-200
                       ${active 
-                        ? 'bg-rpg-gold/10 text-rpg-gold' 
-                        : 'text-[#A0A5B5] hover:text-[#EDEDED] hover:bg-white/5'
+                        ? 'bg-primary/10 text-primary' 
+                        : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-white/5'
                       }
                     `}
                   >
@@ -77,23 +78,32 @@ const Header = () => {
             {/* Language Switcher */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-[#A0A5B5] hover:text-[#EDEDED] hover:bg-white/5">
-                  <Globe className="w-5 h-5" />
+                <Button variant="ghost" size="sm" className="flex items-center gap-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-white/5 px-2">
+                  <div className="w-5 h-3.5 overflow-hidden rounded-sm flex-shrink-0 border border-border">
+                    <img 
+                      src={i18n.language === 'pt-BR' ? 'https://flagcdn.com/w40/br.png' : 'https://flagcdn.com/w40/us.png'} 
+                      alt={i18n.language === 'pt-BR' ? t('header.languages.ptBR') : t('header.languages.enUS')}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <Globe className="w-4 h-4" />
                   <span className="sr-only">{t("language")}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#12141A] border-white/10 text-[#EDEDED]">
+              <DropdownMenuContent align="end" className="bg-[#12141A] border-border text-[var(--foreground)]">
                 <DropdownMenuItem 
                   onClick={() => changeLanguage('pt-BR')}
-                  className={`cursor-pointer focus:bg-white/10 ${i18n.language === 'pt-BR' ? 'bg-white/5 text-rpg-gold' : ''}`}
+                  className={`cursor-pointer focus:bg-white/10 flex items-center gap-3 ${i18n.language === 'pt-BR' ? 'bg-white/5 text-primary' : ''}`}
                 >
-                  {t("pt-BR")}
+                  <img src="https://flagcdn.com/w40/br.png" alt={t('header.languages.ptBR')} className="w-5 h-3.5 rounded-sm object-cover border border-border" />
+                  {t("header.languages.ptBR")}
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => changeLanguage('en-US')}
-                  className={`cursor-pointer focus:bg-white/10 ${i18n.language === 'en-US' ? 'bg-white/5 text-rpg-gold' : ''}`}
+                  className={`cursor-pointer focus:bg-white/10 flex items-center gap-3 ${i18n.language === 'en-US' ? 'bg-white/5 text-primary' : ''}`}
                 >
-                  {t("en-US")}
+                  <img src="https://flagcdn.com/w40/us.png" alt={t('header.languages.enUS')} className="w-5 h-3.5 rounded-sm object-cover border border-border" />
+                  {t("header.languages.enUS")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -105,3 +115,4 @@ const Header = () => {
 };
 
 export default Header;
+

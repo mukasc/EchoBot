@@ -5,6 +5,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { useTranslation } from "react-i18next";
 
 // Custom Hooks
 import { useBotSetup } from "../hooks/useBotSetup";
@@ -14,6 +15,7 @@ import { useSettings } from "../hooks/useSettings";
 import StepCard from "../components/setup/StepCard";
 
 const BotSetup = () => {
+  const { t } = useTranslation();
   const { instructions, loading: instructionsLoading } = useBotSetup();
   const { settings, loading: settingsLoading, saving, saveSettings } = useSettings();
 
@@ -43,14 +45,14 @@ const BotSetup = () => {
         discord_guild_id: formData.discord_guild_id
       });
     } catch (error) {
-      console.error("Erro ao salvar configurações do bot:", error);
+      console.error(t('botSetup.errorSave'), error);
     }
   };
 
   if (instructionsLoading || settingsLoading) {
     return (
       <div className="min-h-screen bg-rpg-void flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-rpg-gold animate-spin" />
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
@@ -61,37 +63,37 @@ const BotSetup = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 rounded-xl bg-rpg-gold/10">
-              <Bot className="w-8 h-8 text-rpg-gold" />
+            <div className="p-3 rounded-xl bg-primary/10">
+              <Bot className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-[#EDEDED] font-serif">
-                {instructions?.title || "Configurar Bot Discord"}
+              <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] font-serif">
+                {instructions?.title || t('botSetup.title')}
               </h1>
-              <p className="text-[#A0A5B5] mt-1">
-                Siga os passos abaixo para criar e configurar seu bot
+              <p className="text-[var(--muted-foreground)] mt-1">
+                {t('botSetup.instructionsSubtitle')}
               </p>
             </div>
           </div>
         </div>
 
         {/* Configuration Section */}
-        <Card className="card-rpg mb-8 border-rpg-gold/20 bg-rpg-gold/5 animate-in-slide-up delay-100">
-          <CardHeader className="border-b border-white/10">
-            <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-              <Key className="w-5 h-5 text-rpg-gold" />
-              Configuração do Bot Discord
+        <Card className="card-rpg mb-8 border-primary/20 bg-primary/5 animate-in-slide-up delay-100">
+          <CardHeader className="border-b border-border">
+            <CardTitle className="text-[var(--foreground)] font-serif flex items-center gap-2">
+              <Key className="w-5 h-5 text-primary" />
+              {t('botSetup.configTitle')}
             </CardTitle>
-            <CardDescription className="text-[#A0A5B5]">
-              Vincule seu bot do Discord aqui para permitir a captura automática
+            <CardDescription className="text-[var(--muted-foreground)]">
+              {t('botSetup.configDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="bot-token" className="text-xs uppercase tracking-wider text-[#A0A5B5]">Token do Bot</Label>
+                <Label htmlFor="bot-token" className="text-xs uppercase tracking-wider text-[var(--muted-foreground)]">{t('botSetup.botTokenLabel')}</Label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C7280]" />
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
                   <Input
                     id="bot-token"
                     type={showToken ? "text" : "password"}
@@ -103,19 +105,19 @@ const BotSetup = () => {
                   <button
                     type="button"
                     onClick={() => setShowToken(!showToken)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6C7280] hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] hover:text-white transition-colors"
                   >
                     {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[10px] text-[#6C7280]">Token secreto obtido na aba 'Bot' do portal</p>
+                <p className="text-[10px] text-[var(--muted-foreground)]">{t('botSetup.botTokenHint')}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="app-id" className="text-xs uppercase tracking-wider text-[#A0A5B5]">ID da Aplicação (App ID)</Label>
+                  <Label htmlFor="app-id" className="text-xs uppercase tracking-wider text-[var(--muted-foreground)]">{t('botSetup.appIdLabel')}</Label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C7280]" />
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
                     <Input
                       id="app-id"
                       value={formData.discord_app_id}
@@ -127,9 +129,9 @@ const BotSetup = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="guild-id" className="text-xs uppercase tracking-wider text-[#A0A5B5]">ID do Servidor (Guild ID)</Label>
+                  <Label htmlFor="guild-id" className="text-xs uppercase tracking-wider text-[var(--muted-foreground)]">{t('botSetup.guildIdLabel')}</Label>
                   <div className="relative">
-                    <Server className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6C7280]" />
+                    <Server className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
                     <Input
                       id="guild-id"
                       value={formData.discord_guild_id}
@@ -153,29 +155,29 @@ const BotSetup = () => {
                 ) : (
                   <Save className="w-4 h-4 mr-2" />
                 )}
-                Salvar Configuração
+                {t('botSetup.saveConfig')}
               </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Important Note */}
-        <Card className="card-rpg mb-8 border-rpg-gold/30">
+        <Card className="card-rpg mb-8 border-primary/30">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <div className="p-2 rounded-lg bg-rpg-gold/10">
-                <Mic className="w-5 h-5 text-rpg-gold" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Mic className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-[#EDEDED] font-semibold mb-2">
-                  Nota sobre Captura de Áudio
+                <h3 className="text-[var(--foreground)] font-semibold mb-2">
+                  {t('botSetup.noteTitle')}
                 </h3>
-                <p className="text-[#A0A5B5] text-sm">
-                  {instructions?.note || "A captura de áudio do Discord requer uma implementação separada. Por enquanto, utilize o upload manual."}
+                <p className="text-[var(--muted-foreground)] text-sm">
+                  {instructions?.note || t('botSetup.noteDesc')}
                 </p>
                 <div className="mt-4">
-                  <Badge className="bg-rpg-gold/10 text-rpg-gold border-rpg-gold/20">
-                    Upload manual disponível
+                  <Badge className="bg-primary/10 text-primary border-primary/20">
+                    {t('botSetup.manualUploadBadge')}
                   </Badge>
                 </div>
               </div>
@@ -192,21 +194,21 @@ const BotSetup = () => {
 
         {/* Permissions Reference */}
         <Card className="card-rpg mt-8">
-          <CardHeader className="border-b border-white/10">
-            <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-              <Shield className="w-5 h-5 text-rpg-gold" />
-              Permissões Necessárias
+          <CardHeader className="border-b border-border">
+            <CardTitle className="text-[var(--foreground)] font-serif flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              {t('botSetup.permissionsTitle')}
             </CardTitle>
-            <CardDescription className="text-[#A0A5B5]">
-              Lista de permissões que o bot precisa para funcionar
+            <CardDescription className="text-[var(--muted-foreground)]">
+              {t('botSetup.permissionsDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-rpg-void border border-white/5">
-                <h4 className="text-[#EDEDED] font-semibold mb-2">Permissões de Voz</h4>
-                <ul className="space-y-2 text-sm text-[#A0A5B5]">
-                  {["Connect (Conectar)", "Speak (Falar)", "Use Voice Activity"].map(p => (
+                <h4 className="text-[var(--foreground)] font-semibold mb-2">{t('botSetup.voicePermissionsTitle')}</h4>
+                <ul className="space-y-2 text-sm text-[var(--muted-foreground)]">
+                  {t('botSetup.voicePermissionsList', { returnObjects: true }).map(p => (
                     <li key={p} className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-green-500" />
                       {p}
@@ -216,9 +218,9 @@ const BotSetup = () => {
               </div>
               
               <div className="p-4 rounded-lg bg-rpg-void border border-white/5">
-                <h4 className="text-[#EDEDED] font-semibold mb-2">Intents Necessários</h4>
-                <ul className="space-y-2 text-sm text-[#A0A5B5]">
-                  {["Message Content Intent", "Server Members Intent", "Presence Intent (Opcional)"].map(i => (
+                <h4 className="text-[var(--foreground)] font-semibold mb-2">{t('botSetup.intentsTitle')}</h4>
+                <ul className="space-y-2 text-sm text-[var(--muted-foreground)]">
+                  {t('botSetup.intentsList', { returnObjects: true }).map(i => (
                     <li key={i} className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-green-500" />
                       {i}
@@ -235,3 +237,4 @@ const BotSetup = () => {
 };
 
 export default BotSetup;
+

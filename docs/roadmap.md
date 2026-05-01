@@ -17,6 +17,8 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [x] Gestão em formato CRUD das Sessões e estruturação canônica de coleções em Campanhas.
 - [x] Diálogos limpos (`AlertDialog`) de proteção e confirmação descartando alertas primitivos do navegador.
 - [x] Otimização e validação intensiva de testes no Frontend (Vitest com Mocks e User Events) e unitários nas rotas Backend.
+- [x] Internacionalização (i18n) completa do ecossistema (Frontend/Backend) com propagação de idioma para provedores de IA.
+- [x] Expansão estética para 11 perfis visuais temáticos (Cyberpunk, Sci-Fi, Wild-West, etc.) controlados via Design Tokens.
 
 **C. Ferramentaria, IA e Legalidade**
 - [x] Estruturação híbrida de Inteligência (STT Local com Fallback em Cloud) + Orquestrador Multi-provedor para o Roteiro (Gemini, Groq, Anthropic).
@@ -47,7 +49,5 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [ ] Sincronização direta de dados via MCP (Ouroboros) com Virtual TableTops (VTTs) como Foundry VTT e Roll20.
 - [ ] Compartilhamento cooperativo e segurança com autenticação de múltiplos mestres, painel de administração de cotas e consumo da IA.
 - [ ] Aplicação de Suporte (Companion App) nativo para celulares operando junto da mesa de RPG física.
-- [x] Multilíngue (i18n) enraizado comunicando contexto de idioma aos modelos de IA.
-- [ ] Novos perfis de interface visual com estética Cyberpunk/Sci-Fi.
 
 > Decisões que baseiam a viabilidade técnica constam nos relatórios de [Pesquisa e Mercado](research_benchmarking.md).

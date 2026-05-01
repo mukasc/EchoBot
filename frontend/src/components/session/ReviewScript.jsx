@@ -5,6 +5,7 @@ import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+import { useTranslation } from "react-i18next";
 
 const ReviewScript = ({ 
   initialScript, 
@@ -18,6 +19,7 @@ const ReviewScript = ({
   saving, 
   processing 
 }) => {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [script, setScript] = useState(initialScript || "");
   const [selectedProvider, setSelectedProvider] = useState("elevenlabs");
@@ -55,9 +57,7 @@ const ReviewScript = ({
         const response = await api.get(`/settings/tts/voices/${selectedProvider}/`);
         if (response.data && Array.isArray(response.data)) {
           setAvailableVoices(response.data);
-          // Auto-select first voice or a default one
           if (response.data.length > 0) {
-            // Try to find a default voice or just take the first
             const defaultVoice = response.data.find(v => 
               v.voice_id === "af_heart" || v.voice_id === "aura-asteria-en" || v.name.includes("Dora")
             );
@@ -95,16 +95,16 @@ const ReviewScript = ({
 
   return (
     <Card className="card-rpg">
-      <CardHeader className="border-b border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <CardHeader className="border-b border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <CardTitle className="text-[#EDEDED] font-serif flex items-center gap-2">
-            <Edit3 className="w-5 h-5 text-rpg-gold" />
-            Roteiro de Revisão
+          <CardTitle className="text-[var(--foreground)] font-serif flex items-center gap-2">
+            <Edit3 className="w-5 h-5 text-primary" />
+            {t('components.reviewScript.title')}
           </CardTitle>
           {metadata && (
             <div className="flex items-center gap-2 ml-7">
-              <span className="text-[10px] text-[#6C7280] uppercase">Processado por:</span>
-              <Badge variant="outline" className="text-[10px] bg-white/5 border-white/10 text-[#A0A5B5] capitalize">
+              <span className="text-[10px] text-[var(--muted-foreground)] uppercase">{t('components.reviewScript.processedBy')}</span>
+              <Badge variant="outline" className="text-[10px] bg-white/5 border-border text-[var(--muted-foreground)] capitalize">
                 {metadata.provider} • {metadata.model}
               </Badge>
             </div>
@@ -116,11 +116,11 @@ const ReviewScript = ({
               {initialScript && !narrationUrl && (
                 <div className="flex flex-wrap items-center gap-2 bg-rpg-surface/50 p-1.5 rounded-lg border border-white/5">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-[#6C7280] uppercase ml-1">Provedor</span>
+                    <span className="text-[10px] text-[var(--muted-foreground)] uppercase ml-1">{t('components.reviewScript.provider')}</span>
                     <select 
                       value={selectedProvider}
                       onChange={(e) => setSelectedProvider(e.target.value)}
-                      className="bg-rpg-surface border border-white/10 rounded px-2 py-1 text-[11px] text-[#EDEDED] outline-none capitalize min-w-[100px]"
+                      className="bg-rpg-surface border border-border rounded px-2 py-1 text-[11px] text-[var(--foreground)] outline-none capitalize min-w-[100px]"
                     >
                       {availableProviders.map(p => (
                         <option key={p} value={p}>{p}</option>
@@ -129,21 +129,21 @@ const ReviewScript = ({
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-[#6C7280] uppercase ml-1">Voz</span>
+                    <span className="text-[10px] text-[var(--muted-foreground)] uppercase ml-1">{t('components.reviewScript.voice')}</span>
                     <select 
                       value={selectedVoice}
                       onChange={(e) => setSelectedVoice(e.target.value)}
                       disabled={loadingVoices || availableVoices.length === 0}
-                      className="bg-rpg-surface border border-white/10 rounded px-2 py-1 text-[11px] text-[#EDEDED] outline-none min-w-[150px]"
+                      className="bg-rpg-surface border border-border rounded px-2 py-1 text-[11px] text-[var(--foreground)] outline-none min-w-[150px]"
                     >
                       {loadingVoices ? (
-                        <option>Carregando...</option>
+                        <option>{t('common.loading')}</option>
                       ) : availableVoices.length > 0 ? (
                         availableVoices.map(v => (
                           <option key={v.voice_id} value={v.voice_id}>{v.name}</option>
                         ))
                       ) : (
-                        <option>Nenhuma voz disponível</option>
+                        <option>{t('components.reviewScript.noVoices')}</option>
                       )}
                     </select>
                   </div>
@@ -153,14 +153,14 @@ const ReviewScript = ({
                     size="sm"
                     onClick={handleGenerate}
                     disabled={processing || loadingVoices || !selectedVoice}
-                    className="border-rpg-gold/20 text-rpg-gold hover:bg-rpg-gold/10 mt-auto h-8"
+                    className="border-primary/20 text-primary hover:bg-primary/10 mt-auto h-8"
                   >
                     {processing ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
                       <Mic className="w-4 h-4 mr-2" />
                     )}
-                    Gerar
+                    {t('components.reviewScript.generate')}
                   </Button>
                 </div>
               )}
@@ -168,10 +168,10 @@ const ReviewScript = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditing(true)}
-                className="border-white/10 text-[#A0A5B5] hover:bg-rpg-surface-hover"
+                className="border-border text-[var(--muted-foreground)] hover:bg-rpg-surface-hover"
               >
                 <Edit3 className="w-4 h-4 mr-2" />
-                Editar
+                {t('common.edit')}
               </Button>
             </>
           ) : (
@@ -183,10 +183,10 @@ const ReviewScript = ({
                   setScript(initialScript || "");
                   setIsEditing(false);
                 }}
-                className="border-white/10 text-[#A0A5B5]"
+                className="border-border text-[var(--muted-foreground)]"
               >
                 <X className="w-4 h-4 mr-2" />
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button
                 size="sm"
@@ -195,18 +195,18 @@ const ReviewScript = ({
                 className="btn-gold"
               >
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Salvar
+                {t('common.save')}
               </Button>
             </div>
           )}
 
-          <div className="flex items-center gap-2 border-l border-white/10 pl-3 ml-1">
+          <div className="flex items-center gap-2 border-l border-border pl-3 ml-1">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onExportMD}
-              className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
-              title="Exportar Markdown"
+              className="h-8 border-border text-[var(--muted-foreground)] hover:text-primary hover:border-primary/50"
+              title={t('components.technicalDiary.exportMD')}
             >
               <FileCode className="w-3.5 h-3.5" />
             </Button>
@@ -214,8 +214,8 @@ const ReviewScript = ({
               variant="outline" 
               size="sm" 
               onClick={onExportPDF}
-              className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
-              title="Exportar PDF"
+              className="h-8 border-border text-[var(--muted-foreground)] hover:text-primary hover:border-primary/50"
+              title={t('components.technicalDiary.exportPDF')}
             >
               <FileText className="w-3.5 h-3.5" />
             </Button>
@@ -223,8 +223,8 @@ const ReviewScript = ({
               variant="outline" 
               size="sm" 
               onClick={onExportNotion}
-              className="h-8 border-white/10 text-[#A0A5B5] hover:text-rpg-gold hover:border-rpg-gold/50"
-              title="Sincronizar com Notion"
+              className="h-8 border-border text-[var(--muted-foreground)] hover:text-primary hover:border-primary/50"
+              title={t('components.technicalDiary.syncNotion')}
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </Button>
@@ -234,29 +234,29 @@ const ReviewScript = ({
       <CardContent className="p-6 space-y-6">
         {/* Narration Player */}
         {narrationUrl && !isEditing && (
-          <div className="p-4 rounded-xl bg-rpg-gold/5 border border-rpg-gold/20 flex flex-col gap-4">
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex flex-col gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-rpg-gold/10 flex items-center justify-center text-rpg-gold flex-shrink-0">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                 <Volume2 className="w-6 h-6" />
               </div>
               <div className="flex-1 w-full">
-                <p className="text-xs text-rpg-gold font-medium mb-2 uppercase tracking-wider">Narração Épica Disponível</p>
+                <p className="text-xs text-primary font-medium mb-2 uppercase tracking-wider">{t('components.reviewScript.epicNarration')}</p>
                 <audio 
                   controls 
-                  className="w-full h-10 accent-rpg-gold"
+                  className="w-full h-10 accent-primary"
                   src={fullNarrationUrl}
                 >
-                  Seu navegador não suporta o elemento de áudio.
+                  {t('components.reviewScript.audioError')}
                 </audio>
               </div>
             </div>
             
             <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-white/5">
-              <span className="text-[10px] text-[#6C7280] uppercase">Tentar com outro:</span>
+              <span className="text-[10px] text-[var(--muted-foreground)] uppercase">{t('components.reviewScript.tryOther')}</span>
               <select 
                 value={selectedProvider}
                 onChange={(e) => setSelectedProvider(e.target.value)}
-                className="bg-rpg-surface border border-white/10 rounded px-2 py-1 text-[11px] text-[#A0A5B5] outline-none capitalize"
+                className="bg-rpg-surface border border-border rounded px-2 py-1 text-[11px] text-[var(--muted-foreground)] outline-none capitalize"
               >
                 {availableProviders.map(p => (
                   <option key={p} value={p}>{p}</option>
@@ -266,7 +266,7 @@ const ReviewScript = ({
                 value={selectedVoice}
                 onChange={(e) => setSelectedVoice(e.target.value)}
                 disabled={loadingVoices || availableVoices.length === 0}
-                className="bg-rpg-surface border border-white/10 rounded px-2 py-1 text-[11px] text-[#A0A5B5] outline-none min-w-[120px]"
+                className="bg-rpg-surface border border-border rounded px-2 py-1 text-[11px] text-[var(--muted-foreground)] outline-none min-w-[120px]"
               >
                 {availableVoices.map(v => (
                   <option key={v.voice_id} value={v.voice_id}>{v.name}</option>
@@ -277,9 +277,9 @@ const ReviewScript = ({
                 size="sm"
                 onClick={handleGenerate}
                 disabled={processing || loadingVoices}
-                className="text-xs text-[#A0A5B5] hover:text-rpg-gold"
+                className="text-xs text-[var(--muted-foreground)] hover:text-primary"
               >
-                Regerar
+                {t('components.reviewScript.regenerate')}
               </Button>
             </div>
           </div>
@@ -290,20 +290,20 @@ const ReviewScript = ({
             value={script}
             onChange={(e) => setScript(e.target.value)}
             className="input-dark min-h-[400px] font-serif text-lg leading-relaxed"
-            placeholder="Escreva ou edite o roteiro de revisão da sessão aqui..."
+            placeholder={t('components.reviewScript.placeholder')}
           />
         ) : (
           <div className="prose prose-invert max-w-none">
             {initialScript ? (
-              <p className="text-[#EDEDED] leading-relaxed font-serif text-lg whitespace-pre-wrap">
+              <p className="text-[var(--foreground)] leading-relaxed font-serif text-lg whitespace-pre-wrap">
                 {initialScript}
               </p>
             ) : (
               <div className="text-center py-8">
-                <Edit3 className="w-12 h-12 text-[#6C7280] mx-auto mb-4" />
-                <p className="text-[#A0A5B5]">Nenhum roteiro de revisão ainda.</p>
-                <p className="text-sm text-[#6C7280] mt-2">
-                  Processe com IA ou escreva manualmente.
+                <Edit3 className="w-12 h-12 text-[var(--muted-foreground)] mx-auto mb-4" />
+                <p className="text-[var(--muted-foreground)]">{t('components.reviewScript.empty')}</p>
+                <p className="text-sm text-[var(--muted-foreground)] mt-2">
+                  {t('components.reviewScript.emptyDesc')}
                 </p>
               </div>
             )}
@@ -315,3 +315,4 @@ const ReviewScript = ({
 };
 
 export default ReviewScript;
+

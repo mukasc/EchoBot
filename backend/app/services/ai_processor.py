@@ -20,28 +20,16 @@ from app.exceptions import AppException
 
 logger = logging.getLogger(__name__)
 
+from app.utils.i18n import t
+
 def get_system_prompt(target_language: str = "pt-BR") -> str:
     return f"""\
-Você é um cronista de RPG especializado. Sua tarefa é analisar transcrições de sessões de RPG.
-IDIOMA DE SAÍDA OBRIGATÓRIO: {target_language}
+{t('ai.role', target_language)}
+{t('ai.idiom_instruction', target_language, language=target_language)}
 
-1. IDENTIFICAR e FILTRAR:
-   - IC (In-Character): Falas de personagens, narração do mestre, descrições de ações
-   - OOC (Out-of-Character): Discussões sobre regras, piadas fora do jogo, conversas pessoais
-
-2. GERAR DIÁRIO TÉCNICO:
-   - NPCs encontrados
-   - Locais visitados
-   - Itens obtidos/perdidos
-   - XP ou recompensas
-   - Eventos importantes
-
-3. GERAR ROTEIRO DE REVISÃO:
-   - Texto em prosa conforme as instruções de estilo fornecidas
-   - Substituir nomes de jogadores por nomes de personagens
-   - Manter a narrativa coerente
-   - Marcar termos incertos como [Termo Incerto: fonética]
-   - Evitar caracteres especiais para TTS
+{t('ai.task_filter', target_language)}
+{t('ai.task_diary', target_language)}
+{t('ai.task_script', target_language)}
 
 Responda SEMPRE em JSON com o formato:
 {{
@@ -98,7 +86,7 @@ class AIProcessorService:
                 attempts.append((fallback.provider, fallback.model, fallback.api_key))
 
         if not attempts:
-            raise AppException("Nenhum provedor de IA está ativo nas configurações.", status_code=400)
+            raise AppException(t('error.ai_providers_disabled', target_language), status_code=400)
 
         last_error = None
         for attempt_index, (provider, model_name, specific_key) in enumerate(attempts):
@@ -131,7 +119,7 @@ class AIProcessorService:
         # If we reach here, all attempts failed
         logger.error(f"All LLM attempts failed. Last error: {str(last_error)}")
         raise AppException(
-            detail=f"Falha ao processar com IA após {len(attempts)} tentativas. Erro: {str(last_error)}",
+            detail=t('error.ai_failed', target_language, attempts=len(attempts), error=str(last_error)),
             status_code=503
         )
 
@@ -208,31 +196,30 @@ class AIProcessorService:
         target_language: str = "pt-BR",
     ) -> str:
         # Instruction for density
-        density_instructions = {
-            "short": "Gere um roteiro conciso, focando apenas nos pontos cruciais e resumindo diálogos longos.",
-            "standard": "Gere um roteiro equilibrado, mantendo o fluxo natural da história sem ser excessivamente longo.",
-            "alternative": "Gere um roteiro com foco em diálogos e interações emocionais entre os personagens.",
-            "detailed": "Gere um roteiro detalhado, épico e ricamente descritivo, capturando a atmosfera e nuances da sessão."
-        }
+        density_key = f"ai.density.{script_density}"
+        density_text = t(density_key, target_language)
         
         # Instruction for perspective
-        perspective_instructions = {
-            "1p": "Escreva o roteiro em 1ª pessoa (do ponto de vista de um dos personagens ou de um narrador observador que participa da cena).",
-            "2p": "Escreva o roteiro em 2ª pessoa (usando 'Você', como se contasse a história diretamente para os jogadores).",
-            "3p_epic": "Escreva o roteiro em 3ª pessoa com um tom épico, lendário e solene.",
-            "tactical": "Escreva o roteiro como um relatório tático ou diário de missão oficial, focado em fatos, ordens, posicionamentos e resultados, de forma burocrática e direta."
-        }
+        perspective_key = f"ai.perspective.{narrative_perspective}"
+        perspective_text = t(perspective_key, target_language)
 
-        density_text = density_instructions.get(script_density, density_instructions["standard"])
-        perspective_text = perspective_instructions.get(narrative_perspective, perspective_instructions["3p_epic"])
+        if target_language == "pt-BR":
+            return (
+                f"Analise esta transcrição de sessão de RPG ({game_system}):\n\n"
+                f"MAPEAMENTO DE JOGADORES:\n{mapping_context}\n\n"
+                f"INSTRUÇÕES DE ESTILO:\n- DENSIDADE: {density_text}\n- PERSPECTIVA: {perspective_text}\n\n"
+                f"TRANSCRIÇÃO:\n{raw_transcription}\n\n"
+                "Processe e retorne o JSON estruturado conforme o SYSTEM PROMPT."
+            )
+        else:
+            return (
+                f"Analyze this RPG session transcription ({game_system}):\n\n"
+                f"PLAYER MAPPING:\n{mapping_context}\n\n"
+                f"STYLE INSTRUCTIONS:\n- DENSITY: {density_text}\n- PERSPECTIVE: {perspective_text}\n\n"
+                f"TRANSCRIPTION:\n{raw_transcription}\n\n"
+                "Process and return the structured JSON as defined in the SYSTEM PROMPT."
+            )
 
-        return (
-            f"Analise esta transcrição de sessão de RPG ({game_system}):\n\n"
-            f"MAPEAMENTO DE JOGADORES:\n{mapping_context}\n\n"
-            f"INSTRUÇÕES DE ESTILO:\n- DENSIDADE: {density_text}\n- PERSPECTIVA: {perspective_text}\n\n"
-            f"TRANSCRIÇÃO:\n{raw_transcription}\n\n"
-            "Processe e retorne o JSON estruturado conforme o SYSTEM PROMPT."
-        )
 
     async def _call_llm_direct(
         self, provider: LLMProvider, model: str, api_key: str, prompt: str, system_prompt: str
