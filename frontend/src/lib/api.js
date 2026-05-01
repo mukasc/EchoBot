@@ -1,4 +1,5 @@
 import axios from "axios";
+import i18n from "@/i18n";
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
@@ -7,6 +8,13 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+api.interceptors.request.use((config) => {
+  if (i18n && i18n.language) {
+    config.headers['Accept-Language'] = i18n.language;
+  }
+  return config;
 });
 
 // Response interceptor for error handling

@@ -91,7 +91,7 @@ class TestTranscriptionService:
         # Since it's an async call in the service, we mock it appropriately
         mock_model.generate_content_async = AsyncMock(return_value=mock_response)
         
-        result = await service._transcribe_gemini(b"content", "test.wav", "fake-key")
+        result = await service._transcribe_gemini(b"content", "test.wav", "fake-key", "pt-BR")
         
         assert result.raw_text == "Gemini raw text"
         assert result.method == "Gemini"
@@ -112,7 +112,7 @@ class TestTranscriptionService:
         ]
         mock_client.audio.transcriptions.create = AsyncMock(return_value=mock_response)
         
-        result = await service._transcribe_openai(b"content", "test.wav", "fake-key")
+        result = await service._transcribe_openai(b"content", "test.wav", "fake-key", "pt-BR")
         
         assert result.raw_text == "OpenAI raw text"
         assert len(result.segments) == 2

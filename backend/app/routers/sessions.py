@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -211,6 +211,7 @@ async def _background_transcribe(
     session_start_dt: Optional[datetime],
     db: AsyncIOMotorDatabase,
     settings: Settings,
+    target_language: str = "pt-BR",
 ):
     async with _transcription_lock:
         try:
@@ -224,6 +225,7 @@ async def _background_transcribe(
                 audio_content=audio_content,
                 filename=filename,
                 file_path=file_path,
+                target_language=target_language,
             )
 
             # Build TranscriptionSegment documents
@@ -320,6 +322,7 @@ async def _background_process(
     settings: Settings,
     script_density: str = "standard",
     narrative_perspective: str = "3p_epic",
+    target_language: str = "pt-BR",
 ):
     logger.info("Background AI processing started for session %s", session_id)
     try:
@@ -336,6 +339,7 @@ async def _background_process(
             app_settings=app_settings,
             script_density=script_density,
             narrative_perspective=narrative_perspective,
+            target_language=target_language,
         )
 
         # Build diary entries
@@ -396,6 +400,7 @@ async def upload_audio(
     speaker_id: Optional[str] = Form(None),
     session_start_time: Optional[str] = Form(None),
     chunk_offset: float = Form(0.0),
+    accept_language: str = Header("pt-BR", alias="Accept-Language"),
     db: AsyncIOMotorDatabase = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -460,6 +465,7 @@ async def upload_audio(
             session_start_dt=session_start_dt,
             db=db,
             settings=settings,
+            target_language=accept_language,
         )
 
         return {
@@ -486,6 +492,7 @@ async def process_session(
     session_id: str,
     background_tasks: BackgroundTasks,
     payload: SessionProcessRequest,
+    accept_language: str = Header("pt-BR", alias="Accept-Language"),
     db: AsyncIOMotorDatabase = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -527,6 +534,7 @@ async def process_session(
         settings=settings,
         script_density=payload.script_density,
         narrative_perspective=payload.narrative_perspective,
+        target_language=accept_language,
     )
 
     return {
@@ -540,6 +548,7 @@ async def process_session(
 async def reprocess_transcription(
     session_id: str,
     background_tasks: BackgroundTasks,
+    accept_language: str = Header("pt-BR", alias="Accept-Language"),
     db: AsyncIOMotorDatabase = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -596,6 +605,7 @@ async def reprocess_transcription(
         audio_files=audio_files,
         db=db,
         settings=settings,
+        target_language=accept_language,
     )
 
     return {
@@ -610,6 +620,7 @@ async def _background_reprocess_all(
     audio_files: List[Path],
     db: AsyncIOMotorDatabase,
     settings: Settings,
+    target_language: str = "pt-BR",
 ):
     """Sequential reprocessing of all files within the transcription lock."""
     async with _transcription_lock:
@@ -671,6 +682,7 @@ async def _background_reprocess_all(
                     audio_content=content,
                     filename=file_path.name,
                     file_path=file_path,
+                    target_language=target_language,
                 )
                 
                 for seg in result.segments:

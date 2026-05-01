@@ -56,6 +56,7 @@ class TranscriptionService:
         audio_content: bytes,
         filename: str,
         file_path: Optional[Path] = None,
+        target_language: str = "pt-BR",
     ) -> TranscriptionResult:
         """
         Transcribe audio using the best available method.
@@ -76,7 +77,7 @@ class TranscriptionService:
         # 1. Try local Whisper first (free, offline)
         if file_path and file_path.exists():
             try:
-                return await self._transcribe_local(file_path)
+                return await self._transcribe_local(file_path, target_language)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Local Whisper failed: %s — falling back to cloud.", exc)
 
@@ -86,13 +87,13 @@ class TranscriptionService:
 
         if google_key:
             try:
-                return await self._transcribe_gemini(audio_content, filename, google_key)
+                return await self._transcribe_gemini(audio_content, filename, google_key, target_language)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Gemini transcription failed: %s — trying OpenAI.", exc)
 
         if openai_key:
             try:
-                return await self._transcribe_openai(audio_content, filename, openai_key)
+                return await self._transcribe_openai(audio_content, filename, openai_key, target_language)
             except Exception as exc:  # noqa: BLE001
                 logger.error("OpenAI transcription failed: %s", exc)
                 raise
@@ -129,7 +130,7 @@ class TranscriptionService:
                 cls._model_instance = WhisperModel("medium", device=device, compute_type=compute_type)
             return cls._model_instance
 
-    async def _transcribe_local(self, file_path: Path) -> TranscriptionResult:
+    async def _transcribe_local(self, file_path: Path, target_language: str) -> TranscriptionResult:
         from fastapi.concurrency import run_in_threadpool
         
         if TranscriptionService._local_sem is None:
@@ -140,9 +141,12 @@ class TranscriptionService:
                 model = self._get_local_model()
 
                 logger.info("Transcribing %s …", file_path)
+                
+                lang_code = target_language.split("-")[0].lower() if target_language else "pt"
+                
                 segments_gen, info = model.transcribe(
                     str(file_path),
-                    language="pt",
+                    language=lang_code,
                     beam_size=5,
                     vad_filter=True,
                     initial_prompt="Esta é uma sessão de RPG de mesa.", # Helps with RPG context
@@ -165,7 +169,7 @@ class TranscriptionService:
             return await run_in_threadpool(_sync_transcribe)
 
     async def _transcribe_gemini(
-        self, content: bytes, filename: str, api_key: str
+        self, content: bytes, filename: str, api_key: str, target_language: str
     ) -> TranscriptionResult:
         import google.generativeai as genai
 
@@ -186,8 +190,8 @@ class TranscriptionService:
                 # Using wait_for for explicit timeout handling
                 response = await asyncio.wait_for(
                     model.generate_content_async([
-                        "Transcreva este áudio de uma sessão de RPG. "
-                        "Retorne apenas a transcrição literal em português.",
+                        f"Transcreva este áudio de uma sessão de RPG. "
+                        f"Retorne apenas a transcrição literal no idioma correspondente a {target_language}.",
                         {"mime_type": mime, "data": content},
                     ]),
                     timeout=90.0  # Slightly longer for large audio files
@@ -207,7 +211,7 @@ class TranscriptionService:
         raise last_err  # type: ignore[misc]
 
     async def _transcribe_openai(
-        self, content: bytes, filename: str, api_key: str
+        self, content: bytes, filename: str, api_key: str, target_language: str
     ) -> TranscriptionResult:
         import openai
 
@@ -215,11 +219,13 @@ class TranscriptionService:
             audio_file = io.BytesIO(content)
             audio_file.name = filename
 
+            lang_code = target_language.split("-")[0].lower() if target_language else "pt"
+            
             response = await client.audio.transcriptions.create(
                 file=audio_file,
                 model="whisper-1",
                 response_format="verbose_json",
-                language="pt",
+                language=lang_code,
                 timestamp_granularities=["segment"],
             )
 

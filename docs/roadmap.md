@@ -47,6 +47,7 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [ ] Sincronização direta de dados via MCP (Ouroboros) com Virtual TableTops (VTTs) como Foundry VTT e Roll20.
 - [ ] Compartilhamento cooperativo e segurança com autenticação de múltiplos mestres, painel de administração de cotas e consumo da IA.
 - [ ] Aplicação de Suporte (Companion App) nativo para celulares operando junto da mesa de RPG física.
-- [ ] Multilíngue (i18n) enraizado e novos perfis de interface visual com estética Cyberpunk/Sci-Fi.
+- [x] Multilíngue (i18n) enraizado comunicando contexto de idioma aos modelos de IA.
+- [ ] Novos perfis de interface visual com estética Cyberpunk/Sci-Fi.
 
 > Decisões que baseiam a viabilidade técnica constam nos relatórios de [Pesquisa e Mercado](research_benchmarking.md).

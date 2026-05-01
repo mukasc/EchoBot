@@ -1,19 +1,32 @@
 import { Link, useLocation } from "react-router-dom";
-import { Scroll, Users, Settings, Bot, Home } from "lucide-react";
+import { Scroll, Users, Settings, Bot, Home, Globe } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 const Header = () => {
   const location = useLocation();
+  const { t, i18n } = useTranslation();
   
   const navItems = [
-    { path: "/", label: "Sessões", icon: Home },
-    { path: "/characters", label: "Personagens", icon: Users },
-    { path: "/bot-setup", label: "Bot Discord", icon: Bot },
-    { path: "/settings", label: "Configurações", icon: Settings },
+    { path: "/", label: t("Sessões"), icon: Home },
+    { path: "/characters", label: t("Personagens"), icon: Users },
+    { path: "/bot-setup", label: t("Bot Discord"), icon: Bot },
+    { path: "/settings", label: t("Configurações"), icon: Settings },
   ];
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
+  };
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
   };
 
   return (
@@ -27,38 +40,64 @@ const Header = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold text-[#EDEDED] font-serif">
-                RPG Cronista
+                {t("RPG Cronista")}
               </h1>
               <p className="text-[10px] text-[#6C7280] hidden sm:block uppercase tracking-wider">
-                Crônicas de Aventura
+                {t("Crônicas de Aventura")}
               </p>
             </div>
           </Link>
 
-          {/* Navigation */}
-          <nav className="flex items-center gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
-                    transition-all duration-200
-                    ${active 
-                      ? 'bg-rpg-gold/10 text-rpg-gold' 
-                      : 'text-[#A0A5B5] hover:text-[#EDEDED] hover:bg-white/5'
-                    }
-                  `}
+          {/* Right side: Navigation + Language Switcher */}
+          <div className="flex items-center gap-4">
+            <nav className="flex items-center gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`
+                      flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                      transition-all duration-200
+                      ${active 
+                        ? 'bg-rpg-gold/10 text-rpg-gold' 
+                        : 'text-[#A0A5B5] hover:text-[#EDEDED] hover:bg-white/5'
+                      }
+                    `}
+                  >
+                    <Icon className="w-4 h-4" strokeWidth={1.5} />
+                    <span className="hidden md:inline">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Language Switcher */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-[#A0A5B5] hover:text-[#EDEDED] hover:bg-white/5">
+                  <Globe className="w-5 h-5" />
+                  <span className="sr-only">{t("language")}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#12141A] border-white/10 text-[#EDEDED]">
+                <DropdownMenuItem 
+                  onClick={() => changeLanguage('pt-BR')}
+                  className={`cursor-pointer focus:bg-white/10 ${i18n.language === 'pt-BR' ? 'bg-white/5 text-rpg-gold' : ''}`}
                 >
-                  <Icon className="w-4 h-4" strokeWidth={1.5} />
-                  <span className="hidden md:inline">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+                  {t("pt-BR")}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => changeLanguage('en-US')}
+                  className={`cursor-pointer focus:bg-white/10 ${i18n.language === 'en-US' ? 'bg-white/5 text-rpg-gold' : ''}`}
+                >
+                  {t("en-US")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>

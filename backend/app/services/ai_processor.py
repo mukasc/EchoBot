@@ -20,8 +20,10 @@ from app.exceptions import AppException
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = """\
-Você é um cronista de RPG especializado. Sua tarefa é analisar transcrições de sessões de RPG e:
+def get_system_prompt(target_language: str = "pt-BR") -> str:
+    return f"""\
+Você é um cronista de RPG especializado. Sua tarefa é analisar transcrições de sessões de RPG.
+IDIOMA DE SAÍDA OBRIGATÓRIO: {target_language}
 
 1. IDENTIFICAR e FILTRAR:
    - IC (In-Character): Falas de personagens, narração do mestre, descrições de ações
@@ -42,16 +44,15 @@ Você é um cronista de RPG especializado. Sua tarefa é analisar transcrições
    - Evitar caracteres especiais para TTS
 
 Responda SEMPRE em JSON com o formato:
-{
+{{
   "technical_diary": [
-    {"category": "npc|location|item|xp|event", "name": "Nome", "description": "Descrição opcional"}
+    {{"category": "npc|location|item|xp|event", "name": "Nome", "description": "Descrição opcional"}}
   ],
   "review_script": "Texto do roteiro de revisão...",
   "filtered_segments": [
-    {"text": "texto", "type": "ic|ooc", "character": "Nome do Personagem ou null"}
+    {{"text": "texto", "type": "ic|ooc", "character": "Nome do Personagem ou null"}}
   ]
-}"""
-
+}}"""
 
 class AIProcessorService:
     """Processes RPG transcriptions using configured LLM provider."""
@@ -67,6 +68,7 @@ class AIProcessorService:
         app_settings: AppSettings,
         script_density: str = "standard",
         narrative_perspective: str = "3p_epic",
+        target_language: str = "pt-BR",
     ) -> Dict[str, Any]:
         """
         Send transcription to the configured LLM and parse the structured response.
@@ -80,54 +82,49 @@ class AIProcessorService:
             game_system, 
             mapping_context,
             script_density,
-            narrative_perspective
+            narrative_perspective,
+            target_language
         )
+        system_prompt = get_system_prompt(target_language)
         
         # Build the chain of attempts: (provider, model, specific_api_key)
         attempts = []
         
-        logger.info(f"Building LLM chain. Primary enabled: {app_settings.llm_primary_enabled}, Primary: {app_settings.llm_provider}")
-        
         if app_settings.llm_primary_enabled:
-            attempts.append((app_settings.llm_provider, app_settings.llm_model or "default", None))
-        
-        for fb in app_settings.llm_fallbacks:
-            logger.info(f"Checking fallback: {fb.provider} ({fb.model}), enabled: {fb.enabled}")
-            if fb.enabled:
-                attempts.append((fb.provider, fb.model, fb.api_key))
+            attempts.append((app_settings.llm_provider, app_settings.llm_model, None))
+            
+        for fallback in app_settings.llm_fallbacks:
+            if fallback.enabled:
+                attempts.append((fallback.provider, fallback.model, fallback.api_key))
 
-        logger.info(f"Total attempts in chain: {len(attempts)}")
-        
         if not attempts:
-            raise AppException(
-                detail="Nenhum provedor de IA está ativo. Ative o Provedor Principal ou pelo menos um Fallback nas Configurações.",
-                status_code=400
-            )
+            raise AppException("Nenhum provedor de IA está ativo nas configurações.", status_code=400)
 
         last_error = None
-        for i, (provider, model, specific_key) in enumerate(attempts):
+        for attempt_index, (provider, model_name, specific_key) in enumerate(attempts):
             try:
-                logger.info(f"LLM Attempt {i+1}: {provider} ({model})")
-                
-                # Resolve API Key for this specific attempt
+                logger.info(f"AI Process attempt {attempt_index + 1}: Provider={provider.value}, Model={model_name}")
                 api_key = self._resolve_api_key(provider, specific_key, app_settings)
                 
-                # Call the specific provider
-                response_text = await self._call_llm_direct(provider, model, api_key, prompt)
+                if not api_key:
+                    logger.warning(f"Skipping {provider.value} because API key is missing.")
+                    continue
+                
+                response_text = await self._call_llm_direct(provider, model_name or "default", api_key, prompt, system_prompt)
                 
                 # If we got here, it worked!
                 parsed = self._parse_response(response_text, raw_transcription)
                 parsed["metadata"] = {
                     "provider": provider.value if hasattr(provider, "value") else str(provider),
-                    "model": model.value if hasattr(model, "value") else str(model if model != "default" else self._get_default_model(provider)),
-                    "attempts": str(i + 1),
+                    "model": model_name.value if hasattr(model_name, "value") else str(model_name if model_name != "default" else self._get_default_model(provider)),
+                    "attempts": str(attempt_index + 1),
                     "primary_enabled": str(app_settings.llm_primary_enabled)
                 }
                 return parsed
                 
             except Exception as e:
                 last_error = e
-                logger.warning(f"LLM Attempt {i+1} failed ({provider}): {str(e)}")
+                logger.warning(f"LLM Attempt {attempt_index + 1} failed ({provider}): {str(e)}")
                 # Continue to next attempt
                 continue
 
@@ -208,6 +205,7 @@ class AIProcessorService:
         mapping_context: str,
         script_density: str = "standard",
         narrative_perspective: str = "3p_epic",
+        target_language: str = "pt-BR",
     ) -> str:
         # Instruction for density
         density_instructions = {
@@ -237,40 +235,40 @@ class AIProcessorService:
         )
 
     async def _call_llm_direct(
-        self, provider: LLMProvider, model: str, api_key: str, prompt: str
+        self, provider: LLMProvider, model: str, api_key: str, prompt: str, system_prompt: str
     ) -> str:
         """Dispatches the call to the specific provider implementation."""
         if provider == LLMProvider.OPENAI:
-            return await self._call_openai(api_key, prompt, model if model != "default" else "gpt-4o")
+            return await self._call_openai(api_key, prompt, model if model != "default" else "gpt-4o", system_prompt)
 
         if provider == LLMProvider.GEMINI:
-            return await self._call_gemini(api_key, prompt, model if model != "default" else "gemini-2.0-flash")
+            return await self._call_gemini(api_key, prompt, model if model != "default" else "gemini-2.0-flash", system_prompt)
 
         if provider == LLMProvider.ANTHROPIC:
             return await self._call_anthropic(
-                api_key, prompt, model if model != "default" else "claude-3-5-sonnet-20240620"
+                api_key, prompt, model if model != "default" else "claude-3-5-sonnet-20240620", system_prompt
             )
 
         if provider == LLMProvider.OPENROUTER:
             return await self._call_openrouter(
-                api_key, prompt, model if model != "default" else "google/gemini-2.0-flash-001"
+                api_key, prompt, model if model != "default" else "google/gemini-2.0-flash-001", system_prompt
             )
 
         if provider == LLMProvider.GROQ:
             return await self._call_groq(
-                api_key, prompt, model if model != "default" else "llama3-70b-8192"
+                api_key, prompt, model if model != "default" else "llama3-70b-8192", system_prompt
             )
 
         raise ValueError(f"Unknown LLM provider: {provider}")
 
-    async def _call_openai(self, api_key: str, prompt: str, model: str) -> str:
+    async def _call_openai(self, api_key: str, prompt: str, model: str, system_prompt: str) -> str:
         from openai import AsyncOpenAI
 
         client = AsyncOpenAI(api_key=api_key)
         completion = await client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
             response_format={"type": "json_object"},
@@ -278,7 +276,7 @@ class AIProcessorService:
         )
         return completion.choices[0].message.content or ""
 
-    async def _call_openrouter(self, api_key: str, prompt: str, model: str) -> str:
+    async def _call_openrouter(self, api_key: str, prompt: str, model: str, system_prompt: str) -> str:
         from openai import AsyncOpenAI
 
         # OpenRouter is OpenAI-compatible
@@ -293,7 +291,7 @@ class AIProcessorService:
         completion = await client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
             response_format={"type": "json_object"} if any(m in model.lower() for m in ["gemini", "gpt", "llama-3"]) else None,
@@ -301,7 +299,7 @@ class AIProcessorService:
         )
         return completion.choices[0].message.content or ""
 
-    async def _call_groq(self, api_key: str, prompt: str, model: str) -> str:
+    async def _call_groq(self, api_key: str, prompt: str, model: str, system_prompt: str) -> str:
         from openai import AsyncOpenAI
 
         # Groq is OpenAI-compatible
@@ -312,7 +310,7 @@ class AIProcessorService:
         completion = await client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
             response_format={"type": "json_object"} if any(m in model.lower() for m in ["llama-3", "llama3", "mixtral"]) else None,
@@ -320,13 +318,13 @@ class AIProcessorService:
         )
         return completion.choices[0].message.content or ""
 
-    async def _call_gemini(self, api_key: str, prompt: str, model_name: str) -> str:
+    async def _call_gemini(self, api_key: str, prompt: str, model_name: str, system_prompt: str) -> str:
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
             model_name=model_name,
-            system_instruction=_SYSTEM_PROMPT,
+            system_instruction=system_prompt,
         )
         response = await model.generate_content_async(
             prompt,
@@ -334,14 +332,14 @@ class AIProcessorService:
         )
         return response.text
 
-    async def _call_anthropic(self, api_key: str, prompt: str, model: str) -> str:
+    async def _call_anthropic(self, api_key: str, prompt: str, model: str, system_prompt: str) -> str:
         from anthropic import AsyncAnthropic
 
         client = AsyncAnthropic(api_key=api_key)
         message = await client.messages.create(
             model=model,
             max_tokens=4096,
-            system=_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=[{"role": "user", "content": prompt}],
             timeout=60.0,
         )
