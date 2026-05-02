@@ -62,6 +62,8 @@ class Session(BaseModel):
     review_metadata: Optional[Dict[str, Any]] = None
     script_density: ScriptDensity = ScriptDensity.STANDARD
     narrative_perspective: NarrativePerspective = NarrativePerspective.THIRD_PERSON_EPIC
+    selected_music: Optional[Dict[str, Any]] = None
+
 
 
 class SessionCreate(BaseModel):
@@ -85,6 +87,7 @@ class SessionUpdate(BaseModel):
     chunk_duration_minutes: Optional[int] = None
     script_density: Optional[ScriptDensity] = None
     narrative_perspective: Optional[NarrativePerspective] = None
+    selected_music: Optional[Dict[str, Any]] = None
 
 
 class SessionProcessRequest(BaseModel):

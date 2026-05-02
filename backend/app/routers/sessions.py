@@ -34,7 +34,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.config import Settings, get_settings
 from app.models.common import SessionStatus
-from app.utils.audio import convert_to_ogg
+from app.utils.audio import convert_to_ogg, mix_audio_with_background
 from app.database import get_db
 from app.exceptions import AppException, BadRequestException, NotFoundException
 from app.models.session import (
@@ -976,10 +976,52 @@ async def generate_narration(
         else:
             raise BadRequestException(f"Provedor de TTS inválido: {used_provider}")
         
-        # Convert to OGG for space optimization
-        upload_dir = Path(__file__).parent.parent.parent / "uploads" / "narrations"
-        final_ogg_path = await convert_to_ogg(upload_dir / filename)
-        filename = final_ogg_path.name
+        # Check for selected music to mix
+        selected_music = doc.get("selected_music")
+        if selected_music and selected_music.get("title"):
+            try:
+                music_title = selected_music["title"]
+                # Encode spaces for URL
+                encoded_title = music_title.replace(' ', '%20')
+                music_url = f"https://incompetech.com/music/royalty-free/mp3-royaltyfree/{encoded_title}.mp3"
+                
+                music_dir = _UPLOAD_DIR / "music"
+                music_dir.mkdir(exist_ok=True)
+                # Safe filename
+                safe_music_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in music_title)
+                music_path = music_dir / f"{safe_music_name}.mp3"
+                
+                # Download if not exists
+                if not music_path.exists():
+                    logger.info(f"Downloading background music: {music_url}")
+                    import httpx
+                    async with httpx.AsyncClient(follow_redirects=True) as client:
+                        resp = await client.get(music_url, timeout=30.0)
+                        if resp.status_code == 200:
+                            music_path.write_bytes(resp.content)
+                        else:
+                            logger.error(f"Failed to download music: {resp.status_code} from {music_url}")
+                            music_path = None
+                
+                if music_path and music_path.exists():
+                    # Mix it!
+                    logger.info(f"Mixing narration with background music: {music_title}")
+                    mixed_path = await mix_audio_with_background(upload_dir / filename, music_path)
+                    filename = mixed_path.name
+                    # Note: mix_audio_with_background already outputs .ogg (libopus)
+                else:
+                    # Fallback to standard conversion
+                    final_ogg_path = await convert_to_ogg(upload_dir / filename)
+                    filename = final_ogg_path.name
+            except Exception as mix_err:
+                logger.error(f"Error mixing music: {mix_err}")
+                # Fallback to standard conversion
+                final_ogg_path = await convert_to_ogg(upload_dir / filename)
+                filename = final_ogg_path.name
+        else:
+            # Standard conversion without music
+            final_ogg_path = await convert_to_ogg(upload_dir / filename)
+            filename = final_ogg_path.name
         
         # Audio is served via static files at /uploads/narrations/
         audio_url = f"/uploads/narrations/{filename}"

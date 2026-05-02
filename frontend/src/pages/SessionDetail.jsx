@@ -128,6 +128,7 @@ const SessionDetail = () => {
               initialScript={session.review_script}
               narrationUrl={session.narration_audio_url}
               metadata={session.review_metadata}
+              initialMusic={session.selected_music}
               onSave={updateSession}
               onGenerateNarration={generateNarration}
               onRegenerateScript={() => processWithAI({ scope: 'script' })}
