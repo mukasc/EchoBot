@@ -77,7 +77,7 @@ class AppSettings(BaseModel):
     
     # Appearance
     visual_theme: VisualTheme = VisualTheme.DARK_FANTASY
-    language: str = "en-US"
+    language: str = "pt-BR"
     
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

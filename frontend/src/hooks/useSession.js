@@ -13,7 +13,7 @@ export const useSession = (sessionId) => {
     if (!sessionId) return;
     try {
       setLoading(true);
-      const response = await api.get(`/sessions/${sessionId}/`);
+      const response = await api.get(`/sessions/${sessionId}`);
       setSession(response.data);
     } catch (error) {
       console.error("Error fetching session:", error);
@@ -56,7 +56,7 @@ export const useSession = (sessionId) => {
   const updateSession = async (updates) => {
     setSaving(true);
     try {
-      const response = await api.put(`/sessions/${sessionId}/`, updates);
+      const response = await api.put(`/sessions/${sessionId}`, updates);
       setSession(prev => ({ ...prev, ...response.data }));
       toast.success("Informações salvas!");
       return response.data;
@@ -74,7 +74,7 @@ export const useSession = (sessionId) => {
 
     setUploading(true);
     try {
-      const response = await api.post(`/sessions/${sessionId}/upload-audio/`, formData, {
+      const response = await api.post(`/sessions/${sessionId}/upload-audio`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       toast.success("Áudio enviado. Transcrição iniciada em segundo plano!");
@@ -93,7 +93,7 @@ export const useSession = (sessionId) => {
   const processWithAI = async (options = {}) => {
     setProcessing(true);
     try {
-      const response = await api.post(`/sessions/${sessionId}/process/`, options);
+      const response = await api.post(`/sessions/${sessionId}/process`, options);
       toast.success("Processamento iniciado em segundo plano!");
       if (response.data.status) {
         setSession(prev => ({ ...prev, status: response.data.status }));
@@ -109,7 +109,7 @@ export const useSession = (sessionId) => {
 
   const updateSegment = async (segmentId, updates) => {
     try {
-      await api.put(`/sessions/${sessionId}/segments/${segmentId}/`, updates);
+      await api.put(`/sessions/${sessionId}/segments/${segmentId}`, updates);
       await fetchSession();
       toast.success("Segmento atualizado!");
     } catch (error) {
@@ -126,7 +126,7 @@ export const useSession = (sessionId) => {
     setProcessing(true);
     try {
       const { provider, voiceId } = options;
-      let url = `/sessions/${sessionId}/narration/`;
+      let url = `/sessions/${sessionId}/narration`;
       
       const params = new URLSearchParams();
       if (provider) params.append("provider", provider);
@@ -167,7 +167,7 @@ export const useSession = (sessionId) => {
 
   const exportMarkdown = async () => {
     try {
-      const response = await api.get(`/sessions/${sessionId}/export/markdown/`, {
+      const response = await api.get(`/sessions/${sessionId}/export/markdown`, {
         responseType: 'blob'
       });
       const filename = `EchoBot_${session?.name?.replace(/\s+/g, '_') || 'session'}.md`;
@@ -186,7 +186,7 @@ export const useSession = (sessionId) => {
 
   const exportPDF = async () => {
     try {
-      const response = await api.get(`/sessions/${sessionId}/export/pdf/`, {
+      const response = await api.get(`/sessions/${sessionId}/export/pdf`, {
         responseType: 'blob'
       });
       const filename = `EchoBot_${session?.name?.replace(/\s+/g, '_') || 'session'}.pdf`;

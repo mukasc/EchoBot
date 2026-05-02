@@ -20,7 +20,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "ai.density.detailed": "Gere um roteiro detalhado e ricamente descritivo.",
         "ai.perspective.1p": "Escreva em 1ª pessoa.",
         "ai.perspective.3p_epic": "Escreva em 3ª pessoa com um tom épico.",
-        "ai.perspective.tactical": "Escreva como um relatório tático focado em fatos."
+        "ai.perspective.tactical": "Escreva como um relatório tático focado em fatos.",
+        "ai.prompt.header": "Analise esta transcrição de sessão de RPG ({game_system}):",
+        "ai.prompt.mapping": "MAPEAMENTO DE JOGADORES:",
+        "ai.prompt.glossary": "GLOSSÁRIO E CONTEXTO DA CAMPANHA (GRAFIA E DEFINIÇÕES):",
+        "ai.prompt.context_instructions": "INSTRUÇÕES DE CONTEXTO:\n- Use o glossário acima para garantir a grafia correta de nomes próprios.\n- Use as definições do glossário para categorizar corretamente NPCs, Locais e Itens.",
+        "ai.prompt.style_instructions": "INSTRUÇÕES DE ESTILO:\n- DENSIDADE: {density}\n- PERSPECTIVA: {perspective}",
+        "ai.prompt.scope_diary": "FOCO: Gere APENAS o diário técnico. O roteiro de revisão pode ser deixado vazio ou curto.",
+        "ai.prompt.scope_script": "FOCO: Gere APENAS o roteiro de revisão. O diário técnico pode ser deixado vazio.",
+        "ai.prompt.transcription": "TRANSCRIÇÃO:",
+        "ai.prompt.footer": "Processe e retorne o JSON estruturado conforme o SYSTEM PROMPT.",
+        "ai.prompt.json_instruction": "Responda SEMPRE em JSON com o formato:"
     },
     "en-US": {
         "error.session_not_found": "Session not found.",
@@ -38,7 +48,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "ai.density.detailed": "Generate a detailed and richly descriptive script.",
         "ai.perspective.1p": "Write in 1st person.",
         "ai.perspective.3p_epic": "Write in 3rd person with an epic tone.",
-        "ai.perspective.tactical": "Write as a tactical report focused on facts."
+        "ai.perspective.tactical": "Write as a tactical report focused on facts.",
+        "ai.prompt.header": "Analyze this RPG session transcription ({game_system}):",
+        "ai.prompt.mapping": "PLAYER MAPPING:",
+        "ai.prompt.glossary": "CAMPAIGN GLOSSARY AND CONTEXT (SPELLING AND DEFINITIONS):",
+        "ai.prompt.context_instructions": "CONTEXT INSTRUCTIONS:\n- Use the glossary above to ensure correct spelling of proper names.\n- Use the glossary definitions to correctly categorize NPCs, Locations, and Items.",
+        "ai.prompt.style_instructions": "STYLE INSTRUCTIONS:\n- DENSITY: {density}\n- PERSPECTIVE: {perspective}",
+        "ai.prompt.scope_diary": "FOCUS: Generate ONLY the technical diary. The review script can be left empty or short.",
+        "ai.prompt.scope_script": "FOCUS: Generate ONLY the review script. The technical diary can be left empty.",
+        "ai.prompt.transcription": "TRANSCRIPTION:",
+        "ai.prompt.footer": "Process and return the structured JSON as per the SYSTEM PROMPT.",
+        "ai.prompt.json_instruction": "ALWAYS respond in JSON with the format:"
     }
 }
 

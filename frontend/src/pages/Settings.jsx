@@ -74,7 +74,8 @@ const Settings = () => {
     llm_primary_enabled: true,
     notion_api_key: "",
     notion_page_id: "",
-    visual_theme: "dark_fantasy"
+    visual_theme: "dark_fantasy",
+    language: "pt-BR"
   });
 
   const [visibleFields, setVisibleFields] = useState({});
@@ -126,10 +127,6 @@ const Settings = () => {
         visual_theme: settings.visual_theme || "dark_fantasy",
         language: settings.language || i18n.language || "en-US"
       });
-      
-      if (settings.language && settings.language !== i18n.language) {
-        i18n.changeLanguage(settings.language);
-      }
     }
   }, [settings, i18n]);
 
@@ -1005,6 +1002,37 @@ const Settings = () => {
                   <SelectItem value="steampunk">{t('settings.themes.steampunk')}</SelectItem>
                   <SelectItem value="superheroes">{t('settings.themes.superheroes')}</SelectItem>
                   <SelectItem value="weird_west">{t('settings.themes.weird_west')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="language" className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">
+                {t('settings.language')}
+              </Label>
+              <Select
+                value={formData.language}
+                onValueChange={(val) => {
+                  setFormData({ ...formData, language: val });
+                  i18n.changeLanguage(val);
+                }}
+              >
+                <SelectTrigger id="language" className="input-dark">
+                  <SelectValue placeholder={t('settings.language')} />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-primary/30 text-foreground">
+                  <SelectItem value="pt-BR">
+                    <div className="flex items-center gap-2">
+                      <img src="https://flagcdn.com/w40/br.png" alt="BR" className="w-4 h-3 rounded-sm object-cover" />
+                      {t('header.languages.ptBR')}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="en-US">
+                    <div className="flex items-center gap-2">
+                      <img src="https://flagcdn.com/w40/us.png" alt="US" className="w-4 h-3 rounded-sm object-cover" />
+                      {t('header.languages.enUS')}
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

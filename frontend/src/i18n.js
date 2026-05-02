@@ -915,7 +915,9 @@ const enUS = {
 
 const resources = {
   'pt-BR': ptBR,
-  'en-US': enUS
+  'pt': ptBR,
+  'en-US': enUS,
+  'en': enUS
 };
 
 i18n

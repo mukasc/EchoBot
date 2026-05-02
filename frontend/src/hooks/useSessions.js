@@ -9,7 +9,7 @@ export const useSessions = () => {
   const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get("/sessions/");
+      const response = await api.get("/sessions");
       setSessions(response.data);
     } catch (error) {
       console.error("Error fetching sessions:", error);
@@ -25,7 +25,7 @@ export const useSessions = () => {
 
   const createSession = async (sessionData) => {
     try {
-      const response = await api.post("/sessions/", sessionData);
+      const response = await api.post("/sessions", sessionData);
       setSessions(prev => [response.data, ...prev]);
       toast.success("Sessão criada com sucesso!");
       return response.data;
@@ -38,7 +38,7 @@ export const useSessions = () => {
 
   const deleteSession = async (id) => {
     try {
-      await api.delete(`/sessions/${id}/`);
+      await api.delete(`/sessions/${id}`);
       setSessions(prev => prev.filter(s => s.id !== id));
       toast.success("Sessão excluída");
     } catch (error) {

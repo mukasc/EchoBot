@@ -9,7 +9,7 @@ export const useCampaigns = () => {
   const fetchCampaigns = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get("/campaigns/");
+      const response = await api.get("/campaigns");
       setCampaigns(response.data);
     } catch (error) {
       console.error("Error fetching campaigns:", error);
@@ -25,7 +25,7 @@ export const useCampaigns = () => {
 
   const createCampaign = async (campaignData) => {
     try {
-      const response = await api.post("/campaigns/", campaignData);
+      const response = await api.post("/campaigns", campaignData);
       setCampaigns(prev => [response.data, ...prev]);
       toast.success("Campanha criada com sucesso!");
       return response.data;
@@ -38,7 +38,7 @@ export const useCampaigns = () => {
 
   const deleteCampaign = async (id) => {
     try {
-      await api.delete(`/campaigns/${id}/`);
+      await api.delete(`/campaigns/${id}`);
       setCampaigns(prev => prev.filter(c => c.id !== id));
       toast.success("Campanha excluída");
     } catch (error) {

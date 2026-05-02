@@ -11,10 +11,10 @@ import Settings from "./pages/Settings";
 import BotSetup from "./pages/BotSetup";
 
 import Header from "./components/Header";
-import { useSettings } from "./hooks/useSettings";
+import { SettingsProvider, useSettings } from "./context/SettingsContext";
 import { useEffect } from "react";
 
-function App() {
+function AppContent() {
   const { settings } = useSettings();
 
   useEffect(() => {
@@ -52,6 +52,14 @@ function App() {
         </main>
       </BrowserRouter>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
   );
 }
 

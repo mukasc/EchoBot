@@ -8,10 +8,14 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import { Button } from "../components/ui/button";
+import { useSettings } from "../hooks/useSettings";
+import { toast } from "sonner";
 
 const Header = () => {
   const location = useLocation();
   const { t, i18n } = useTranslation();
+  
+  const { settings, saveSettings } = useSettings();
   
   const navItems = [
     { path: "/", label: t("header.sessions"), icon: Home },
@@ -25,9 +29,18 @@ const Header = () => {
     return location.pathname.startsWith(path);
   };
 
-  const changeLanguage = (lng) => {
+  const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
     localStorage.setItem("i18nextLng", lng);
+    
+    // Persistir no banco se as configurações estiverem carregadas
+    if (settings) {
+      try {
+        await saveSettings({ ...settings, language: lng });
+      } catch (error) {
+        console.error("Failed to persist language setting:", error);
+      }
+    }
   };
 
   return (
@@ -92,14 +105,14 @@ const Header = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-[#12141A] border-border text-[var(--foreground)]">
                 <DropdownMenuItem 
-                  onClick={() => changeLanguage('pt-BR')}
+                  onSelect={() => changeLanguage('pt-BR')}
                   className={`cursor-pointer focus:bg-white/10 flex items-center gap-3 ${i18n.language === 'pt-BR' ? 'bg-white/5 text-primary' : ''}`}
                 >
                   <img src="https://flagcdn.com/w40/br.png" alt={t('header.languages.ptBR')} className="w-5 h-3.5 rounded-sm object-cover border border-border" />
                   {t("header.languages.ptBR")}
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={() => changeLanguage('en-US')}
+                  onSelect={() => changeLanguage('en-US')}
                   className={`cursor-pointer focus:bg-white/10 flex items-center gap-3 ${i18n.language === 'en-US' ? 'bg-white/5 text-primary' : ''}`}
                 >
                   <img src="https://flagcdn.com/w40/us.png" alt={t('header.languages.enUS')} className="w-5 h-3.5 rounded-sm object-cover border border-border" />

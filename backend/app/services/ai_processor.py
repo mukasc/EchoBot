@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from app.config import Settings
 from app.models.common import LLMProvider
@@ -31,7 +31,7 @@ def get_system_prompt(target_language: str = "pt-BR") -> str:
 {t('ai.task_diary', target_language)}
 {t('ai.task_script', target_language)}
 
-Responda SEMPRE em JSON com o formato:
+{t('ai.prompt.json_instruction', target_language)}
 {{
   "technical_diary": [
     {{"category": "npc|location|item|xp|event", "name": "Nome", "description": "Descrição opcional"}}
@@ -211,45 +211,23 @@ class AIProcessorService:
         
         scope_instruction = ""
         if scope == "diary":
-            scope_instruction = "FOCO: Gere APENAS o diário técnico. O roteiro de revisão pode ser deixado vazio ou curto."
+            scope_instruction = t("ai.prompt.scope_diary", target_language)
         elif scope == "script":
-            scope_instruction = "FOCO: Gere APENAS o roteiro de revisão. O diário técnico pode ser deixado vazio."
+            scope_instruction = t("ai.prompt.scope_script", target_language)
         
-        glossary_context = f"\nGLOSSÁRIO E CONTEXTO DA CAMPANHA (GRAFIA E DEFINIÇÕES):\n{glossary}\n" if glossary else ""
+        glossary_header = t("ai.prompt.glossary", target_language)
+        glossary_context = f"\n{glossary_header}\n{glossary}\n" if glossary else ""
 
-        if target_language == "pt-BR":
-            return (
-                f"Analise esta transcrição de sessão de RPG ({game_system}):\n\n"
-                f"MAPEAMENTO DE JOGADORES:\n{mapping_context}\n\n"
-                f"{glossary_context}\n"
-                "INSTRUÇÕES DE CONTEXTO:\n"
-                "- Use o glossário acima para garantir a grafia correta de nomes próprios.\n"
-                "- Use as definições do glossário para categorizar corretamente NPCs, Locais e Itens.\n\n"
-                f"INSTRUÇÕES DE ESTILO:\n- DENSIDADE: {density_text}\n- PERSPECTIVA: {perspective_text}\n"
-                f"{scope_instruction}\n\n"
-                f"TRANSCRIÇÃO:\n{raw_transcription}\n\n"
-                "Processe e retorne o JSON estruturado conforme o SYSTEM PROMPT."
-            )
-        else:
-            glossary_context_en = f"\nCAMPAIGN GLOSSARY AND CONTEXT (SPELLING AND DEFINITIONS):\n{glossary}\n" if glossary else ""
-            scope_instruction_en = ""
-            if scope == "diary":
-                scope_instruction_en = "FOCUS: Generate ONLY the technical diary."
-            elif scope == "script":
-                scope_instruction_en = "FOCUS: Generate ONLY the review script."
-
-            return (
-                f"Analyze this RPG session transcription ({game_system}):\n\n"
-                f"PLAYER MAPPING:\n{mapping_context}\n\n"
-                f"{glossary_context_en}\n"
-                "CONTEXT INSTRUCTIONS:\n"
-                "- Use the glossary above to ensure correct spelling of proper names.\n"
-                "- Use the glossary definitions to correctly categorize NPCs, Locations, and Items.\n\n"
-                f"STYLE INSTRUCTIONS:\n- DENSITY: {density_text}\n- PERSPECTIVE: {perspective_text}\n"
-                f"{scope_instruction_en}\n\n"
-                f"TRANSCRIPTION:\n{raw_transcription}\n\n"
-                "Process and return the structured JSON as defined in the SYSTEM PROMPT."
-            )
+        return (
+            f"{t('ai.prompt.header', target_language, game_system=game_system)}\n\n"
+            f"{t('ai.prompt.mapping', target_language)}\n{mapping_context}\n\n"
+            f"{glossary_context}\n"
+            f"{t('ai.prompt.context_instructions', target_language)}\n\n"
+            f"{t('ai.prompt.style_instructions', target_language, density=density_text, perspective=perspective_text)}\n"
+            f"{scope_instruction}\n\n"
+            f"{t('ai.prompt.transcription', target_language)}\n{raw_transcription}\n\n"
+            f"{t('ai.prompt.footer', target_language)}"
+        )
 
 
     async def _call_llm_direct(
@@ -365,22 +343,52 @@ class AIProcessorService:
 
     @staticmethod
     def _parse_response(response_text: str, fallback_transcription: str) -> Dict[str, Any]:
-        """Strip markdown fences and parse JSON. Falls back gracefully."""
-        text = response_text.strip()
-        # Remove markdown code fences
-        text = re.sub(r"^```(?:json)?", "", text, flags=re.MULTILINE).strip()
-        text = re.sub(r"```$", "", text, flags=re.MULTILINE).strip()
+        """Parse JSON from LLM response, handling trailing text and markdown fences."""
+        if not response_text:
+            return {
+                "technical_diary": [],
+                "review_script": fallback_transcription,
+                "filtered_segments": [],
+            }
 
-        # Try to find JSON block if there's extra text
-        if not text.startswith("{"):
-            match = re.search(r"({.*})", text, re.DOTALL)
-            if match:
-                text = match.group(1)
+        # Initial cleanup
+        text = response_text.strip()
+        
+        # Remove markdown code fences if they wrap the entire response
+        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*```$", "", text)
+
+        # Find the first occurrence of '{'
+        start_idx = text.find('{')
+        if start_idx == -1:
+            logger.warning(f"No JSON object start found. Raw: {text[:200]}...")
+            return {
+                "technical_diary": [],
+                "review_script": fallback_transcription,
+                "filtered_segments": [],
+            }
+
+        text = text[start_idx:]
 
         try:
-            return json.loads(text)
-        except json.JSONDecodeError as e:
-            logger.warning(f"Failed to parse LLM JSON response: {e}. Raw: {text[:200]}...")
+            # JSONDecoder().raw_decode is the key: it parses the first valid JSON object
+            # and ignores anything after it (the "Extra data" that causes json.loads to fail)
+            decoder = json.JSONDecoder()
+            obj, _ = decoder.raw_decode(text)
+            return obj
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"JSON parsing failed: {e}. Attempting greedy fallback...")
+            
+            # Greedy fallback: find the last '}'
+            end_idx = text.rfind('}')
+            if end_idx != -1:
+                try:
+                    greedy_text = text[:end_idx + 1]
+                    return json.loads(greedy_text)
+                except:
+                    pass
+            
+            logger.error(f"All JSON parsing attempts failed. Raw snippet: {text[:200]}...")
             return {
                 "technical_diary": [],
                 "review_script": fallback_transcription,
