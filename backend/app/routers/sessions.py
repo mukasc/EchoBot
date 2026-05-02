@@ -208,6 +208,43 @@ async def update_segment(
 # Background Task Helpers
 # ---------------------------------------------------------------------------
 
+async def _get_campaign_glossary(db: AsyncIOMotorDatabase, campaign_id: Optional[str]) -> str:
+    """Combines manual glossary with terms discovered in previous technical diaries."""
+    if not campaign_id:
+        return ""
+    
+    # 1. Fetch manual glossary
+    campaign = await db.campaigns.find_one({"id": campaign_id}, {"spelling_glossary": 1})
+    manual_glossary = (campaign or {}).get("spelling_glossary", "") or ""
+    
+    # 2. Fetch terms from past technical diaries
+    # We look for NPCs, Locations, and Items specifically
+    pipeline = [
+        {"$match": {"campaign_id": campaign_id}},
+        {"$unwind": "$technical_diary"},
+        {"$match": {"technical_diary.category": {"$in": ["npc", "location", "item"]}}},
+        {"$group": {"_id": "$technical_diary.name"}}
+    ]
+    
+    auto_names = []
+    try:
+        cursor = db.sessions.aggregate(pipeline)
+        async for doc in cursor:
+            if doc.get("_id"):
+                auto_names.append(doc["_id"])
+    except Exception as e:
+        logger.warning(f"Error aggregating auto-glossary: {e}")
+
+    if not auto_names:
+        return manual_glossary
+        
+    auto_glossary_str = "Conhecimento Prévio (Sessões Anteriores): " + ", ".join(auto_names)
+    
+    if manual_glossary:
+        return f"{manual_glossary}\n\n{auto_glossary_str}"
+    return auto_glossary_str
+
+
 async def _background_transcribe(
     session_id: str,
     audio_content: bytes,
@@ -219,6 +256,7 @@ async def _background_transcribe(
     db: AsyncIOMotorDatabase,
     settings: Settings,
     target_language: str = "pt-BR",
+    glossary: Optional[str] = None,
 ):
     async with _transcription_lock:
         try:
@@ -233,6 +271,7 @@ async def _background_transcribe(
                 filename=filename,
                 file_path=file_path,
                 target_language=target_language,
+                glossary=glossary,
             )
 
             # Build TranscriptionSegment documents
@@ -331,6 +370,7 @@ async def _background_process(
     narrative_perspective: str = "3p_epic",
     target_language: str = "pt-BR",
     scope: str = "all",
+    glossary: Optional[str] = None,
 ):
     logger.info("Background AI processing started for session %s", session_id)
     try:
@@ -349,6 +389,7 @@ async def _background_process(
             narrative_perspective=narrative_perspective,
             target_language=target_language,
             scope=scope,
+            glossary=glossary,
         )
 
         update_fields = {
@@ -449,6 +490,9 @@ async def upload_audio(
         {"$set": update_data},
     )
 
+    # Fetch campaign glossary (Manual + Auto-Learning)
+    glossary = await _get_campaign_glossary(db, doc.get("campaign_id"))
+
     app_settings = await _get_app_settings(db)
 
     try:
@@ -482,6 +526,7 @@ async def upload_audio(
             db=db,
             settings=settings,
             target_language=app_settings.language or accept_language,
+            glossary=glossary,
         )
 
         return {
@@ -531,6 +576,9 @@ async def process_session(
 
     app_settings = await _get_app_settings(db)
 
+    # Fetch campaign glossary
+    glossary = await _get_campaign_glossary(db, doc.get("campaign_id"))
+
     # Mark as processing
     await db.sessions.update_one(
         {"id": session_id},
@@ -552,6 +600,7 @@ async def process_session(
         narrative_perspective=payload.narrative_perspective,
         target_language=app_settings.language or accept_language,
         scope=payload.scope,
+        glossary=glossary,
     )
 
     return {
@@ -589,6 +638,9 @@ async def reprocess_transcription(
 
     app_settings = await _get_app_settings(db)
 
+    # Fetch campaign glossary
+    glossary = await _get_campaign_glossary(db, doc.get("campaign_id"))
+
     # 2. Find all audio files for this session
     audio_files = list(_UPLOAD_DIR.glob(f"session_{session_id}_*"))
     
@@ -625,6 +677,7 @@ async def reprocess_transcription(
         db=db,
         settings=settings,
         target_language=app_settings.language or accept_language,
+        glossary=glossary,
     )
 
     return {
@@ -640,6 +693,7 @@ async def _background_reprocess_all(
     db: AsyncIOMotorDatabase,
     settings: Settings,
     target_language: str = "pt-BR",
+    glossary: Optional[str] = None,
 ):
     """Sequential reprocessing of all files within the transcription lock."""
     async with _transcription_lock:
@@ -702,6 +756,7 @@ async def _background_reprocess_all(
                     filename=file_path.name,
                     file_path=file_path,
                     target_language=target_language,
+                    glossary=glossary,
                 )
                 
                 for seg in result.segments:

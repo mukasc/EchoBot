@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 from app.models.settings import AppSettings, LLMConfig, TTSProvider
 from app.models.common import LLMProvider
+from app.models.campaign import Campaign, CampaignCreate
 
 class TestSettingsModels:
 
@@ -53,3 +54,21 @@ class TestSettingsModels:
         
         with pytest.raises(ValidationError):
             AppSettings(tts_provider="invalid-tts")
+
+class TestCampaignModels:
+    def test_campaign_create_with_glossary(self):
+        """Test CampaignCreate handles spelling_glossary."""
+        data = {
+            "name": "The Dark Woods",
+            "spelling_glossary": "Grim-lock: Forest monster"
+        }
+        campaign = CampaignCreate(**data)
+        assert campaign.name == "The Dark Woods"
+        assert campaign.spelling_glossary == "Grim-lock: Forest monster"
+
+    def test_campaign_full_model(self):
+        """Test full Campaign model with default values."""
+        campaign = Campaign(name="Campaign Name")
+        assert campaign.game_system == "D&D 5e"
+        assert campaign.spelling_glossary is None
+        assert campaign.id is not None

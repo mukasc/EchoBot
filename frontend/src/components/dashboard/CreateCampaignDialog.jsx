@@ -26,13 +26,14 @@ const CreateCampaignDialog = ({ open, onOpenChange, onSubmit }) => {
     name: "",
     game_system: "D&D 5e",
     description: "",
-    cover_image_url: ""
+    cover_image_url: "",
+    spelling_glossary: ""
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(formData);
-    setFormData({ name: "", game_system: "D&D 5e", description: "", cover_image_url: "" });
+    setFormData({ name: "", game_system: "D&D 5e", description: "", cover_image_url: "", spelling_glossary: "" });
   };
 
   return (
@@ -95,6 +96,20 @@ const CreateCampaignDialog = ({ open, onOpenChange, onSubmit }) => {
               placeholder={t('components.createCampaign.imageUrlPlaceholder')}
               className="input-dark"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="campaign-glossary">{t('components.createCampaign.glossary')}</Label>
+            <Textarea
+              id="campaign-glossary"
+              value={formData.spelling_glossary}
+              onChange={(e) => setFormData({...formData, spelling_glossary: e.target.value})}
+              placeholder={t('components.createCampaign.glossaryPlaceholder')}
+              className="input-dark resize-none h-24"
+            />
+            <p className="text-[10px] text-[var(--muted-foreground)]">
+              {t('components.createCampaign.glossaryHint')}
+            </p>
           </div>
 
           <DialogFooter className="pt-4">

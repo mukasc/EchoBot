@@ -58,6 +58,7 @@ class AIProcessorService:
         narrative_perspective: str = "3p_epic",
         target_language: str = "pt-BR",
         scope: str = "all",
+        glossary: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Send transcription to the configured LLM and parse the structured response.
@@ -73,7 +74,8 @@ class AIProcessorService:
             script_density,
             narrative_perspective,
             target_language,
-            scope
+            scope,
+            glossary
         )
         system_prompt = get_system_prompt(target_language)
         
@@ -197,6 +199,7 @@ class AIProcessorService:
         narrative_perspective: str = "3p_epic",
         target_language: str = "pt-BR",
         scope: str = "all",
+        glossary: Optional[str] = None,
     ) -> str:
         # Instruction for density
         density_key = f"ai.density.{script_density}"
@@ -211,21 +214,39 @@ class AIProcessorService:
             scope_instruction = "FOCO: Gere APENAS o diário técnico. O roteiro de revisão pode ser deixado vazio ou curto."
         elif scope == "script":
             scope_instruction = "FOCO: Gere APENAS o roteiro de revisão. O diário técnico pode ser deixado vazio."
+        
+        glossary_context = f"\nGLOSSÁRIO E CONTEXTO DA CAMPANHA (GRAFIA E DEFINIÇÕES):\n{glossary}\n" if glossary else ""
 
         if target_language == "pt-BR":
             return (
                 f"Analise esta transcrição de sessão de RPG ({game_system}):\n\n"
                 f"MAPEAMENTO DE JOGADORES:\n{mapping_context}\n\n"
+                f"{glossary_context}\n"
+                "INSTRUÇÕES DE CONTEXTO:\n"
+                "- Use o glossário acima para garantir a grafia correta de nomes próprios.\n"
+                "- Use as definições do glossário para categorizar corretamente NPCs, Locais e Itens.\n\n"
                 f"INSTRUÇÕES DE ESTILO:\n- DENSIDADE: {density_text}\n- PERSPECTIVA: {perspective_text}\n"
                 f"{scope_instruction}\n\n"
                 f"TRANSCRIÇÃO:\n{raw_transcription}\n\n"
                 "Processe e retorne o JSON estruturado conforme o SYSTEM PROMPT."
             )
         else:
+            glossary_context_en = f"\nCAMPAIGN GLOSSARY AND CONTEXT (SPELLING AND DEFINITIONS):\n{glossary}\n" if glossary else ""
+            scope_instruction_en = ""
+            if scope == "diary":
+                scope_instruction_en = "FOCUS: Generate ONLY the technical diary."
+            elif scope == "script":
+                scope_instruction_en = "FOCUS: Generate ONLY the review script."
+
             return (
                 f"Analyze this RPG session transcription ({game_system}):\n\n"
                 f"PLAYER MAPPING:\n{mapping_context}\n\n"
-                f"STYLE INSTRUCTIONS:\n- DENSITY: {density_text}\n- PERSPECTIVE: {perspective_text}\n\n"
+                f"{glossary_context_en}\n"
+                "CONTEXT INSTRUCTIONS:\n"
+                "- Use the glossary above to ensure correct spelling of proper names.\n"
+                "- Use the glossary definitions to correctly categorize NPCs, Locations, and Items.\n\n"
+                f"STYLE INSTRUCTIONS:\n- DENSITY: {density_text}\n- PERSPECTIVE: {perspective_text}\n"
+                f"{scope_instruction_en}\n\n"
                 f"TRANSCRIPTION:\n{raw_transcription}\n\n"
                 "Process and return the structured JSON as defined in the SYSTEM PROMPT."
             )

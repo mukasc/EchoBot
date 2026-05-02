@@ -20,7 +20,12 @@ class TestTranscriptionService:
         file_path = Path("test.wav")
         # Ensure path exists for the check in transcribe()
         with patch.object(Path, "exists", return_value=True):
-            result = await service.transcribe(b"content" * 20, "test.wav", file_path=file_path)
+            result = await service.transcribe(
+                b"content" * 20, 
+                "test.wav", 
+                file_path=file_path,
+                glossary="Test Glossary"
+            )
         
         assert result.raw_text == "Local text"
         assert result.method == "LocalWhisper"
@@ -112,7 +117,11 @@ class TestTranscriptionService:
         ]
         mock_client.audio.transcriptions.create = AsyncMock(return_value=mock_response)
         
-        result = await service._transcribe_openai(b"content", "test.wav", "fake-key", "pt-BR")
+        result = await service._transcribe_openai(b"content", "test.wav", "fake-key", "pt-BR", glossary="My Glossary")
+        
+        # Verify glossary was passed as prompt to OpenAI
+        call_kwargs = mock_client.audio.transcriptions.create.call_args.kwargs
+        assert call_kwargs["prompt"] == "My Glossary"
         
         assert result.raw_text == "OpenAI raw text"
         assert len(result.segments) == 2

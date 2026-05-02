@@ -57,6 +57,7 @@ class TranscriptionService:
         filename: str,
         file_path: Optional[Path] = None,
         target_language: str = "pt-BR",
+        glossary: Optional[str] = None,
     ) -> TranscriptionResult:
         """
         Transcribe audio using the best available method.
@@ -77,7 +78,7 @@ class TranscriptionService:
         # 1. Try local Whisper first (free, offline)
         if file_path and file_path.exists():
             try:
-                return await self._transcribe_local(file_path, target_language)
+                return await self._transcribe_local(file_path, target_language, glossary)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Local Whisper failed: %s — falling back to cloud.", exc)
 
@@ -87,13 +88,13 @@ class TranscriptionService:
 
         if google_key:
             try:
-                return await self._transcribe_gemini(audio_content, filename, google_key, target_language)
+                return await self._transcribe_gemini(audio_content, filename, google_key, target_language, glossary)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Gemini transcription failed: %s — trying OpenAI.", exc)
 
         if openai_key:
             try:
-                return await self._transcribe_openai(audio_content, filename, openai_key, target_language)
+                return await self._transcribe_openai(audio_content, filename, openai_key, target_language, glossary)
             except Exception as exc:  # noqa: BLE001
                 logger.error("OpenAI transcription failed: %s", exc)
                 raise
@@ -130,7 +131,7 @@ class TranscriptionService:
                 cls._model_instance = WhisperModel("medium", device=device, compute_type=compute_type)
             return cls._model_instance
 
-    async def _transcribe_local(self, file_path: Path, target_language: str) -> TranscriptionResult:
+    async def _transcribe_local(self, file_path: Path, target_language: str, glossary: Optional[str] = None) -> TranscriptionResult:
         from fastapi.concurrency import run_in_threadpool
         
         if TranscriptionService._local_sem is None:
@@ -146,12 +147,17 @@ class TranscriptionService:
                 
                 lang_code = target_language.split("-")[0].lower() if target_language else "pt"
                 
+                # Build initial prompt with global i18n context + campaign glossary
+                initial_prompt = t('stt.initial_prompt', target_language)
+                if glossary:
+                    initial_prompt = f"{initial_prompt} UNIQUE CAMPAIGN TERMS: {glossary}"
+
                 segments_gen, info = model.transcribe(
                     str(file_path),
                     language=lang_code,
                     beam_size=5,
                     vad_filter=True,
-                    initial_prompt=t('stt.initial_prompt', target_language), # Helps with RPG context
+                    initial_prompt=initial_prompt, # Helps with RPG context
                 )
                 raw_segments = list(segments_gen)
                 lang = info.language or "pt"
@@ -171,7 +177,7 @@ class TranscriptionService:
             return await run_in_threadpool(_sync_transcribe)
 
     async def _transcribe_gemini(
-        self, content: bytes, filename: str, api_key: str, target_language: str
+        self, content: bytes, filename: str, api_key: str, target_language: str, glossary: Optional[str] = None
     ) -> TranscriptionResult:
         import google.generativeai as genai
 
@@ -189,10 +195,12 @@ class TranscriptionService:
                 logger.info("Trying Gemini model: %s …", model_name)
                 model = genai.GenerativeModel(model_name)
                 
+                glossary_instruction = f" Considere estes termos específicos da campanha: {glossary}." if glossary else ""
+                
                 # Using wait_for for explicit timeout handling
                 response = await asyncio.wait_for(
                     model.generate_content_async([
-                        f"Transcreva este áudio de uma sessão de RPG. "
+                        f"Transcreva este áudio de uma sessão de RPG.{glossary_instruction} "
                         f"Retorne apenas a transcrição literal no idioma correspondente a {target_language}.",
                         {"mime_type": mime, "data": content},
                     ]),
@@ -213,7 +221,7 @@ class TranscriptionService:
         raise last_err  # type: ignore[misc]
 
     async def _transcribe_openai(
-        self, content: bytes, filename: str, api_key: str, target_language: str
+        self, content: bytes, filename: str, api_key: str, target_language: str, glossary: Optional[str] = None
     ) -> TranscriptionResult:
         import openai
 
@@ -229,6 +237,7 @@ class TranscriptionService:
                 response_format="verbose_json",
                 language=lang_code,
                 timestamp_granularities=["segment"],
+                prompt=glossary, # Use glossary as prompt for Whisper API
             )
 
             result_segments: List[TranscriptionSegmentResult] = []

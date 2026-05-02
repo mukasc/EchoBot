@@ -152,6 +152,9 @@ const ptBR = {
         "descriptionPlaceholder": "Uma breve descrição da sua aventura...",
         "imageUrl": "URL da Capa (opcional)",
         "imageUrlPlaceholder": "https://...",
+        "glossary": "Glossário de Spelling Ativo",
+        "glossaryPlaceholder": "Ex:\nValerius: O Rei traído\nXandalar: Cidade voadora\nDraconic: Língua dos dragões",
+        "glossaryHint": "Coloque um termo por linha (ex: Nome: Descrição). Isso ajuda a IA com a grafia e o contexto.",
         "cancel": "Cancelar",
         "create": "Criar Campanha"
       },
@@ -605,6 +608,9 @@ const enUS = {
         "descriptionPlaceholder": "A brief description of your adventure...",
         "imageUrl": "Cover URL (optional)",
         "imageUrlPlaceholder": "https://...",
+        "glossary": "Active Spelling Glossary",
+        "glossaryPlaceholder": "E.g.:\nValerius: The betrayed King\nXandalar: Flying city\nDraconic: Language of dragons",
+        "glossaryHint": "One term per line (e.g. Name: Description). This helps the AI with both spelling and context.",
         "cancel": "Cancel",
         "create": "Create Campaign"
       },

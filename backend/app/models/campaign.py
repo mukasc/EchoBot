@@ -17,15 +17,18 @@ class Campaign(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     description: Optional[str] = None
+    spelling_glossary: Optional[str] = None
 
 class CampaignCreate(BaseModel):
     name: str
     game_system: str = "D&D 5e"
     cover_image_url: Optional[str] = None
     description: Optional[str] = None
+    spelling_glossary: Optional[str] = None
 
 class CampaignUpdate(BaseModel):
     name: Optional[str] = None
     game_system: Optional[str] = None
     cover_image_url: Optional[str] = None
     description: Optional[str] = None
+    spelling_glossary: Optional[str] = None

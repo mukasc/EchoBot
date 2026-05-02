@@ -44,6 +44,34 @@ class TestAIProcessorService:
         service._call_llm_direct.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_process_with_glossary(self, service, app_settings):
+        """Test that the glossary is correctly passed and included in the prompt building."""
+        service._call_llm_direct = AsyncMock(return_value=json.dumps({
+            "technical_diary": [],
+            "review_script": "Test script",
+            "filtered_segments": []
+        }))
+        
+        glossary = "Valerius: The betrayed King\nXandalar: Flying city"
+        
+        await service.process(
+            raw_transcription="Test transcription",
+            game_system="D&D 5e",
+            mapping_context="Context",
+            app_settings=app_settings,
+            glossary=glossary
+        )
+        
+        # Verify that the build_prompt was called with glossary
+        # The arguments are: (provider, model_name, api_key, prompt, system_prompt)
+        called_args = service._call_llm_direct.call_args[0]
+        final_prompt = called_args[3]
+        
+        assert "GLOSSÁRIO E CONTEXTO DA CAMPANHA" in final_prompt
+        assert "Valerius: The betrayed King" in final_prompt
+        assert "Xandalar: Flying city" in final_prompt
+
+    @pytest.mark.asyncio
     async def test_process_fallback_success(self, service, app_settings):
         """Test that if the primary fails, it falls back to the configured fallback."""
         app_settings.llm_fallbacks = [
