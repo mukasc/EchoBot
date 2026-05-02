@@ -40,7 +40,7 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 ### 🟡 P2 (Prioridade Média - Estrutura Imbatível)
 - [ ] **Integração de Memória Contínua (RAG):** Contextualização contínua para resumos injetando diários das semanas anteriores no prompt das sessões vigentes.
 - [ ] **Busca Semântica Completa:** Motor interno de pesquisa global indexando eventos passados da campanha.
-- [ ] **Trilha Sonora Autônoma:** Biblioteca embutida (*Royalty-Free / FMA*) misturada de modo harmônico à voz do TTS. Download opcional do áudio isolado (Stem).
+- [x] **Trilha Sonora Autônoma:** Biblioteca embutida (*Royalty-Free / FMA*) misturada de modo harmônico à voz do TTS. Download opcional do áudio isolado (Stem).
 - [ ] **Video Recap (Compatibilidade Discord):** Geração de mídia rápida, estática e comprimida sob a barra de 10MB limitante do Discord Free.
 - [ ] **Portabilidade Absoluta da Base de Dados:** Adeus ao servidor obrigatório do MongoDB em implementações caseiras; transição para formato Flat-File/SQLite priorizando "Copiar & Colar" (*Zero-config* backup).
 - [ ] **Voice Bridge Isolado e Gravação via WebRTC:** Habilitar modo gravador de podcast avulso do Discord; interface via Browser capturando e despachando pacotes direto do navegador para o servidor.
