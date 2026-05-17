@@ -23,7 +23,7 @@
 [![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=flat&logo=pytest&logoColor=white)](https://docs.pytest.org/)
 [![Attributions](https://img.shields.io/badge/Attributions-List-orange.svg)](ATTRIBUTIONS.md)
 
-**EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord ou via **upload manual de arquivos**, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
+**EchoBot** é um sistema avançado de crônica automática para RPG de mesa. Ele captura áudio diretamente das suas sessões no Discord ou via **upload manual em lote de múltiplos arquivos**, utiliza modelos de Inteligência Artificial de elite (**Gemini**, **GPT-4o**, **Claude 3.5**, ou **Whisper local**) para transcrever e processar a narrativa, gerando um diário técnico e um roteiro de revisão pronto para ser narrado ou arquivado.
 
 ---
 
@@ -36,7 +36,7 @@ O EchoBot é composto por três serviços principais que trabalham em harmonia:
 graph TD
     subgraph "Captação de Áudio"
         A[Discord Voice] -->|Opus/Ogg Stream| B[Voice Bridge Node.js]
-        A1[Upload Manual] -->|Arquivo .ogg/mp3| C
+        A1[Upload Manual em Lote] -->|Multi-arquivos .mp3/wav/ogg| C
     end
 
     subgraph "Processamento & IA"
@@ -84,7 +84,12 @@ graph TD
 ## ✨ Funcionalidades
 
 -   **Captura de Voz Multi-usuário**: Grava o áudio de cada participante separadamente para transcrições mais precisas.
--   **Upload Manual**: Ingestão de arquivos de áudio externos diretamente pela interface web para processamento de sessões gravadas fora do Discord.
+-   **Upload Manual em Lote**: Permissão para *bulk uploads* de múltiplos arquivos de áudio externos simultaneamente, com sanitização severa no servidor que converte silenciosamente todos os formatos brutos recebidos para Ogg/Opus antes do processamento.
+-   **Ajuste Global de Termos (Find & Replace Avançado)**: Correções de texto cirúrgicas em lote para nomes próprios e termos específicos de RPG (com suporte a Match Case e Whole Word) englobando Transcrição, Diário Técnico e Roteiro de uma só vez.
+-   **Glossário de Spelling Ativo**: Treinamento estático e persistente por meio de injeção de contexto/prompt para guiar a transcrição e processamento correto de nomes próprios únicos e de fantasia do seu cenário.
+-   **Trilha Sonora Autônoma**: Biblioteca embutida misturada de modo harmônico e dinâmico no servidor com a narração de voz do TTS (com suporte ao download opcional do áudio isolado/Stem).
+-   **Carregamento Dinâmico de Modelos**: Consulta em tempo real aos provedores configurados (OpenAI, Gemini, Groq, OpenRouter) para listar apenas modelos ativos e válidos para suas chaves de API.
+-   **Regeneração Seletiva Inteligente**: Possibilidade de regenerar apenas o Diário Técnico ou apenas o Roteiro de Revisão de forma isolada, evitando desperdício de chamadas e agilizando ajustes pontuais.
 -   **Timestamp Absoluto**: Registra o horário real de cada fala (ex: 14:32:15), facilitando a sincronização com a sessão.
 -   **Transcrição Híbrida**: Prioriza o uso do **Faster Whisper (Local)** para economia, com fallback para APIs de cloud (OpenAI/Gemini).
 -   **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas/Aventuras, com uma visão consolidada de todo o histórico.
@@ -125,8 +130,10 @@ O EchoBot está em constante evolução. Nossos próximos marcos incluem:
 - [ ] **Busca Semântica**: Localize eventos, nomes ou falas específicas em todo o seu histórico de campanhas usando busca por significado (vetores).
 - [ ] **Memória de Longo Prazo (RAG)**: O bot consultará crônicas de sessões passadas para manter a consistência narrativa em novas gerações.
 - [x] **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas ou Aventuras.
-- [ ] **Glossário de Pronúncia**: Sistema para ensinar a IA a grafia e pronúncia correta de nomes próprios do seu cenário.
-- [ ] **Mixagem de Trilha Sonora**: Adição automática de trilha ambiente baseada no tom da cena narrada.
+- [x] **Glossário de Spelling Ativo**: Sistema para ensinar a IA a grafia correta de nomes próprios e termos únicos da campanha.
+- [x] **Trilha Sonora Autônoma**: Biblioteca embutida misturada de modo harmônico à voz do TTS com download de áudio (Stem).
+- [x] **Ajuste Global de Termos**: Find & replace avançado englobando transcrições, diários e roteiros simultaneamente.
+- [x] **Upload Manual em Lote**: Upload de múltiplos arquivos simultaneamente com sanitização e conversão a Opus (Ogg) silenciosa.
 
 ---
 
@@ -137,6 +144,7 @@ Para garantir a melhor eficiência do sistema, o EchoBot não utiliza `.wav` pur
 - **Formato**: `.ogg` (Opus). O Opus é o formato nativo do Discord, o que facilita a captura e oferece qualidade excelente com compressão superior.
 - **Configuração**: 64kbps (mono). Para voz, esta taxa é mais que suficiente. A clareza para a IA transcrever depende da redução de ruídos de fundo e não de alta fidelidade musical.
 - **Economia**: Um áudio de 1 hora em WAV (48kHz/16bit/Stereo) ocupa ~1GB. Em Opus 64k mono, ocupa apenas **~28MB**.
+- **Conversão e Sanitização no Servidor**: O backend do FastAPI realiza uma sanitização severa no upload. Qualquer formato bruto de áudio enviado em lote é silenciosamente convertido em Ogg/Opus utilizando FFmpeg em subprocesso de background antes da transcrição para manter o armazenamento limpo e otimizado.
 
 ---
 
