@@ -247,7 +247,6 @@ async def _get_campaign_glossary(db: AsyncIOMotorDatabase, campaign_id: Optional
 
 async def _background_transcribe(
     session_id: str,
-    audio_content: bytes,
     filename: str,
     file_path: Path,
     speaker_id: Optional[str],
@@ -262,7 +261,22 @@ async def _background_transcribe(
         try:
             # Determine append mode
             doc = await db.sessions.find_one({"id": session_id}, {"audio_file_id": 1})
-            is_append = bool(doc.get("audio_file_id"))
+            is_append = bool(doc.get("audio_file_id")) if doc else False
+
+            # Calculate dynamic offset if chunk_offset is 0.0
+            actual_offset = chunk_offset
+            if chunk_offset == 0.0:
+                session_doc = await db.sessions.find_one({"id": session_id}, {"transcription_segments": 1})
+                if session_doc and "transcription_segments" in session_doc:
+                    segments = session_doc["transcription_segments"] or []
+                    if segments:
+                        actual_offset = max(float(seg.get("timestamp_end", 0.0)) for seg in segments)
+                        logger.info(f"Dynamic offset calculated under Lock: {actual_offset}s for session {session_id}")
+
+            # Lazy Loading: Read the audio content from disk under the Lock
+            if not file_path.exists():
+                raise FileNotFoundError(f"Audio file not found at path: {file_path}")
+            audio_content = file_path.read_bytes()
 
             # Transcribe
             svc = TranscriptionService(settings)
@@ -277,7 +291,7 @@ async def _background_transcribe(
             # Build TranscriptionSegment documents
             def _calc_absolute(relative: float) -> Optional[str]:
                 if session_start_dt and relative is not None:
-                    return (session_start_dt + timedelta(seconds=chunk_offset + relative)).isoformat()
+                    return (session_start_dt + timedelta(seconds=actual_offset + relative)).isoformat()
                 return None
 
             speaker = speaker_id or "unknown"
@@ -288,8 +302,8 @@ async def _background_transcribe(
                     ts = TranscriptionSegment(
                         speaker_discord_id=speaker,
                         text=seg.text,
-                        timestamp_start=chunk_offset + seg.start,
-                        timestamp_end=chunk_offset + seg.end,
+                        timestamp_start=actual_offset + seg.start,
+                        timestamp_end=actual_offset + seg.end,
                         timestamp_absolute_start=_calc_absolute(seg.start),
                         timestamp_absolute_end=_calc_absolute(seg.end),
                         message_type=MessageType.IC,
@@ -299,8 +313,8 @@ async def _background_transcribe(
                 ts = TranscriptionSegment(
                     speaker_discord_id=speaker,
                     text=result.raw_text,
-                    timestamp_start=chunk_offset,
-                    timestamp_end=chunk_offset,
+                    timestamp_start=actual_offset,
+                    timestamp_end=actual_offset,
                     timestamp_absolute_start=_calc_absolute(0),
                     timestamp_absolute_end=_calc_absolute(0),
                     message_type=MessageType.IC,
@@ -317,7 +331,7 @@ async def _background_transcribe(
                 last_end = 0
                 if result.segments:
                     last_end = max(seg.end for seg in result.segments)
-                current_duration_sec = chunk_offset + last_end
+                current_duration_sec = actual_offset + last_end
                 current_duration_min = int(current_duration_sec // 60)
 
                 await db.sessions.update_one(
@@ -451,7 +465,8 @@ async def _background_process(
 async def upload_audio(
     session_id: str,
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
+    files: Optional[List[UploadFile]] = File(None),
     speaker_id: Optional[str] = Form(None),
     session_start_time: Optional[str] = Form(None),
     chunk_offset: float = Form(0.0),
@@ -464,10 +479,15 @@ async def upload_audio(
     if not doc:
         raise NotFoundException("Session", session_id)
 
-    # Validate file type
-    suffix = Path(file.filename or "").suffix.lower()
-    if file.content_type not in _ALLOWED_CONTENT_TYPES and suffix not in _ALLOWED_AUDIO_EXTENSIONS:
-        raise BadRequestException("Invalid audio file type")
+    # Consolidate files from both 'file' and 'files'
+    uploaded_files: List[UploadFile] = []
+    if file:
+        uploaded_files.append(file)
+    if files:
+        uploaded_files.extend(files)
+
+    if not uploaded_files:
+        raise BadRequestException("No audio files provided")
 
     # Parse optional session start time
     session_start_dt: Optional[datetime] = None
@@ -495,39 +515,52 @@ async def upload_audio(
 
     app_settings = await _get_app_settings(db)
 
+    # Persist audio files and convert to OGG
+    _UPLOAD_DIR.mkdir(exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    spk = speaker_id or "central"
+    offset_val = int(chunk_offset)
+    
+    tasks_to_queue = []
+
     try:
-        audio_content = await file.read()
-
-        # Persist audio to disk
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # Include speaker and offset in filename for reprocess capability
-        # We use a sortable offset string (6 digits for hours of RPG)
-        spk = speaker_id or "central"
-        offset_val = int(chunk_offset)
-        safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in (file.filename or "audio"))
-        
-        # New format: session_{id}_off_{offset}_spk_{speaker}_{timestamp}_{original_name}
-        file_path = _UPLOAD_DIR / f"session_{session_id}_off_{offset_val:06d}_spk_{spk}_{timestamp}_{safe_name}"
-        
-        _UPLOAD_DIR.mkdir(exist_ok=True)
-        file_path.write_bytes(audio_content)
-
-        # Queue background transcription
-        background_tasks.add_task(
-            _background_transcribe,
-            session_id=session_id,
-            audio_content=audio_content,
-            filename=file.filename or "audio.wav",
-            file_path=file_path,
-            speaker_id=speaker_id,
-            chunk_offset=chunk_offset,
-            session_start_dt=session_start_dt,
-            db=db,
-            settings=settings,
-            target_language=app_settings.language or accept_language,
-            glossary=glossary,
-        )
+        for idx, upload_file in enumerate(uploaded_files):
+            # Validate individual file type
+            suffix = Path(upload_file.filename or "").suffix.lower()
+            if upload_file.content_type not in _ALLOWED_CONTENT_TYPES and suffix not in _ALLOWED_AUDIO_EXTENSIONS:
+                raise BadRequestException(f"Invalid audio file type: {upload_file.filename}")
+                
+            audio_content = await upload_file.read()
+            
+            safe_name = "".join(c if c.isalnum() or c in "._-" else "_" for c in (upload_file.filename or "audio"))
+            # Save raw upload temporarily
+            temp_filename = f"session_{session_id}_off_{offset_val:06d}_spk_{spk}_{timestamp}_{idx}_{safe_name}"
+            temp_file_path = _UPLOAD_DIR / temp_filename
+            
+            temp_file_path.write_bytes(audio_content)
+            
+            # Convert immediately to OGG/Opus (deletes temp raw file on success)
+            final_file_path = await convert_to_ogg(temp_file_path)
+            tasks_to_queue.append({
+                "filename": final_file_path.name,
+                "file_path": final_file_path
+            })
+            
+        # Queue background transcriptions
+        for task_info in tasks_to_queue:
+            background_tasks.add_task(
+                _background_transcribe,
+                session_id=session_id,
+                filename=task_info["filename"],
+                file_path=task_info["file_path"],
+                speaker_id=speaker_id,
+                chunk_offset=chunk_offset,
+                session_start_dt=session_start_dt,
+                db=db,
+                settings=settings,
+                target_language=app_settings.language or accept_language,
+                glossary=glossary,
+            )
 
         return {
             "message": "Upload successful. Transcription started in background.",
@@ -535,6 +568,13 @@ async def upload_audio(
             "status": SessionStatus.TRANSCRIBING.value
         }
 
+    except AppException as exc:
+        logger.warning("Upload validation/client error: %s", exc)
+        await db.sessions.update_one(
+            {"id": session_id},
+            {"$set": {"status": SessionStatus.AWAITING_REVIEW.value, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
+        raise
     except Exception as exc:
         logger.exception("Upload error: %s", exc)
         await db.sessions.update_one(

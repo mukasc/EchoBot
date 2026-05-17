@@ -68,9 +68,15 @@ export const useSession = (sessionId) => {
     }
   };
 
-  const uploadAudio = async (file) => {
+  const uploadAudio = async (fileOrFiles) => {
     const formData = new FormData();
-    formData.append("file", file);
+    if (Array.isArray(fileOrFiles)) {
+      fileOrFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+    } else {
+      formData.append("file", fileOrFiles);
+    }
 
     setUploading(true);
     try {

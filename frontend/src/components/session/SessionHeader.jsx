@@ -91,8 +91,10 @@ const SessionHeader = ({
   };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) onUpload(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      onUpload(files);
+    }
   };
 
   const handleFindReplace = async (payload) => {
@@ -246,7 +248,7 @@ const SessionHeader = ({
         {/* Right: Main Actions and Utilities */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:justify-end">
           
-          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".mp3,.wav,.webm,.mp4,.m4a" className="hidden" />
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".mp3,.wav,.webm,.mp4,.m4a,.ogg,.opus" multiple className="hidden" />
           
           {/* Technical Utilities (Grouped and subtle) */}
           <div className="flex items-center gap-1.5 border-r border-border pr-2 mr-1 sm:pr-3 sm:mr-1">

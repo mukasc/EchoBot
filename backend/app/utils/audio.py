@@ -9,29 +9,43 @@ from fastapi.concurrency import run_in_threadpool
 logger = logging.getLogger(__name__)
 
 def _sync_convert_to_ogg(input_path: Path) -> Path:
-    """Synchronous ffmpeg call to convert audio to OGG/Opus."""
+    """Synchronous ffmpeg call to convert audio to OGG/Opus with temporary file swap."""
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
     
-    output_path = input_path.with_suffix(".ogg")
+    # Evita sobrescrever diretamente gravando em temp
+    temp_output_path = input_path.parent / f"conv_{input_path.stem}.ogg"
     
     # -c:a libopus -b:a 64k provides high quality at low bitrate for speech
     command = [
         "ffmpeg", "-y", "-i", str(input_path),
         "-c:a", "libopus", "-b:a", "64k",
-        str(output_path)
+        str(temp_output_path)
     ]
     
     try:
         subprocess.run(command, capture_output=True, text=True, check=True)
-        logger.info(f"FFmpeg: Converted {input_path.name} to {output_path.name}")
+        final_output_path = input_path.with_suffix(".ogg")
+        logger.info(f"FFmpeg: Converted {input_path.name} to {final_output_path.name} via temp {temp_output_path.name}")
         
-        # Delete original if it's different
-        if input_path.suffix != ".ogg":
+        # Se o arquivo original não for .ogg, podemos removê-lo com segurança
+        if input_path.resolve() != final_output_path.resolve():
             input_path.unlink()
             
-        return output_path
+        if temp_output_path.exists():
+            # Remove o destino final se ele já existir e não for o temp em si
+            if final_output_path.exists() and final_output_path.resolve() != temp_output_path.resolve():
+                final_output_path.unlink()
+            # Renomeia o temp para o destino final
+            temp_output_path.rename(final_output_path)
+            
+        return final_output_path
     except subprocess.CalledProcessError as e:
+        if temp_output_path.exists():
+            try:
+                temp_output_path.unlink()
+            except Exception as unlink_err:
+                logger.warning(f"Failed to cleanup temp file {temp_output_path}: {unlink_err}")
         logger.error(f"FFmpeg conversion failed: {e.stderr}")
         raise RuntimeError(f"FFmpeg conversion failed: {e.stderr}") from e
 

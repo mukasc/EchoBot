@@ -35,7 +35,7 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [x] **Ajuste Global de Termos (Find & Replace Avançado):** Cirurgia de nomes próprios com funções nativas *Match Case* / *Whole Word* englobando Transcrição, Diário e Roteiro simultaneamente.
 - [x] **Glossário de Spelling Ativo:** Treino estático persistente (*Injeção de Prompt/Contexto*) instruindo o STT/LLM nas cartilhas de grafia únicas da campanha.
 - [ ] **Expansão Profunda do Diário Técnico:** Detecção automatizada de *status* dinâmicos de Quests (Abandonada, Falha, Concluída) e enumeração de interações notáveis por jogador.
-- [ ] **Refatoração no Upload:** Permissão para *bulk uploads* de arquivos, implementando uma sanitização severa no servidor convertendo tudo para Opus (Ogg) silenciosamente.
+- [x] **Refatoração no Upload:** Permissão para *bulk uploads* de arquivos, implementando uma sanitização severa no servidor convertendo tudo para Opus (Ogg) silenciosamente.
 
 ### 🟡 P2 (Prioridade Média - Estrutura Imbatível)
 - [ ] **Integração de Memória Contínua (RAG):** Contextualização contínua para resumos injetando diários das semanas anteriores no prompt das sessões vigentes.
