@@ -94,7 +94,7 @@ graph TD
 -   **Transcrição Híbrida**: Prioriza o uso do **Faster Whisper (Local)** para economia, com fallback para APIs de cloud (OpenAI/Gemini).
 -   **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas/Aventuras, com uma visão consolidada de todo o histórico.
 -   **Processamento Narrativo Inteligente**: Separa automaticamente falas *In-Character* (IC) de conversas *Out-of-Character* (OOC).
--   **Diário Técnico Automático & Geral**: Extração de NPCs, Itens, Locais e Eventos por sessão, consolidando tudo no **Diário Técnico Geral** da Campanha.
+-   **Diário Técnico Automático & Copiloto do Mestre**: Extração inteligente e profunda de NPCs, Itens, Locais e Eventos, Rastreamento Dinâmico de Quests persistentes (com máquina de estados via LLM alimentada pelo histórico de sessões) e registro de Interações Notáveis por jogador, tudo consolidado de forma unificada no **Diário Técnico Geral** da Campanha.
 -   **Roteiro de Revisão**: Gera uma narrativa fluida e épica da sessão.
 -   **Narração Épica (TTS)**: Transforma o roteiro em áudio de alta qualidade via **ElevenLabs**, **Deepgram (Aura)** ou **Kokoro** (Nativo Python ou Servidor API).
 -   **Multi-Provider LLM & Fallback**: Suporte integrado para **OpenRouter** e **Groq** com um sistema inteligente de contingência (fallbacks) que alterna automaticamente entre provedores em caso de falha.
@@ -134,6 +134,7 @@ O EchoBot está em constante evolução. Nossos próximos marcos incluem:
 - [x] **Trilha Sonora Autônoma**: Biblioteca embutida misturada de modo harmônico à voz do TTS com download de áudio (Stem).
 - [x] **Ajuste Global de Termos**: Find & replace avançado englobando transcrições, diários e roteiros simultaneamente.
 - [x] **Upload Manual em Lote**: Upload de múltiplos arquivos simultaneamente com sanitização e conversão a Opus (Ogg) silenciosa.
+- [x] **Expansão Profunda do Diário Técnico**: Rastreamento persistente de Quests (Ativa, Concluída, Falha, Abandonada) via State Machine em LLM e registro de momentos épicos por jogador/personagem.
 
 ---
 

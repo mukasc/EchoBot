@@ -36,6 +36,8 @@ class ExportService:
             "npc": "👥 NPCs",
             "location": "📍 Locais",
             "item": "⚔️ Itens & Recompensas",
+            "quest": "🎯 Missões (Quests)",
+            "interaction": "👥 Interações Notáveis",
             "xp": "📈 Experiência (XP)",
             "event": "🎭 Eventos Importantes"
         }
@@ -51,7 +53,14 @@ class ExportService:
             if cat_id in grouped:
                 lines.append(f"### {cat_name}")
                 for entry in grouped[cat_id]:
-                    lines.append(f"- **{entry.name}**: {entry.description or 'Sem descrição'}")
+                    if cat_id == "quest":
+                        status = entry.status or "Ativa"
+                        lines.append(f"- **{entry.name}** `[{status}]`: {entry.description or 'Sem descrição'}")
+                    elif cat_id == "interaction":
+                        player_info = f" *({entry.player_name})*" if entry.player_name else ""
+                        lines.append(f"- **{entry.name}**{player_info}: {entry.description or 'Sem descrição'}")
+                    else:
+                        lines.append(f"- **{entry.name}**: {entry.description or 'Sem descrição'}")
                 lines.append("")
 
         if not session.technical_diary:
@@ -74,6 +83,30 @@ class ExportService:
     def generate_pdf(self, session: Session) -> bytes:
         """Generates a styled PDF document."""
         md_content = self.generate_markdown(session)
+        
+        # Replace Markdown badges with HTML span badges for PDF styling
+        import re
+        
+        def replace_status_badge(match):
+            status = match.group(1)
+            status_lower = status.lower()
+            status_class = "active"
+            if status_lower in ("concluída", "completed", "concluida"):
+                status_class = "completed"
+            elif status_lower in ("falha", "failed"):
+                status_class = "failed"
+            elif status_lower in ("abandonada", "abandoned"):
+                status_class = "abandoned"
+            return f'<span class="badge badge-{status_class}">{status}</span>'
+            
+        md_content = re.sub(r'`\[([^\]]+)\]`', replace_status_badge, md_content)
+        
+        def replace_player_badge(match):
+            player = match.group(1)
+            return f'<span class="badge badge-player">{player}</span>'
+            
+        md_content = re.sub(r'\*\(([^\)]+)\)\*', replace_player_badge, md_content)
+
         html_content = markdown.markdown(md_content, extensions=['extra', 'smarty'])
 
         # Add some styling
@@ -145,6 +178,40 @@ class ExportService:
                     font-style: italic;
                     margin: 15pt 0;
                 }}
+                .badge {{
+                    display: inline-block;
+                    padding: 2px 6px;
+                    font-size: 9pt;
+                    font-weight: bold;
+                    border-radius: 3px;
+                    margin-left: 5px;
+                    margin-right: 5px;
+                }}
+                .badge-active {{
+                    background-color: #FEF3C7; /* amber-100 */
+                    color: #92400E; /* amber-800 */
+                    border: 1px solid #F59E0B;
+                }}
+                .badge-completed {{
+                    background-color: #D1FAE5; /* emerald-100 */
+                    color: #065F46; /* emerald-800 */
+                    border: 1px solid #10B981;
+                }}
+                .badge-failed {{
+                    background-color: #FFE4E6; /* rose-100 */
+                    color: #9F1239; /* rose-800 */
+                    border: 1px solid #F43F5E;
+                }}
+                .badge-abandoned {{
+                    background-color: #F4F4F5; /* zinc-100 */
+                    color: #3F3F46; /* zinc-800 */
+                    border: 1px solid #71717A;
+                }}
+                .badge-player {{
+                    background-color: #E0F2FE; /* sky-100 */
+                    color: #075985; /* sky-800 */
+                    border: 1px solid #0EA5E9;
+                }}
             </style>
         </head>
         <body>
@@ -211,6 +278,8 @@ class ExportService:
             "npc": "👥 NPCs",
             "location": "📍 Locais",
             "item": "⚔️ Itens & Recompensas",
+            "quest": "🎯 Missões (Quests)",
+            "interaction": "👥 Interações Notáveis",
             "xp": "📈 Experiência (XP)",
             "event": "🎭 Eventos Importantes"
         }
@@ -231,16 +300,43 @@ class ExportService:
                     }
                 })
                 for entry in grouped[cat_id]:
-                    blocks.append({
-                        "object": "block",
-                        "type": "bulleted_list_item",
-                        "bulleted_list_item": {
-                            "rich_text": [
-                                {"type": "text", "text": {"content": entry.name, "link": None}, "annotations": {"bold": True}},
-                                {"type": "text", "text": {"content": f": {entry.description or ''}"}}
-                            ]
-                        }
-                    })
+                    if cat_id == "quest":
+                        status = entry.status or "Ativa"
+                        blocks.append({
+                            "object": "block",
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {
+                                "rich_text": [
+                                    {"type": "text", "text": {"content": entry.name, "link": None}, "annotations": {"bold": True}},
+                                    {"type": "text", "text": {"content": f" [{status}]", "link": None}, "annotations": {"code": True}},
+                                    {"type": "text", "text": {"content": f": {entry.description or ''}"}}
+                                ]
+                            }
+                        })
+                    elif cat_id == "interaction":
+                        player_info = f" ({entry.player_name})" if entry.player_name else ""
+                        blocks.append({
+                            "object": "block",
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {
+                                "rich_text": [
+                                    {"type": "text", "text": {"content": entry.name, "link": None}, "annotations": {"bold": True}},
+                                    *( [{"type": "text", "text": {"content": player_info, "link": None}, "annotations": {"italic": True, "bold": True}}] if player_info else [] ),
+                                    {"type": "text", "text": {"content": f": {entry.description or ''}"}}
+                                ]
+                            }
+                        })
+                    else:
+                        blocks.append({
+                            "object": "block",
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {
+                                "rich_text": [
+                                    {"type": "text", "text": {"content": entry.name, "link": None}, "annotations": {"bold": True}},
+                                    {"type": "text", "text": {"content": f": {entry.description or ''}"}}
+                                ]
+                            }
+                        })
 
         blocks.append({"object": "block", "type": "divider", "divider": {}})
         

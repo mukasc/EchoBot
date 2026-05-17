@@ -10,7 +10,7 @@ A funcionalidade do EchoBot foi mapeada nos seguintes requisitos fundamentais (E
 - **US004:** Como **Usuário**, quero poder realizar o upload manual de áudios brutos gravados previamente, de forma múltipla e com conversão nativa do servidor, salvando aventuras passadas.
 ## 2. Orquestração Narrativa e Inteligência
 - **US005:** Como **Mestre**, quero que a IA efetue a distinção automática de frases *In-Character* (IC) versus piadas/quebras de imersão *Out-of-Character* (OOC) no processo de redação do resumo.
-- **US006:** Como **Mestre**, quero um robusto **Diário Técnico** entregue no fim da sessão. Ele deve catalogar: novos NPCs, Locais descobertos, Itens obtidos, as diversas Facções em jogo, status de *Quests* (Ativa/Falha/Completa) e ações notáveis dos heróis.
+- **US006:** Como **Mestre**, quero um robusto **Diário Técnico** entregue no fim da sessão. Ele deve catalogar: novos NPCs, Locais descobertos, Itens obtidos, as diversas Facções em jogo, status dinâmicos de *Quests* (Ativa, Concluída, Falha, Abandonada) usando uma máquina de estados baseada no histórico da campanha, e ações notáveis associadas a cada jogador/personagem.
 - **US007:** Como **Mestre**, quero um Roteiro limpo, factual e de forte viés criativo. Desejo ter a opção nativa de gerar a redação na 1ª, 2ª (você) ou 3ª pessoa antes de transformá-la em locuções épicas.
 ## 3. Revisão e Domínio Criativo
 - **US008:** Como **Mestre**, quero usar um painel global de **Ajuste de Termos (*Find & Replace*)** para caçar e corrigir nomes próprios complexos na transcrição — com chaves de exatidão como *Match Case* e *Whole Word*.

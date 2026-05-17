@@ -103,7 +103,9 @@ const ptBR = {
         "location": "Local",
         "item": "Item",
         "xp": "XP",
-        "event": "Evento"
+        "event": "Evento",
+        "quest": "Missão",
+        "interaction": "Interação"
       },
       "script": {
         "empty": "O roteiro de revisão ainda não foi gerado ou está vazio.",
@@ -559,7 +561,9 @@ const enUS = {
         "location": "Location",
         "item": "Item",
         "xp": "XP",
-        "event": "Event"
+        "event": "Event",
+        "quest": "Quest",
+        "interaction": "Interaction"
       },
       "script": {
         "empty": "The review script hasn't been generated yet or is empty.",

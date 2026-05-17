@@ -1,4 +1,4 @@
-import { Package, User, MapPin, Zap, Star, FileCode, FileText, ExternalLink, RefreshCw, Loader2 } from "lucide-react";
+import { Package, User, MapPin, Zap, Star, FileCode, FileText, ExternalLink, RefreshCw, Loader2, Target, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -9,8 +9,29 @@ const categoryIcons = {
   location: MapPin,
   item: Package,
   xp: Star,
-  event: Zap
+  event: Zap,
+  quest: Target,
+  interaction: Users
 };
+
+const questStatusStyles = {
+  active: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  completed: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  failed: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  abandoned: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20",
+  ativa: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  concluída: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  concluida: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  falha: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  abandonada: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
+};
+
+const getQuestStatusClass = (status) => {
+  if (!status) return questStatusStyles.active;
+  return questStatusStyles[status.toLowerCase()] || questStatusStyles.active;
+};
+
+const playerBadgeClass = "bg-sky-500/10 text-sky-400 border border-sky-500/20";
 
 const TechnicalDiary = ({ entries, metadata, onRegenerate, processing, onExportMD, onExportPDF, onExportNotion }) => {
   const { t } = useTranslation();
@@ -97,9 +118,21 @@ const TechnicalDiary = ({ entries, metadata, onRegenerate, processing, onExportM
                         <Icon className="w-4 h-4 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Badge className="text-xs mb-2 bg-rpg-surface-active text-[var(--muted-foreground)] border-0">
-                          {t(`session.diaryCategory.${entry.category}`, { defaultValue: entry.category })}
-                        </Badge>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <Badge className="text-xs bg-rpg-surface-active text-[var(--muted-foreground)] border-0">
+                            {t(`session.diaryCategory.${entry.category}`, { defaultValue: entry.category })}
+                          </Badge>
+                          {entry.category === "quest" && (
+                            <Badge className={`text-[10px] uppercase font-bold tracking-wider ${getQuestStatusClass(entry.status)}`}>
+                              {entry.status || "Ativa"}
+                            </Badge>
+                          )}
+                          {entry.category === "interaction" && entry.player_name && (
+                            <Badge className={`text-[10px] uppercase font-bold tracking-wider ${playerBadgeClass}`}>
+                              {entry.player_name}
+                            </Badge>
+                          )}
+                        </div>
                         <h4 className="text-[var(--foreground)] font-semibold truncate">
                           {entry.name}
                         </h4>

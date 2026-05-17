@@ -72,6 +72,42 @@ class TestAIProcessorService:
         assert "Xandalar: Flying city" in final_prompt
 
     @pytest.mark.asyncio
+    async def test_process_with_quests_context(self, service, app_settings):
+        """Test that the quests context is correctly passed and included in prompt building."""
+        service._call_llm_direct = AsyncMock(return_value=json.dumps({
+            "technical_diary": [
+                {"category": "quest", "name": "Find the Relic", "description": "Search the temple", "status": "Completed"},
+                {"category": "interaction", "name": "Critical hit on Ogre", "description": "Player rolls 20", "player_name": "Thorin"}
+            ],
+            "review_script": "Test script",
+            "filtered_segments": []
+        }))
+        
+        quests_context = "- Quest: Find the Relic (Search the temple) | Status: Active"
+        
+        result = await service.process(
+            raw_transcription="Test transcription",
+            game_system="D&D 5e",
+            mapping_context="Context",
+            app_settings=app_settings,
+            quests_context=quests_context
+        )
+        
+        # Verify that the build_prompt was called with quests_context
+        called_args = service._call_llm_direct.call_args[0]
+        final_prompt = called_args[3]
+        
+        assert "HISTÓRICO DE MISSÕES (QUESTS) DE SESSÕES ANTERIORES:" in final_prompt
+        assert "Find the Relic" in final_prompt
+        
+        # Verify result contains the new diary fields
+        assert len(result["technical_diary"]) == 2
+        assert result["technical_diary"][0]["category"] == "quest"
+        assert result["technical_diary"][0]["status"] == "Completed"
+        assert result["technical_diary"][1]["category"] == "interaction"
+        assert result["technical_diary"][1]["player_name"] == "Thorin"
+
+    @pytest.mark.asyncio
     async def test_process_fallback_success(self, service, app_settings):
         """Test that if the primary fails, it falls back to the configured fallback."""
         app_settings.llm_fallbacks = [

@@ -21,7 +21,9 @@ class TestExportService:
                 TechnicalDiaryEntry(category="npc", name="Grog", description="Um bárbaro amigável"),
                 TechnicalDiaryEntry(category="location", name="Taberna do Dragão", description="Local de descanso"),
                 TechnicalDiaryEntry(category="item", name="Espada Longa +1", description="Encontrada no baú"),
-                TechnicalDiaryEntry(category="event", name="Ataque dos Goblins", description="Ocorreu no meio da estrada")
+                TechnicalDiaryEntry(category="event", name="Ataque dos Goblins", description="Ocorreu no meio da estrada"),
+                TechnicalDiaryEntry(category="quest", name="Destruir o Beholder", description="Missão principal da guilda", status="Concluída"),
+                TechnicalDiaryEntry(category="interaction", name="Grog decapita o líder goblin", description="Ataque crítico marcante", player_name="Grog (João)")
             ],
             review_script="O grupo chegou na taberna e foi atacado por goblins."
         )
@@ -38,6 +40,10 @@ class TestExportService:
         assert "### ⚔️ Itens & Recompensas" in md
         assert "### 🎭 Eventos Importantes" in md
         assert "- **Grog**: Um bárbaro amigável" in md
+        assert "### 🎯 Missões (Quests)" in md
+        assert "- **Destruir o Beholder** `[Concluída]`: Missão principal da guilda" in md
+        assert "### 👥 Interações Notáveis" in md
+        assert "- **Grog decapita o líder goblin** *(Grog (João))*: Ataque crítico marcante" in md
         assert "## 📖 Roteiro de Revisão" in md
         assert "O grupo chegou na taberna" in md
         assert "Gerado automaticamente por EchoBot" in md

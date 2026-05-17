@@ -32,10 +32,12 @@ class TranscriptionSegmentUpdate(BaseModel):
 
 class TechnicalDiaryEntry(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    category: str  # npc, location, item, xp, event
+    category: str  # npc, location, item, xp, event, quest, interaction
     name: str
     description: Optional[str] = None
     timestamp: Optional[str] = None
+    status: Optional[str] = None
+    player_name: Optional[str] = None
 
 
 class Session(BaseModel):

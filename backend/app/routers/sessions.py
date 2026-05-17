@@ -245,6 +245,52 @@ async def _get_campaign_glossary(db: AsyncIOMotorDatabase, campaign_id: Optional
     return auto_glossary_str
 
 
+async def _get_campaign_quests(db: AsyncIOMotorDatabase, campaign_id: Optional[str], current_session_id: str) -> str:
+    """Retrieves and consolidates active/completed quests from previous sessions of the campaign."""
+    if not campaign_id:
+        return ""
+    
+    # Query all sessions in the campaign except the current one, sorted by created_at (ascending)
+    pipeline = [
+        {"$match": {"campaign_id": campaign_id, "id": {"$ne": current_session_id}}},
+        {"$sort": {"created_at": 1}},
+        {"$unwind": "$technical_diary"},
+        {"$match": {"technical_diary.category": "quest"}},
+        {"$project": {
+            "name": "$technical_diary.name",
+            "description": "$technical_diary.description",
+            "status": "$technical_diary.status",
+        }}
+    ]
+    
+    quests = {}
+    try:
+        cursor = db.sessions.aggregate(pipeline)
+        async for doc in cursor:
+            name = doc.get("name")
+            if not name:
+                continue
+            # Keep the latest status / description for each quest name (overwriting older ones)
+            quests[name] = {
+                "description": doc.get("description") or "",
+                "status": doc.get("status") or "Ativa",
+            }
+    except Exception as e:
+        logger.warning(f"Error aggregating campaign quests: {e}")
+        return ""
+
+    if not quests:
+        return ""
+
+    lines = []
+    for q_name, q_data in quests.items():
+        desc = f" ({q_data['description']})" if q_data['description'] else ""
+        status = q_data['status'] or "Ativa"
+        lines.append(f"- Quest: {q_name}{desc} | Status: {status}")
+    
+    return "\n".join(lines)
+
+
 async def _background_transcribe(
     session_id: str,
     filename: str,
@@ -385,6 +431,7 @@ async def _background_process(
     target_language: str = "pt-BR",
     scope: str = "all",
     glossary: Optional[str] = None,
+    quests_context: Optional[str] = None,
 ):
     logger.info("Background AI processing started for session %s", session_id)
     try:
@@ -404,6 +451,7 @@ async def _background_process(
             target_language=target_language,
             scope=scope,
             glossary=glossary,
+            quests_context=quests_context,
         )
 
         update_fields = {
@@ -422,6 +470,8 @@ async def _background_process(
                         category=entry.get("category", "event"),
                         name=entry.get("name", ""),
                         description=entry.get("description"),
+                        status=entry.get("status"),
+                        player_name=entry.get("player_name"),
                     ).model_dump()
                 )
                 for entry in ai_result.get("technical_diary", [])
@@ -616,8 +666,9 @@ async def process_session(
 
     app_settings = await _get_app_settings(db)
 
-    # Fetch campaign glossary
+    # Fetch campaign glossary and quests context
     glossary = await _get_campaign_glossary(db, doc.get("campaign_id"))
+    quests_context = await _get_campaign_quests(db, doc.get("campaign_id"), session_id)
 
     # Mark as processing
     await db.sessions.update_one(
@@ -641,6 +692,7 @@ async def process_session(
         target_language=app_settings.language or accept_language,
         scope=payload.scope,
         glossary=glossary,
+        quests_context=quests_context,
     )
 
     return {

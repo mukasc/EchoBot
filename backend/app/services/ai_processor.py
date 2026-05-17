@@ -34,7 +34,7 @@ def get_system_prompt(target_language: str = "pt-BR") -> str:
 {t('ai.prompt.json_instruction', target_language)}
 {{
   "technical_diary": [
-    {{"category": "npc|location|item|xp|event", "name": "Nome", "description": "Descrição opcional"}}
+    {{"category": "npc|location|item|xp|event|quest|interaction", "name": "Nome", "description": "Descrição opcional", "timestamp": "opcional", "status": "Ativa|Concluída|Falha|Abandonada (apenas para category=quest, opcional)", "player_name": "Nome do jogador ou personagem (apenas para category=interaction, opcional)"}}
   ],
   "review_script": "Texto do roteiro de revisão...",
   "filtered_segments": [
@@ -59,6 +59,7 @@ class AIProcessorService:
         target_language: str = "pt-BR",
         scope: str = "all",
         glossary: Optional[str] = None,
+        quests_context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Send transcription to the configured LLM and parse the structured response.
@@ -75,7 +76,8 @@ class AIProcessorService:
             narrative_perspective,
             target_language,
             scope,
-            glossary
+            glossary,
+            quests_context
         )
         system_prompt = get_system_prompt(target_language)
         
@@ -200,6 +202,7 @@ class AIProcessorService:
         target_language: str = "pt-BR",
         scope: str = "all",
         glossary: Optional[str] = None,
+        quests_context: Optional[str] = None,
     ) -> str:
         # Instruction for density
         density_key = f"ai.density.{script_density}"
@@ -218,10 +221,17 @@ class AIProcessorService:
         glossary_header = t("ai.prompt.glossary", target_language)
         glossary_context = f"\n{glossary_header}\n{glossary}\n" if glossary else ""
 
+        quests_context_str = ""
+        if quests_context:
+            quests_header = t("ai.prompt.quests_context", target_language)
+            quests_instruction = t("ai.prompt.quests_instruction", target_language)
+            quests_context_str = f"\n{quests_header}\n{quests_context}\n\n{quests_instruction}\n"
+
         return (
             f"{t('ai.prompt.header', target_language, game_system=game_system)}\n\n"
             f"{t('ai.prompt.mapping', target_language)}\n{mapping_context}\n\n"
             f"{glossary_context}\n"
+            f"{quests_context_str}\n"
             f"{t('ai.prompt.context_instructions', target_language)}\n\n"
             f"{t('ai.prompt.style_instructions', target_language, density=density_text, perspective=perspective_text)}\n"
             f"{scope_instruction}\n\n"
