@@ -35,4 +35,7 @@ notion-client>=2.2.1
 # tqdm>=4.66.0
 kokoro-onnx>=0.3.0
 soundfile>=0.12.1
+sentence-transformers>=3.0.0
+
+
 

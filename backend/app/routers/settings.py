@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.interfaces import DatabaseProviderInterface
 
 from app.database import get_db
 from app.models.settings import AppSettings, AppSettingsUpdate, TTSProvider
@@ -23,14 +23,14 @@ from app.services.settings_service import get_app_settings as load_settings, upd
 
 
 @router.get("/", response_model=AppSettings)
-async def get_app_settings(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def get_app_settings(db: DatabaseProviderInterface = Depends(get_db)):
     return await load_settings(db)
 
 
 @router.put("/", response_model=AppSettings)
 async def update_app_settings(
     payload: AppSettingsUpdate,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
 ):
     return await save_settings(db, payload)
 
@@ -38,7 +38,7 @@ async def update_app_settings(
 @router.get("/elevenlabs/voices/")
 async def get_elevenlabs_voices(
     api_key: Optional[str] = None,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: DatabaseProviderInterface = Depends(get_db)
 ):
     settings = await load_settings(db)
     target_key = api_key or settings.elevenlabs_api_key
@@ -58,7 +58,7 @@ async def get_elevenlabs_voices(
 @router.get("/elevenlabs/usage/")
 async def get_elevenlabs_usage(
     api_key: Optional[str] = None,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: DatabaseProviderInterface = Depends(get_db)
 ):
     settings = await load_settings(db)
     target_key = api_key or settings.elevenlabs_api_key
@@ -78,7 +78,7 @@ async def get_elevenlabs_usage(
 @router.get("/deepgram/voices/")
 async def get_deepgram_voices(
     api_key: Optional[str] = None,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: DatabaseProviderInterface = Depends(get_db)
 ):
     from app.services.deepgram import DeepgramService
     settings = await load_settings(db)
@@ -96,7 +96,7 @@ async def get_deepgram_voices(
 @router.get("/deepgram/usage/")
 async def get_deepgram_usage(
     api_key: Optional[str] = None,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: DatabaseProviderInterface = Depends(get_db)
 ):
     from app.services.deepgram import DeepgramService
     settings = await load_settings(db)
@@ -151,7 +151,7 @@ def _format_kokoro_voices(voices: list[str]) -> list[dict]:
 
 @router.get("/kokoro/voices/")
 async def get_kokoro_voices(
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: DatabaseProviderInterface = Depends(get_db)
 ):
     from app.services.kokoro import KokoroService
     from app.models.settings import TTSProvider
@@ -184,7 +184,7 @@ async def list_tts_providers():
 @router.get("/tts/voices/{provider}/")
 async def list_tts_voices(
     provider: str,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: DatabaseProviderInterface = Depends(get_db)
 ):
     """Retorna a lista de vozes disponíveis para um provedor específico."""
     app_settings = await load_settings(db)
@@ -211,7 +211,7 @@ async def list_tts_voices(
     return []
     
 @router.get("/llm/openrouter/models/")
-async def list_openrouter_models(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def list_openrouter_models(db: DatabaseProviderInterface = Depends(get_db)):
     """Busca a lista de modelos disponíveis diretamente do OpenRouter."""
     import httpx
     try:
@@ -242,7 +242,7 @@ async def list_openrouter_models(db: AsyncIOMotorDatabase = Depends(get_db)):
 
 
 @router.get("/llm/groq/models/")
-async def list_groq_models(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def list_groq_models(db: DatabaseProviderInterface = Depends(get_db)):
     """Busca a lista de modelos disponíveis diretamente do Groq."""
     import httpx
     try:
@@ -279,7 +279,7 @@ async def list_groq_models(db: AsyncIOMotorDatabase = Depends(get_db)):
 
 
 @router.get("/llm/openai/models/")
-async def list_openai_models(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def list_openai_models(db: DatabaseProviderInterface = Depends(get_db)):
     """Busca a lista de modelos disponíveis diretamente da OpenAI."""
     import httpx
     try:
@@ -312,7 +312,7 @@ async def list_openai_models(db: AsyncIOMotorDatabase = Depends(get_db)):
 
 
 @router.get("/llm/gemini/models/")
-async def list_gemini_models(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def list_gemini_models(db: DatabaseProviderInterface = Depends(get_db)):
     """Busca a lista de modelos disponíveis diretamente do Google Gemini."""
     import httpx
     try:

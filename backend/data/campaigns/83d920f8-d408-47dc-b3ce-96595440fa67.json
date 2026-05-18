@@ -1,0 +1,11 @@
+{
+  "_id": "83d920f8-d408-47dc-b3ce-96595440fa67",
+  "id": "83d920f8-d408-47dc-b3ce-96595440fa67",
+  "name": "Campanha Teste",
+  "description": "Campanha criada automaticamente para armazenar sessões antigas que estavam sem campanha.",
+  "game_system": "Outro",
+  "status": "active",
+  "created_at": "2026-04-28T01:02:07.696000",
+  "updated_at": "2026-04-28T01:08:09.503714+00:00",
+  "cover_image_url": "https://rpg.charlescorrea.com.br/wp-content/uploads/2021/10/Capa-Arte-RPG-scaled-1-1024x614.jpg.webp"
+}

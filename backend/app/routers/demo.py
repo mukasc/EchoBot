@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.interfaces import DatabaseProviderInterface
 
 from app.database import get_db
 from app.models.character import CharacterMapping, CharacterMappingCreate
@@ -39,7 +39,7 @@ async def root():
 
 
 @router.post("/demo/create-sample-session")
-async def create_sample_session(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def create_sample_session(db: DatabaseProviderInterface = Depends(get_db)):
     """Create a sample session with demo data."""
     sample_segments = [
         TranscriptionSegment(

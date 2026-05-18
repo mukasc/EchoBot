@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import List
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,8 +21,18 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # --- MongoDB ---
-    mongo_url: str = Field(..., description="MongoDB connection string")
+    # --- Database Settings ---
+    db_provider: str = Field(
+        "mongodb",
+        validation_alias=AliasChoices("db_provider", "DATABASE_TYPE"),
+        description="Database provider: mongodb or flatfile"
+    )
+    flatfile_dir: str = Field(
+        "./data",
+        validation_alias=AliasChoices("flatfile_dir", "DATABASE_DIR"),
+        description="Directory to store Flat-File JSON databases"
+    )
+    mongo_url: str = Field(default="", description="MongoDB connection string")
     db_name: str = Field("rpbcronista", description="MongoDB database name")
     master_key: str = Field(default="", description="Master key for encryption")
 
@@ -57,6 +67,17 @@ class Settings(BaseSettings):
     def parse_cors_origins(cls, v):
         if isinstance(v, str):
             return [o.strip() for o in v.split(",") if o.strip()]
+        return v
+
+    @field_validator("db_provider", mode="before")
+    @classmethod
+    def normalize_db_provider(cls, v):
+        if isinstance(v, str):
+            v_clean = v.strip().lower()
+            if v_clean in ("flatfile", "flatfiles", "flat_file", "flat-file", "json"):
+                return "flatfile"
+            if v_clean in ("mongodb", "mongo"):
+                return "mongodb"
         return v
 
 

@@ -30,7 +30,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.interfaces import DatabaseProviderInterface
 
 from app.config import Settings, get_settings
 from app.models.common import SessionStatus
@@ -103,7 +103,7 @@ from app.services.settings_service import get_app_settings as _get_app_settings
 # ---------------------------------------------------------------------------
 
 @router.get("/", response_model=List[Session])
-async def list_sessions(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def list_sessions(db: DatabaseProviderInterface = Depends(get_db)):
     docs = await db.sessions.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [_deserialize_session(d) for d in docs]
 
@@ -111,7 +111,7 @@ async def list_sessions(db: AsyncIOMotorDatabase = Depends(get_db)):
 @router.get("/{session_id}", response_model=Session)
 async def get_session(
     session_id: str, 
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
     accept_language: str = Header("pt-BR", alias="Accept-Language"),
 ):
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
@@ -122,7 +122,7 @@ async def get_session(
 
 
 @router.post("/", response_model=Session, status_code=201)
-async def create_session(payload: SessionCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def create_session(payload: SessionCreate, db: DatabaseProviderInterface = Depends(get_db)):
     session = Session(**payload.model_dump())
     await db.sessions.insert_one(_serialize_datetime(session.model_dump()))
     return session
@@ -132,7 +132,7 @@ async def create_session(payload: SessionCreate, db: AsyncIOMotorDatabase = Depe
 async def update_session(
     session_id: str,
     payload: SessionUpdate,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
 ):
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:
@@ -155,7 +155,7 @@ async def update_session(
 
 
 @router.delete("/{session_id}", status_code=204)
-async def delete_session(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def delete_session(session_id: str, db: DatabaseProviderInterface = Depends(get_db)):
     result = await db.sessions.delete_one({"id": session_id})
     if result.deleted_count == 0:
         raise NotFoundException("Session", session_id)
@@ -170,7 +170,7 @@ async def update_segment(
     session_id: str,
     segment_id: str,
     payload: TranscriptionSegmentUpdate,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
 ):
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:
@@ -208,7 +208,7 @@ async def update_segment(
 # Background Task Helpers
 # ---------------------------------------------------------------------------
 
-async def _get_campaign_glossary(db: AsyncIOMotorDatabase, campaign_id: Optional[str]) -> str:
+async def _get_campaign_glossary(db: DatabaseProviderInterface, campaign_id: Optional[str]) -> str:
     """Combines manual glossary with terms discovered in previous technical diaries."""
     if not campaign_id:
         return ""
@@ -245,7 +245,7 @@ async def _get_campaign_glossary(db: AsyncIOMotorDatabase, campaign_id: Optional
     return auto_glossary_str
 
 
-async def _get_campaign_quests(db: AsyncIOMotorDatabase, campaign_id: Optional[str], current_session_id: str) -> str:
+async def _get_campaign_quests(db: DatabaseProviderInterface, campaign_id: Optional[str], current_session_id: str) -> str:
     """Retrieves and consolidates active/completed quests from previous sessions of the campaign."""
     if not campaign_id:
         return ""
@@ -298,7 +298,7 @@ async def _background_transcribe(
     speaker_id: Optional[str],
     chunk_offset: float,
     session_start_dt: Optional[datetime],
-    db: AsyncIOMotorDatabase,
+    db: DatabaseProviderInterface,
     settings: Settings,
     target_language: str = "pt-BR",
     glossary: Optional[str] = None,
@@ -424,7 +424,7 @@ async def _background_process(
     game_system: str,
     mapping_context: str,
     app_settings: AppSettings,
-    db: AsyncIOMotorDatabase,
+    db: DatabaseProviderInterface,
     settings: Settings,
     script_density: str = "standard",
     narrative_perspective: str = "3p_epic",
@@ -499,6 +499,17 @@ async def _background_process(
         )
         logger.info("Background AI processing successfully completed for session %s", session_id)
 
+        # Trigger RAG auto-indexing to keep the campaign memory updated
+        campaign_id = session.get("campaign_id")
+        if campaign_id:
+            try:
+                from app.services.rag_service import RAGService
+                rag_svc = RAGService()
+                await rag_svc.reindex_campaign(campaign_id, db)
+                logger.info("Background RAG auto-reindexing completed for campaign %s", campaign_id)
+            except Exception as r_err:
+                logger.exception("Failed to auto-reindex campaign %s after AI processing: %s", campaign_id, r_err)
+
     except Exception as exc:
         logger.exception("CRITICAL: Background AI processing error for session %s: %s", session_id, exc)
         await db.sessions.update_one(
@@ -521,7 +532,7 @@ async def upload_audio(
     session_start_time: Optional[str] = Form(None),
     chunk_offset: float = Form(0.0),
     accept_language: str = Header("pt-BR", alias="Accept-Language"),
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     """Upload and transcribe audio for a session (in background)."""
@@ -644,7 +655,7 @@ async def process_session(
     background_tasks: BackgroundTasks,
     payload: SessionProcessRequest,
     accept_language: str = Header("pt-BR", alias="Accept-Language"),
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     """Process transcription with AI (in background)."""
@@ -707,7 +718,7 @@ async def reprocess_transcription(
     session_id: str,
     background_tasks: BackgroundTasks,
     accept_language: str = Header("pt-BR", alias="Accept-Language"),
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     """Reprocess all audio files for a session from scratch."""
@@ -782,7 +793,7 @@ async def reprocess_transcription(
 async def _background_reprocess_all(
     session_id: str,
     audio_files: List[Path],
-    db: AsyncIOMotorDatabase,
+    db: DatabaseProviderInterface,
     settings: Settings,
     target_language: str = "pt-BR",
     glossary: Optional[str] = None,
@@ -911,7 +922,7 @@ async def _background_reprocess_all(
 async def find_replace(
     session_id: str,
     payload: SessionFindReplaceRequest,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
 ):
     """
     Globally find and replace terms in transcription, diary and script.
@@ -983,7 +994,7 @@ async def generate_narration(
     session_id: str, 
     provider: Optional[str] = None,
     voice_id: Optional[str] = None,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: DatabaseProviderInterface = Depends(get_db)
 ):
     """Gera o áudio da narração épica usando ElevenLabs ou Deepgram."""
     doc = await db.sessions.find_one({"id": session_id})
@@ -1151,7 +1162,7 @@ async def generate_narration(
 # ---------------------------------------------------------------------------
 
 @router.get("/{session_id}/export/markdown/")
-async def export_markdown(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def export_markdown(session_id: str, db: DatabaseProviderInterface = Depends(get_db)):
     """Export session as a Markdown file."""
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:
@@ -1171,7 +1182,7 @@ async def export_markdown(session_id: str, db: AsyncIOMotorDatabase = Depends(ge
 
 
 @router.get("/{session_id}/export/pdf/")
-async def export_pdf(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def export_pdf(session_id: str, db: DatabaseProviderInterface = Depends(get_db)):
     """Export session as a PDF file."""
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:
@@ -1195,7 +1206,7 @@ async def export_pdf(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
 
 
 @router.post("/{session_id}/export/notion/")
-async def export_notion(session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def export_notion(session_id: str, db: DatabaseProviderInterface = Depends(get_db)):
     """Export session to Notion."""
     doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not doc:

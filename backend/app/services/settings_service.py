@@ -1,13 +1,13 @@
 import logging
 from datetime import datetime, timezone
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.interfaces import DatabaseProviderInterface
 from app.models.settings import AppSettings, AppSettingsUpdate
 from app.utils.security import encrypt, decrypt
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-async def get_app_settings(db: AsyncIOMotorDatabase) -> AppSettings:
+async def get_app_settings(db: DatabaseProviderInterface) -> AppSettings:
     """Loads and decrypts application settings from MongoDB."""
     cfg = get_settings()
     doc = await db.settings.find_one({"id": "app_settings"}, {"_id": 0})
@@ -47,7 +47,7 @@ async def get_app_settings(db: AsyncIOMotorDatabase) -> AppSettings:
         
     return settings
 
-async def update_app_settings(db: AsyncIOMotorDatabase, payload: AppSettingsUpdate) -> AppSettings:
+async def update_app_settings(db: DatabaseProviderInterface, payload: AppSettingsUpdate) -> AppSettings:
     """Encrypts and saves application settings to MongoDB."""
     update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
     

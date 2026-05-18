@@ -41,6 +41,8 @@ def mock_settings():
     settings = MagicMock()
     settings.cors_origins = ["*"]
     settings.master_key = "dGVzdC1rZXktMzItYnl0ZXMtc2VjdXJlIQ==" # base64 for 32 bytes
+    settings.openai_api_key = None
+    settings.google_api_key = None
     return settings
 
 @pytest.fixture

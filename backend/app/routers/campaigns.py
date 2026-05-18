@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.interfaces import DatabaseProviderInterface
 
 from app.database import get_db
 from app.exceptions import NotFoundException
@@ -38,18 +38,18 @@ def _deserialize_campaign(doc: dict) -> Campaign:
     return Campaign(**doc)
 
 @router.get("/", response_model=List[Campaign])
-async def list_campaigns(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def list_campaigns(db: DatabaseProviderInterface = Depends(get_db)):
     docs = await db.campaigns.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [_deserialize_campaign(d) for d in docs]
 
 @router.post("/", response_model=Campaign, status_code=201)
-async def create_campaign(payload: CampaignCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def create_campaign(payload: CampaignCreate, db: DatabaseProviderInterface = Depends(get_db)):
     campaign = Campaign(**payload.model_dump())
     await db.campaigns.insert_one(_serialize_datetime(campaign.model_dump()))
     return campaign
 
 @router.get("/{campaign_id}", response_model=Campaign)
-async def get_campaign(campaign_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def get_campaign(campaign_id: str, db: DatabaseProviderInterface = Depends(get_db)):
     doc = await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
     if not doc:
         raise NotFoundException("Campaign", campaign_id)
@@ -59,7 +59,7 @@ async def get_campaign(campaign_id: str, db: AsyncIOMotorDatabase = Depends(get_
 async def update_campaign(
     campaign_id: str,
     payload: CampaignUpdate,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
 ):
     doc = await db.campaigns.find_one({"id": campaign_id}, {"_id": 0})
     if not doc:
@@ -73,13 +73,13 @@ async def update_campaign(
     return _deserialize_campaign(updated)
 
 @router.delete("/{campaign_id}", status_code=204)
-async def delete_campaign(campaign_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def delete_campaign(campaign_id: str, db: DatabaseProviderInterface = Depends(get_db)):
     result = await db.campaigns.delete_one({"id": campaign_id})
     if result.deleted_count == 0:
         raise NotFoundException("Campaign", campaign_id)
 
 @router.get("/{campaign_id}/technical_diary")
-async def get_campaign_technical_diary(campaign_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def get_campaign_technical_diary(campaign_id: str, db: DatabaseProviderInterface = Depends(get_db)):
     """Aggregate all technical diary entries from all sessions in a campaign."""
     campaign = await db.campaigns.find_one({"id": campaign_id})
     if not campaign:
@@ -118,7 +118,7 @@ async def get_campaign_technical_diary(campaign_id: str, db: AsyncIOMotorDatabas
     return {"campaign_id": campaign_id, "technical_diary": formatted_diary}
 
 @router.get("/{campaign_id}/sessions")
-async def list_campaign_sessions(campaign_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def list_campaign_sessions(campaign_id: str, db: DatabaseProviderInterface = Depends(get_db)):
     from app.routers.sessions import _deserialize_session
     docs = await db.sessions.find({"campaign_id": campaign_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return [_deserialize_session(d) for d in docs]

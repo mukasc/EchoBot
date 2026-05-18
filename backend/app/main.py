@@ -34,7 +34,7 @@ from pathlib import Path
 from app.config import get_settings
 from app.database import close_db, init_db
 from app.exceptions import register_exception_handlers
-from app.routers import campaigns, characters, demo, sessions, settings, tts
+from app.routers import campaigns, characters, demo, sessions, settings, tts, rag
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -52,13 +52,34 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage startup and shutdown of long-lived resources."""
-    logger.info("Starting up — connecting to MongoDB …")
+    cfg = get_settings()
+    is_flat = cfg.db_provider == "flatfile"
+    
+    if is_flat:
+        logger.info("Starting up — initialising Flat-File Database …")
+    else:
+        logger.info("Starting up — connecting to MongoDB …")
+        
     await init_db()
-    logger.info("MongoDB connected.")
+    
+    if is_flat:
+        logger.info("Flat-File Database initialisation complete.")
+    else:
+        logger.info("MongoDB connected.")
+        
     yield
-    logger.info("Shutting down — closing MongoDB connection …")
+    
+    if is_flat:
+        logger.info("Shutting down — releasing Flat-File resources …")
+    else:
+        logger.info("Shutting down — closing MongoDB connection …")
+        
     await close_db()
-    logger.info("MongoDB connection closed.")
+    
+    if is_flat:
+        logger.info("Flat-File Database resources released.")
+    else:
+        logger.info("MongoDB connection closed.")
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +94,8 @@ def create_app() -> FastAPI:
         description="API para gerenciamento e processamento de sessões de RPG.",
         lifespan=lifespan,
     )
+
+    app.state.active_campaign_memory = None
 
     # CORS must be added BEFORE routers
     app.add_middleware(
@@ -94,6 +117,7 @@ def create_app() -> FastAPI:
     app.include_router(characters.router, prefix=api_prefix)
     app.include_router(settings.router, prefix=api_prefix)
     app.include_router(tts.router, prefix=api_prefix)
+    app.include_router(rag.router, prefix=api_prefix)
     
     # Static files for audio/images
     uploads_dir = Path(__file__).parent.parent / "uploads"

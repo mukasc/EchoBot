@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.interfaces import DatabaseProviderInterface
 
 from app.database import get_db
 from app.exceptions import NotFoundException
@@ -28,7 +28,7 @@ def _serialize(obj):
 
 
 @router.get("/", response_model=List[CharacterMapping])
-async def list_character_mappings(db: AsyncIOMotorDatabase = Depends(get_db)):
+async def list_character_mappings(db: DatabaseProviderInterface = Depends(get_db)):
     docs = await db.character_mappings.find({}, {"_id": 0}).to_list(100)
     return [CharacterMapping(**d) for d in docs]
 
@@ -36,7 +36,7 @@ async def list_character_mappings(db: AsyncIOMotorDatabase = Depends(get_db)):
 @router.post("/", response_model=CharacterMapping, status_code=201)
 async def create_or_update_character_mapping(
     payload: CharacterMappingCreate,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
 ):
     """Create a character mapping, or update it if the Discord user already exists."""
     existing = await db.character_mappings.find_one(
@@ -63,7 +63,7 @@ async def create_or_update_character_mapping(
 @router.delete("/{mapping_id}", status_code=204)
 async def delete_character_mapping(
     mapping_id: str,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: DatabaseProviderInterface = Depends(get_db),
 ):
     result = await db.character_mappings.delete_one({"id": mapping_id})
     if result.deleted_count == 0:

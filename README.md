@@ -41,7 +41,7 @@ graph TD
 
     subgraph "Processamento & IA"
         C[Backend API FastAPI]
-        D[(MongoDB)]
+        D[(FlatFile JSON / MongoDB)]
         E{Estratégias de IA}
         
         E1[STT: Faster Whisper / Gemini]
@@ -127,8 +127,8 @@ O EchoBot suporta o motor de voz **Kokoro v1.0** de duas formas:
 
 O EchoBot está em constante evolução. Nossos próximos marcos incluem:
 
-- [ ] **Busca Semântica**: Localize eventos, nomes ou falas específicas em todo o seu histórico de campanhas usando busca por significado (vetores).
-- [ ] **Memória de Longo Prazo (RAG)**: O bot consultará crônicas de sessões passadas para manter a consistência narrativa em novas gerações.
+- [x] **Busca Semântica**: Localize eventos, nomes ou falas específicas em todo o seu histórico de campanhas usando busca por significado (vetores).
+- [x] **Memória de Longo Prazo (RAG)**: O bot consultará crônicas de sessões passadas para manter a consistência narrativa em novas gerações.
 - [x] **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas ou Aventuras.
 - [x] **Glossário de Spelling Ativo**: Sistema para ensinar a IA a grafia correta de nomes próprios e termos únicos da campanha.
 - [x] **Trilha Sonora Autônoma**: Biblioteca embutida misturada de modo harmônico à voz do TTS com download de áudio (Stem).
@@ -195,7 +195,8 @@ Crie um arquivo `.env` na pasta `backend/` seguindo o modelo de `.env.example`.
 
 ```env
 # Infraestrutura (Obrigatório no .env)
-MONGO_URL="sua_url_mongodb"
+DB_PROVIDER="flatfile"
+MONGO_URL="sua_url_mongodb" # Opcional, usado apenas se DB_PROVIDER="mongodb"
 DB_NAME="rpbcronista"
 MASTER_KEY="sua_chave_mestra_para_criptografia"
 ```
@@ -280,7 +281,7 @@ Após o bot estar online e convidado para o seu servidor, utilize os comandos de
 
 ### Backend
 -   **Framework**: FastAPI
--   **Banco de Dados**: MongoDB (Motor driver)
+-   **Banco de Dados**: Flat-File JSON (padrão) ou MongoDB
 -   **Processamento de Áudio**: Faster Whisper, PyTorch
 -   **LLMs**: Google Gemini (padrão), OpenAI GPT-4, Anthropic Claude, OpenRouter, Groq
 -   **TTS Providers**: ElevenLabs, Deepgram (Aura), Kokoro Local (Nativo Python)

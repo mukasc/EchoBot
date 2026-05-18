@@ -28,6 +28,11 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [x] **Acesso Intuitivo de Regeração:** Implementação de processamento seletivo (escopo) e interface persuasiva para uso ilimitado de IA local (Kokoro).
 - [x] **Expansão Profunda do Diário Técnico:** Rastreamento de status de Quests (Ativa, Concluída, Falha, Abandonada) com máquina de estados via LLM alimentada pelo histórico de sessões, extração de interações notáveis por jogador e exportações integradas MD, PDF e Notion.
 
+**D. Portabilidade, Resiliência e RAG Semântico**
+- [x] **Banco de Dados Flat-File ("Zero-Config"):** Abstração de persistência dual compatível com MongoDB e arquivos JSON locais gravados atomicamente.
+- [x] **Motor de Migração de Dados:** Script robusto (`migrate_db.py`) de higienização de BSON para tracionar mesas históricas do MongoDB para Flat-File.
+- [x] **Busca Semântica RAG (Retrieval-Augmented Generation):** Motor assíncrono em FastAPI alimentado por NumPy, indexação em RAM (`ActiveCampaignMemory`) e inteligência de embeddings multi-provedor (com Mock local deterministicamente offline).
+
 ---
 
 ## 2. Prioritized Backlog
@@ -39,11 +44,11 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [x] **Refatoração no Upload:** Permissão para *bulk uploads* de arquivos, implementando uma sanitização severa no servidor convertendo tudo para Opus (Ogg) silenciosamente.
 
 ### 🟡 P2 (Prioridade Média - Estrutura Imbatível)
-- [ ] **Integração de Memória Contínua (RAG):** Contextualização contínua para resumos injetando diários das semanas anteriores no prompt das sessões vigentes.
-- [ ] **Busca Semântica Completa:** Motor interno de pesquisa global indexando eventos passados da campanha.
+- [x] **Integração de Memória Contínua (RAG):** Contextualização contínua para resumos injetando diários das semanas anteriores no prompt das sessões vigentes.
+- [x] **Busca Semântica Completa:** Motor interno de pesquisa global indexando eventos passados da campanha.
 - [x] **Trilha Sonora Autônoma:** Biblioteca embutida (*Royalty-Free / FMA*) misturada de modo harmônico à voz do TTS. Download opcional do áudio isolado (Stem).
+- [x] **Portabilidade Absoluta da Base de Dados:** Adeus ao servidor obrigatório do MongoDB em implementações caseiras; transição para formato Flat-File/SQLite priorizando "Copiar & Colar" (*Zero-config* backup).
 - [ ] **Video Recap (Compatibilidade Discord):** Geração de mídia rápida, estática e comprimida sob a barra de 10MB limitante do Discord Free.
-- [ ] **Portabilidade Absoluta da Base de Dados:** Adeus ao servidor obrigatório do MongoDB em implementações caseiras; transição para formato Flat-File/SQLite priorizando "Copiar & Colar" (*Zero-config* backup).
 - [ ] **Voice Bridge Isolado e Gravação via WebRTC:** Habilitar modo gravador de podcast avulso do Discord; interface via Browser capturando e despachando pacotes direto do navegador para o servidor.
 
 ### 🟢 P3 (Baixa Prioridade - O Novo Horizonte)
