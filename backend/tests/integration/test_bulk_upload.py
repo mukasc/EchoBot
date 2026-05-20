@@ -38,6 +38,41 @@ class TestBulkUpload:
         mock_rename.assert_called_once_with(input_path.with_suffix(".ogg"))
         assert result_path == input_path.with_suffix(".ogg")
 
+    @patch("app.utils.audio.subprocess.run")
+    @patch("app.utils.audio.Path.exists", return_value=True)
+    @patch("app.utils.audio.Path.unlink")
+    @patch("app.utils.audio.Path.glob")
+    def test_sync_split_and_convert_to_ogg_success(self, mock_glob, mock_unlink, mock_exists, mock_run):
+        """Test that _sync_split_and_convert_to_ogg calls ffmpeg with segment parameters and handles output parsing."""
+        from app.utils.audio import _sync_split_and_convert_to_ogg
+        input_path = Path("uploads/test_audio.mp3")
+        
+        # Mock glob to return generated parts
+        mock_glob.return_value = [
+            Path("uploads/conv_test_audio_part000.ogg"),
+            Path("uploads/conv_test_audio_part001.ogg")
+        ]
+        
+        # Call the synchronous function
+        result_paths = _sync_split_and_convert_to_ogg(input_path, chunk_duration_minutes=10)
+        
+        # Verify ffmpeg command called with correct segment arguments
+        mock_run.assert_called_once()
+        args, kwargs = mock_run.call_args
+        cmd = args[0]
+        assert "ffmpeg" in cmd
+        assert "-f" in cmd
+        assert "segment" in cmd
+        assert "-segment_time" in cmd
+        assert "600" in cmd  # 10 minutes * 60 seconds
+        
+        # Verify original file deletion
+        mock_unlink.assert_called_once()
+        
+        # Verify result paths returned are what glob found
+        assert len(result_paths) == 2
+        assert result_paths[0] == Path("uploads/conv_test_audio_part000.ogg")
+
     def test_upload_audio_legacy_single_file(self, client, mock_db):
         """Test uploading a single audio file (legacy compatibility with 'file')."""
         session_id = "test-session-123"
@@ -55,8 +90,9 @@ class TestBulkUpload:
         mock_db.settings.find_one.return_value = {"id": "app_settings", "language": "pt-BR"}
         mock_db.campaigns.find_one.return_value = {"spelling_glossary": "rpg glossary"}
         
-        # Mock convert_to_ogg, Path operations, and TranscriptionService
-        with patch("app.routers.sessions.convert_to_ogg", new_callable=AsyncMock) as mock_convert, \
+        # Mock split_and_convert_to_ogg, Path operations, and TranscriptionService
+        with patch("app.routers.sessions.split_and_convert_to_ogg", new_callable=AsyncMock) as mock_convert, \
+             patch("app.utils.audio.get_audio_metadata", return_value={}) as mock_metadata, \
              patch("app.routers.sessions.Path.write_bytes") as mock_write, \
              patch("app.routers.sessions.Path.mkdir") as mock_mkdir, \
              patch("app.routers.sessions.Path.exists", return_value=True) as mock_exists, \
@@ -69,7 +105,7 @@ class TestBulkUpload:
                 segments=[TranscriptionSegmentResult(text="transcribed text", start=0.0, end=5.0)],
                 method="Mock"
             )
-            mock_convert.return_value = Path("uploads/session_test-session-123_off_000000_spk_central_converted.ogg")
+            mock_convert.return_value = [Path("uploads/session_test-session-123_off_000000_spk_central_converted_part000.ogg")]
             
             # Send file via key "file" (single file upload)
             file_data = {"file": ("test.mp3", b"dummy mp3 data content", "audio/mpeg")}
@@ -106,8 +142,9 @@ class TestBulkUpload:
         mock_db.settings.find_one.return_value = {"id": "app_settings", "language": "pt-BR"}
         mock_db.campaigns.find_one.return_value = {"spelling_glossary": "rpg glossary"}
         
-        # Mock convert_to_ogg, Path operations, and TranscriptionService
-        with patch("app.routers.sessions.convert_to_ogg", new_callable=AsyncMock) as mock_convert, \
+        # Mock split_and_convert_to_ogg, Path operations, and TranscriptionService
+        with patch("app.routers.sessions.split_and_convert_to_ogg", new_callable=AsyncMock) as mock_convert, \
+             patch("app.utils.audio.get_audio_metadata", return_value={}) as mock_metadata, \
              patch("app.routers.sessions.Path.write_bytes") as mock_write, \
              patch("app.routers.sessions.Path.mkdir") as mock_mkdir, \
              patch("app.routers.sessions.Path.exists", return_value=True) as mock_exists, \
@@ -120,7 +157,7 @@ class TestBulkUpload:
                 segments=[TranscriptionSegmentResult(text="transcribed text", start=0.0, end=5.0)],
                 method="Mock"
             )
-            mock_convert.side_effect = lambda path: path.with_suffix(".ogg")
+            mock_convert.side_effect = lambda path, chunk_dur: [path.with_suffix(".ogg")]
             
             # Send multiple files via key "files"
             file_data = [
@@ -139,7 +176,7 @@ class TestBulkUpload:
             assert data["session_id"] == session_id
             assert data["status"] == "transcribing"
             
-            # Verify that convert_to_ogg was called twice
+            # Verify that split_and_convert_to_ogg was called twice
             assert mock_convert.call_count == 2
             
             # Verify DB was updated

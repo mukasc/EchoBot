@@ -6,7 +6,7 @@ import logging
 import json
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from fastapi.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)
@@ -93,6 +93,74 @@ def _sync_convert_to_ogg(input_path: Path, metadata: Optional[dict] = None) -> P
 async def convert_to_ogg(input_path: Path, metadata: Optional[dict] = None) -> Path:
     """Asynchronously converts an audio file to .ogg (Opus) using ffmpeg."""
     return await run_in_threadpool(_sync_convert_to_ogg, input_path, metadata)
+
+def _sync_split_and_convert_to_ogg(
+    input_path: Path,
+    chunk_duration_minutes: int,
+    metadata: Optional[dict] = None
+) -> List[Path]:
+    """Synchronous ffmpeg call to convert audio to OGG/Opus and split it into chunks of chunk_duration_minutes."""
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+        
+    segment_time_seconds = chunk_duration_minutes * 60
+    
+    # We want output files named like: conv_inputName_part%03d.ogg
+    output_prefix = input_path.parent / f"conv_{input_path.stem}_part"
+    output_pattern = f"{output_prefix}%03d.ogg"
+    
+    command = [
+        "ffmpeg", "-y", "-i", str(input_path),
+        "-f", "segment",
+        "-segment_time", str(segment_time_seconds),
+        "-c:a", "libopus", "-b:a", "64k",
+        "-map_metadata", "0"
+    ]
+    
+    if metadata:
+        for key, value in metadata.items():
+            if value is not None:
+                command.extend(["-metadata", f"{key}={value}"])
+                
+    command.append(str(output_pattern))
+    
+    try:
+        subprocess.run(command, capture_output=True, text=True, check=True)
+        logger.info(f"FFmpeg: Segmented and converted {input_path.name} to segments with time {segment_time_seconds}s")
+        
+        # Clean up raw temp upload file
+        try:
+            input_path.unlink()
+        except Exception as unlink_err:
+            logger.warning(f"Failed to cleanup raw temp file {input_path}: {unlink_err}")
+            
+        # Find all generated segment files matching the prefix
+        parent_dir = input_path.parent
+        match_pattern = f"conv_{input_path.stem}_part*.ogg"
+        generated_paths = sorted(list(parent_dir.glob(match_pattern)))
+        
+        return generated_paths
+        
+    except subprocess.CalledProcessError as e:
+        # Cleanup any generated segment files on failure
+        parent_dir = input_path.parent
+        match_pattern = f"conv_{input_path.stem}_part*.ogg"
+        for p in parent_dir.glob(match_pattern):
+            try:
+                p.unlink()
+            except Exception:
+                pass
+        logger.error(f"FFmpeg segmentation/conversion failed: {e.stderr}")
+        raise RuntimeError(f"FFmpeg segmentation/conversion failed: {e.stderr}") from e
+
+async def split_and_convert_to_ogg(
+    input_path: Path,
+    chunk_duration_minutes: int,
+    metadata: Optional[dict] = None
+) -> List[Path]:
+    """Asynchronously converts and splits an audio file to .ogg (Opus) segments using ffmpeg."""
+    return await run_in_threadpool(_sync_split_and_convert_to_ogg, input_path, chunk_duration_minutes, metadata)
+
 
 def _sync_mix_audio_with_background(narration_path: Path, background_path: Path, bg_volume: float = 0.12) -> Path:
     """Mix narration with background music using ffmpeg."""

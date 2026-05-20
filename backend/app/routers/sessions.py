@@ -34,7 +34,7 @@ from app.interfaces import DatabaseProviderInterface
 
 from app.config import Settings, get_settings
 from app.models.common import SessionStatus
-from app.utils.audio import convert_to_ogg, mix_audio_with_background
+from app.utils.audio import convert_to_ogg, split_and_convert_to_ogg, mix_audio_with_background
 from app.database import get_db
 from app.exceptions import AppException, BadRequestException, NotFoundException
 from app.models.session import (
@@ -367,7 +367,9 @@ async def _background_transcribe(
     target_language: str = "pt-BR",
     glossary: Optional[str] = None,
 ):
+    logger.info("Queued background transcription task started for session %s, file: %s (offset: %s)", session_id, filename, chunk_offset)
     async with _transcription_lock:
+        logger.info("Acquired lock for session %s, transcribing file: %s (offset: %s)", session_id, filename, chunk_offset)
         try:
             # Determine append mode: check if there is any existing transcription
             doc = await db.sessions.find_one({"id": session_id}, {"audio_file_id": 1, "raw_transcription": 1, "transcription_segments": 1})
@@ -391,6 +393,7 @@ async def _background_transcribe(
             audio_content = file_path.read_bytes()
 
             # Transcribe
+            logger.info("Starting audio transcription for file: %s, session: %s, offset: %s", filename, session_id, actual_offset)
             svc = TranscriptionService(settings)
             result = await svc.transcribe(
                 audio_content=audio_content,
@@ -399,6 +402,7 @@ async def _background_transcribe(
                 target_language=target_language,
                 glossary=glossary,
             )
+            logger.info("Successfully transcribed file: %s, method: %s", filename, result.method)
 
             # Build TranscriptionSegment documents
             def _calc_absolute(relative: float) -> Optional[str]:
@@ -666,13 +670,18 @@ async def upload_audio(
             
             temp_file_path.write_bytes(audio_content)
             
-            # Convert immediately to OGG/Opus (deletes temp raw file on success)
-            final_file_path = await convert_to_ogg(temp_file_path)
-            
-            # Extract metadata from OGG file using ffprobe
+            # Extract metadata from raw uploaded file using ffprobe before we delete/convert/split it
             from app.utils.audio import get_audio_metadata
-            metadata_tags = get_audio_metadata(final_file_path)
+            metadata_tags = get_audio_metadata(temp_file_path)
             logger.info("Probed metadata tags for %s: %s", upload_file.filename, metadata_tags)
+            
+            # Convert and split immediately (deletes temp raw file on success)
+            chunk_duration = doc.get("chunk_duration_minutes", 20) or 20
+            final_file_paths = await split_and_convert_to_ogg(temp_file_path, chunk_duration)
+            
+            if not final_file_paths:
+                logger.warning(f"No audio segments generated for {upload_file.filename}")
+                continue
             
             file_speaker = metadata_tags.get("speaker_id")
             file_start_time = metadata_tags.get("real_start_time")
@@ -688,8 +697,8 @@ async def upload_audio(
                     pass
             
             # Retrieve session doc to check if session_start_time is already set
-            doc = await db.sessions.find_one({"id": session_id}, {"session_start_time": 1})
-            session_start_str = session_start_time or (doc.get("session_start_time") if doc else None)
+            doc_ref = await db.sessions.find_one({"id": session_id}, {"session_start_time": 1})
+            session_start_str = session_start_time or (doc_ref.get("session_start_time") if doc_ref else None)
             
             # Calculate offset from start times if possible
             if file_start_time and session_start_str and resolved_offset == 0.0:
@@ -717,13 +726,17 @@ async def upload_audio(
                 except ValueError:
                     pass
 
-            tasks_to_queue.append({
-                "filename": final_file_path.name,
-                "file_path": final_file_path,
-                "speaker_id": resolved_speaker,
-                "chunk_offset": resolved_offset,
-                "session_start_dt": session_start_dt_final
-            })
+            for seg_idx, final_file_path in enumerate(final_file_paths):
+                # Calculate chunk offset for each segment based on original offset and part index
+                segment_offset = resolved_offset + (seg_idx * chunk_duration * 60.0)
+                
+                tasks_to_queue.append({
+                    "filename": final_file_path.name,
+                    "file_path": final_file_path,
+                    "speaker_id": resolved_speaker,
+                    "chunk_offset": segment_offset,
+                    "session_start_dt": session_start_dt_final
+                })
             
         # Queue background transcriptions
         for task_info in tasks_to_queue:

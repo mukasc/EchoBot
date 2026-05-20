@@ -42,6 +42,7 @@ from app.routers import campaigns, characters, demo, sessions, settings, tts, ra
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    force=True,
 )
 logger = logging.getLogger(__name__)
 
