@@ -1,0 +1,38 @@
+{
+  "id": "818264e4-4c3c-4c4f-b7ee-a4e40c199901",
+  "campaign_id": "83d920f8-d408-47dc-b3ce-96595440fa67",
+  "name": "Teste upload manual",
+  "game_system": "D&D 5e",
+  "status": "awaiting_review",
+  "created_at": "2026-05-20T00:05:19.459578+00:00",
+  "updated_at": "2026-05-20T00:05:42.136120+00:00",
+  "duration_minutes": null,
+  "transcription_segments": [
+    {
+      "id": "f1d1ddcb-e88e-4264-9b29-2d99eb5a4c9d",
+      "speaker_discord_id": "central",
+      "speaker_character_name": null,
+      "text": "Teste, teste, teste, isso é uma gravação teste, se funcionar vai transcrever alguma coisa.",
+      "message_type": "ic",
+      "timestamp_start": 0.18,
+      "timestamp_end": 8.18,
+      "timestamp_absolute_start": null,
+      "timestamp_absolute_end": null,
+      "confidence": 1.0,
+      "uncertain_terms": []
+    }
+  ],
+  "technical_diary": [],
+  "review_script": "",
+  "raw_transcription": "Teste, teste, teste, isso é uma gravação teste, se funcionar vai transcrever alguma coisa.",
+  "cover_image_url": null,
+  "audio_file_id": "file:session_818264e4-4c3c-4c4f-b7ee-a4e40c199901_off_000000_spk_central_20260519_210528_0_webrtc_Jogador_2026-05-19_23-15-16.ogg",
+  "narration_audio_url": null,
+  "is_audio_append": false,
+  "chunk_duration_minutes": 5,
+  "diary_metadata": null,
+  "review_metadata": null,
+  "script_density": "standard",
+  "narrative_perspective": "3p_epic",
+  "selected_music": null
+}
