@@ -103,3 +103,8 @@ class SessionFindReplaceRequest(BaseModel):
     replace_term: str
     match_case: bool = False
     whole_word: bool = False
+
+
+class BulkDeleteSegmentsRequest(BaseModel):
+    segment_ids: List[str]
+

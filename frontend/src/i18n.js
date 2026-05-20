@@ -25,6 +25,7 @@ const ptBR = {
       "copyId": "Copiar ID",
       "idCopied": "ID copiado!",
       "export": "Exportar",
+      "webrtcRecorder": "Gravador WebRTC",
       "systems": {
         "dnd5e": "D&D 5e",
         "pf2e": "Pathfinder 2e",
@@ -483,6 +484,7 @@ const enUS = {
       "copyId": "Copy ID",
       "idCopied": "ID copied!",
       "export": "Export",
+      "webrtcRecorder": "WebRTC Recorder",
       "systems": {
         "dnd5e": "D&D 5e",
         "pf2e": "Pathfinder 2e",

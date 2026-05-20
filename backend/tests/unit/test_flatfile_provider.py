@@ -306,3 +306,41 @@ async def test_flatfile_aggregation(temp_db_dir):
     assert len(res) == 3
     names = {doc["_id"] for doc in res}
     assert names == {"Strahd", "Sword of Light", "Ravenloft"}
+
+
+@pytest.mark.asyncio
+async def test_flatfile_update_push(temp_db_dir):
+    """Test $push operations with and without $each on FlatFileDatabaseProvider."""
+    provider = FlatFileDatabaseProvider(temp_db_dir)
+    
+    # Insert initial document
+    session_doc = {
+        "id": "s1",
+        "name": "Initial Session",
+        "transcription_segments": [
+            {"id": "seg1", "text": "Hello"}
+        ]
+    }
+    await provider.sessions.insert_one(session_doc)
+    
+    # 1. Push single element
+    await provider.sessions.update_one(
+        {"id": "s1"},
+        {"$push": {"transcription_segments": {"id": "seg2", "text": "World"}}}
+    )
+    
+    updated = await provider.sessions.find_one({"id": "s1"})
+    assert len(updated["transcription_segments"]) == 2
+    assert updated["transcription_segments"][1]["id"] == "seg2"
+    
+    # 2. Push multiple elements with $each
+    await provider.sessions.update_one(
+        {"id": "s1"},
+        {"$push": {"transcription_segments": {"$each": [{"id": "seg3", "text": "Foo"}, {"id": "seg4", "text": "Bar"}]}}}
+    )
+    
+    updated2 = await provider.sessions.find_one({"id": "s1"})
+    assert len(updated2["transcription_segments"]) == 4
+    assert updated2["transcription_segments"][2]["id"] == "seg3"
+    assert updated2["transcription_segments"][3]["id"] == "seg4"
+

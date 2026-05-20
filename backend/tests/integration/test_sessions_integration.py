@@ -85,3 +85,53 @@ class TestSessionsIntegration:
         response = client.post(f"/api/sessions/{session_id}/process/", json={})
         assert response.status_code == 400
         assert "No transcription available" in response.json()["detail"]
+
+    def test_delete_segment_success(self, client, mock_db):
+        """Test DELETE /api/sessions/{session_id}/segments/{segment_id}"""
+        session_id = "test-session"
+        segment_id = "seg-1"
+        mock_db.sessions.find_one.return_value = {
+            "id": session_id,
+            "transcription_segments": [
+                {"id": "seg-1", "text": "Segment 1"},
+                {"id": "seg-2", "text": "Segment 2"}
+            ]
+        }
+        
+        response = client.delete(f"/api/sessions/{session_id}/segments/{segment_id}")
+        assert response.status_code == 200
+        assert response.json()["message"] == "Segment deleted successfully"
+        mock_db.sessions.update_one.assert_called_once()
+
+    def test_delete_segment_not_found(self, client, mock_db):
+        """Test DELETE /api/sessions/{session_id}/segments/{segment_id} when segment is missing"""
+        session_id = "test-session"
+        segment_id = "seg-nonexistent"
+        mock_db.sessions.find_one.return_value = {
+            "id": session_id,
+            "transcription_segments": [
+                {"id": "seg-1", "text": "Segment 1"}
+            ]
+        }
+        
+        response = client.delete(f"/api/sessions/{session_id}/segments/{segment_id}")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"]
+
+    def test_bulk_delete_segments(self, client, mock_db):
+        """Test POST /api/sessions/{session_id}/segments/bulk-delete"""
+        session_id = "test-session"
+        mock_db.sessions.find_one.return_value = {
+            "id": session_id,
+            "transcription_segments": [
+                {"id": "seg-1", "text": "Segment 1"},
+                {"id": "seg-2", "text": "Segment 2"},
+                {"id": "seg-3", "text": "Segment 3"}
+            ]
+        }
+        
+        payload = {"segment_ids": ["seg-1", "seg-3"]}
+        response = client.post(f"/api/sessions/{session_id}/segments/bulk-delete", json=payload)
+        assert response.status_code == 200
+        assert response.json()["message"] == "Segments deleted successfully"
+        mock_db.sessions.update_one.assert_called_once()

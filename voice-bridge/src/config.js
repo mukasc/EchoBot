@@ -11,6 +11,8 @@ module.exports = {
     
     // Caminhos temporários
     tempDir: path.join(__dirname, '../temp'),
+    recordingsDir: process.env.STANDALONE_RECORDINGS_DIR || path.join(__dirname, '../recordings'),
+    standaloneChunkDuration: parseInt(process.env.STANDALONE_CHUNK_DURATION || '20', 10) * 60 * 1000,
 
     // Discord Intents
     intents: [
@@ -19,8 +21,11 @@ module.exports = {
     ]
 };
 
-// Garante que o diretório temporário exista
+// Garante que os diretórios existam
 const fs = require('fs');
 if (!fs.existsSync(module.exports.tempDir)) {
     fs.mkdirSync(module.exports.tempDir, { recursive: true });
+}
+if (!fs.existsSync(module.exports.recordingsDir)) {
+    fs.mkdirSync(module.exports.recordingsDir, { recursive: true });
 }

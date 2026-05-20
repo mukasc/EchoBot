@@ -70,9 +70,17 @@ class AudioManager {
     /**
      * Converte um arquivo PCM para Ogg/Opus usando FFmpeg.
      */
-    async convertToOpus(pcmFile, oggFile) {
+    async convertToOpus(pcmFile, oggFile, metadata = {}) {
+        let metadataArgs = '';
+        for (const [key, value] of Object.entries(metadata)) {
+            if (value !== undefined && value !== null) {
+                const escapedValue = String(value).replace(/"/g, '\\"');
+                metadataArgs += ` -metadata ${key}="${escapedValue}"`;
+            }
+        }
+
         // Usamos -ac 1 para ler o PCM Mono que geramos e manter a velocidade correta
-        const ffmpegCmd = `${this.ffmpegPath} -y -f s16le -ar 48000 -ac 1 -i "${pcmFile}" -c:a libopus -b:a 64k -ac 1 "${oggFile}"`;
+        const ffmpegCmd = `${this.ffmpegPath} -y -f s16le -ar 48000 -ac 1 -i "${pcmFile}" -c:a libopus -b:a 64k -ac 1${metadataArgs} "${oggFile}"`;
         
         return new Promise((resolve, reject) => {
             console.log(`🎬 [Audio] Convertendo ${path.basename(pcmFile)} -> OGG/Opus (64k mono)...`);

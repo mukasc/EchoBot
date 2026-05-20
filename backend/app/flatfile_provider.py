@@ -144,22 +144,56 @@ def _project_document(doc: Dict[str, Any], projection: Optional[Dict[str, Any]])
 def _apply_update(doc: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
     """Apply MongoDB-style update operators to a document in place."""
     new_doc = doc.copy()
-    if "$set" in update:
-        for k, v in update["$set"].items():
-            if '.' in k:
-                parts = k.split('.')
-                curr = new_doc
-                for part in parts[:-1]:
-                    if part not in curr or not isinstance(curr[part], dict):
-                        curr[part] = {}
-                    curr = curr[part]
-                curr[parts[-1]] = v
-            else:
-                new_doc[k] = v
+    
+    # Check if there are any $-prefixed keys (update operators)
+    has_operators = any(k.startswith('$') for k in update.keys())
+    
+    if has_operators:
+        if "$set" in update:
+            for k, v in update["$set"].items():
+                if '.' in k:
+                    parts = k.split('.')
+                    curr = new_doc
+                    for part in parts[:-1]:
+                        if part not in curr or not isinstance(curr[part], dict):
+                            curr[part] = {}
+                        curr = curr[part]
+                    curr[parts[-1]] = v
+                else:
+                    new_doc[k] = v
+        if "$push" in update:
+            for k, v in update["$push"].items():
+                if '.' in k:
+                    parts = k.split('.')
+                    curr = new_doc
+                    for part in parts[:-1]:
+                        if part not in curr or not isinstance(curr[part], dict):
+                            curr[part] = {}
+                        curr = curr[part]
+                    target_list = curr.get(parts[-1])
+                    if not isinstance(target_list, list):
+                        target_list = []
+                    curr[parts[-1]] = target_list
+                else:
+                    if k not in new_doc or not isinstance(new_doc[k], list):
+                        new_doc[k] = []
+                    target_list = new_doc[k]
+                
+                # Check for $each modifier
+                if isinstance(v, dict) and "$each" in v:
+                    items_to_push = v["$each"]
+                else:
+                    items_to_push = [v]
+                
+                # Append each item
+                for item in items_to_push:
+                    target_list.append(item)
     else:
+        # Legacy direct-dictionary update
         for k, v in update.items():
             if not k.startswith("$"):
                 new_doc[k] = v
+                
     return new_doc
 
 

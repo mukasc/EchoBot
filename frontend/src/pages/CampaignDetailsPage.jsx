@@ -25,6 +25,7 @@ import { useSessions } from "../hooks/useSessions";
 import SessionCard from "../components/dashboard/SessionCard";
 import CreateSessionDialog from "../components/dashboard/CreateSessionDialog";
 import EditCampaignDialog from "../components/dashboard/EditCampaignDialog";
+import WebRtcRecorder from "../components/session/WebRtcRecorder";
 
 const CampaignDetailsPage = () => {
   const { id } = useParams();
@@ -190,6 +191,9 @@ const CampaignDetailsPage = () => {
             </TabsTrigger>
             <TabsTrigger value="rag" className="data-[state=active]:bg-rpg-void data-[state=active]:text-primary">
               {t('campaigns.memoryRag', 'Memória (RAG)')}
+            </TabsTrigger>
+            <TabsTrigger value="webrtc" className="data-[state=active]:bg-rpg-void data-[state=active]:text-primary">
+              {t('common.webrtcRecorder', 'Gravador WebRTC')}
             </TabsTrigger>
           </TabsList>
           
@@ -471,6 +475,9 @@ const CampaignDetailsPage = () => {
                 </div>
               </div>
             </div>
+          </TabsContent>
+          <TabsContent value="webrtc" className="py-6">
+            <WebRtcRecorder />
           </TabsContent>
         </Tabs>
 

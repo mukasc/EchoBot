@@ -3,13 +3,47 @@
 
 import subprocess
 import logging
+import json
+import shutil
 from pathlib import Path
+from typing import Optional
 from fastapi.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)
 
-def _sync_convert_to_ogg(input_path: Path) -> Path:
-    """Synchronous ffmpeg call to convert audio to OGG/Opus with temporary file swap."""
+def get_audio_metadata(file_path: Path) -> dict:
+    """Extract metadata tags from an audio file using ffprobe."""
+    if not file_path.exists():
+        return {}
+    
+    if not shutil.which("ffprobe"):
+        logger.warning("ffprobe not found in PATH. Cannot extract audio metadata.")
+        return {}
+        
+    command = [
+        "ffprobe", "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        str(file_path)
+    ]
+    
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        data = json.loads(result.stdout)
+        format_info = data.get("format", {})
+        tags = format_info.get("tags", {})
+        # Normalize keys to lowercase for easier lookup
+        return {k.lower(): v for k, v in tags.items()}
+    except Exception as e:
+        logger.error(f"Error reading metadata using ffprobe: {e}")
+        return {}
+
+async def get_audio_metadata_async(file_path: Path) -> dict:
+    """Asynchronously extract metadata tags using ffprobe."""
+    return await run_in_threadpool(get_audio_metadata, file_path)
+
+def _sync_convert_to_ogg(input_path: Path, metadata: Optional[dict] = None) -> Path:
+    """Synchronous ffmpeg call to convert audio to OGG/Opus with temporary file swap and metadata embedding."""
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
     
@@ -20,8 +54,15 @@ def _sync_convert_to_ogg(input_path: Path) -> Path:
     command = [
         "ffmpeg", "-y", "-i", str(input_path),
         "-c:a", "libopus", "-b:a", "64k",
-        str(temp_output_path)
+        "-map_metadata", "0"  # Map metadata from source
     ]
+    
+    if metadata:
+        for key, value in metadata.items():
+            if value is not None:
+                command.extend(["-metadata", f"{key}={value}"])
+                
+    command.append(str(temp_output_path))
     
     try:
         subprocess.run(command, capture_output=True, text=True, check=True)
@@ -49,9 +90,9 @@ def _sync_convert_to_ogg(input_path: Path) -> Path:
         logger.error(f"FFmpeg conversion failed: {e.stderr}")
         raise RuntimeError(f"FFmpeg conversion failed: {e.stderr}") from e
 
-async def convert_to_ogg(input_path: Path) -> Path:
+async def convert_to_ogg(input_path: Path, metadata: Optional[dict] = None) -> Path:
     """Asynchronously converts an audio file to .ogg (Opus) using ffmpeg."""
-    return await run_in_threadpool(_sync_convert_to_ogg, input_path)
+    return await run_in_threadpool(_sync_convert_to_ogg, input_path, metadata)
 
 def _sync_mix_audio_with_background(narration_path: Path, background_path: Path, bg_volume: float = 0.12) -> Path:
     """Mix narration with background music using ffmpeg."""
@@ -63,9 +104,6 @@ def _sync_mix_audio_with_background(narration_path: Path, background_path: Path,
         
     output_path = narration_path.parent / f"mixed_{narration_path.stem}.ogg"
     
-    # filter_complex: 
-    # [1:a]volume={bg_volume}[bg] -> set background volume
-    # [0:a][bg]amix=inputs=2:duration=first -> mix and end when narration ends
     command = [
         "ffmpeg", "-y",
         "-i", str(narration_path),

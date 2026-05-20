@@ -89,4 +89,22 @@ describe('AudioManager', () => {
       expect.any(Function)
     );
   });
+
+  it('convertToOpus supports metadata argument tags', async () => {
+    const pcmFile = 'input.pcm';
+    const oggFile = 'output.ogg';
+    const metadata = {
+      speaker_id: 'user123',
+      real_start_time: '2026-05-19T22:00:00.000Z'
+    };
+
+    audioManager.ffmpegPath = 'ffmpeg-mock';
+
+    await audioManager.convertToOpus(pcmFile, oggFile, metadata);
+
+    expect(execSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`ffmpeg-mock -y -f s16le -ar 48000 -ac 1 -i "input.pcm" -c:a libopus -b:a 64k -ac 1 -metadata speaker_id="user123" -metadata real_start_time="2026-05-19T22:00:00.000Z" "output.ogg"`),
+      expect.any(Function)
+    );
+  });
 });

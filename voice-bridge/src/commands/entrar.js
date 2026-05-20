@@ -10,12 +10,20 @@ module.exports = {
         })
         .addStringOption(option => 
             option.setName('sessao_id')
-                .setDescription('O ID da sessão no EchoBot')
+                .setDescription('O ID da sessão no EchoBot (opcional para gravação avulsa)')
                 .setDescriptionLocalizations({
-                    'en-US': 'The session ID in EchoBot',
-                    'pt-BR': 'O ID da sessão no EchoBot'
+                    'en-US': 'The session ID in EchoBot (optional for standalone recording)',
+                    'pt-BR': 'O ID da sessão no EchoBot (opcional para gravação avulsa)'
                 })
-                .setRequired(true)),
+                .setRequired(false))
+        .addIntegerOption(option =>
+            option.setName('duracao_chunk')
+                .setDescription('Duração de cada parte gravada em minutos (padrão: 20)')
+                .setDescriptionLocalizations({
+                    'en-US': 'Duration of each recorded chunk in minutes (default: 20)',
+                    'pt-BR': 'Duração de cada parte gravada em minutos (padrão: 20)'
+                })
+                .setRequired(false)),
     async execute(interaction, bot) {
         await bot.handleJoin(interaction);
     },

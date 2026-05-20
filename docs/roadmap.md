@@ -49,7 +49,7 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [x] **Trilha Sonora Autônoma:** Biblioteca embutida (*Royalty-Free / FMA*) misturada de modo harmônico à voz do TTS. Download opcional do áudio isolado (Stem).
 - [x] **Portabilidade Absoluta da Base de Dados:** Adeus ao servidor obrigatório do MongoDB em implementações caseiras; transição para formato Flat-File/SQLite priorizando "Copiar & Colar" (*Zero-config* backup).
 - [ ] **Video Recap (Compatibilidade Discord):** Geração de mídia rápida, estática e comprimida sob a barra de 10MB limitante do Discord Free.
-- [ ] **Voice Bridge Isolado e Gravação via WebRTC:** Habilitar modo gravador de podcast avulso do Discord; interface via Browser capturando e despachando pacotes direto do navegador para o servidor.
+- [x] **Voice Bridge Isolado e Gravação via WebRTC:** Habilitar modo gravador de podcast avulso do Discord; interface via Browser capturando e despachando pacotes direto do navegador para o servidor.
 
 ### 🟢 P3 (Baixa Prioridade - O Novo Horizonte)
 - [ ] Sincronização direta de dados via MCP (Ouroboros) com Virtual TableTops (VTTs) como Foundry VTT e Roll20.

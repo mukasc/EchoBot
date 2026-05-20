@@ -29,6 +29,8 @@ const SessionDetail = () => {
     uploadAudio, 
     processWithAI, 
     updateSegment, 
+    deleteSegment,
+    bulkDeleteSegments,
     markAsCompleted,
     generateNarration,
     reprocessTranscription,
@@ -107,6 +109,8 @@ const SessionDetail = () => {
               segments={session.transcription_segments}
               getSpeakerInfo={getSpeakerInfo}
               onUpdateSegment={updateSegment}
+              onDeleteSegment={deleteSegment}
+              onBulkDeleteSegments={bulkDeleteSegments}
               onUploadClick={() => document.querySelector('input[type="file"]')?.click()}
             />
           </TabsContent>

@@ -240,6 +240,26 @@ export const useSession = (sessionId) => {
     }
   };
 
+  const deleteSegment = async (segmentId) => {
+    try {
+      await api.delete(`/sessions/${sessionId}/segments/${segmentId}`);
+      await fetchSession();
+      toast.success("Segmento removido!");
+    } catch (error) {
+      toast.error("Erro ao remover segmento");
+    }
+  };
+
+  const bulkDeleteSegments = async (segmentIds) => {
+    try {
+      await api.post(`/sessions/${sessionId}/segments/bulk-delete`, { segment_ids: segmentIds });
+      await fetchSession();
+      toast.success("Segmentos selecionados removidos!");
+    } catch (error) {
+      toast.error("Erro ao remover segmentos");
+    }
+  };
+
   const isBackgroundProcessing = session?.status === "transcribing" || session?.status === "processing";
 
   return {
@@ -253,6 +273,8 @@ export const useSession = (sessionId) => {
     uploadAudio,
     processWithAI,
     updateSegment,
+    deleteSegment,
+    bulkDeleteSegments,
     markAsCompleted,
     generateNarration,
     reprocessTranscription,

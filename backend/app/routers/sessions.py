@@ -48,6 +48,7 @@ from app.models.session import (
     MessageType,
     SessionProcessRequest,
     SessionFindReplaceRequest,
+    BulkDeleteSegmentsRequest,
 )
 from app.models.settings import AppSettings
 from app.services.ai_processor import AIProcessorService
@@ -204,6 +205,69 @@ async def update_segment(
     return {"message": "Segment updated"}
 
 
+@router.delete("/{session_id}/segments/{segment_id}", status_code=200)
+async def delete_segment(
+    session_id: str,
+    segment_id: str,
+    db: DatabaseProviderInterface = Depends(get_db),
+):
+    doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not doc:
+        raise NotFoundException("Session", session_id)
+
+    segments = doc.get("transcription_segments", [])
+    initial_len = len(segments)
+    segments = [seg for seg in segments if seg.get("id") != segment_id]
+    
+    if len(segments) == initial_len:
+        raise NotFoundException("Segment", segment_id)
+        
+    # Re-assemble raw_transcription based on remaining segments
+    raw_text = " ".join(seg.get("text", "") for seg in segments).strip()
+
+    await db.sessions.update_one(
+        {"id": session_id},
+        {
+            "$set": {
+                "transcription_segments": segments,
+                "raw_transcription": raw_text,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
+    return {"message": "Segment deleted successfully"}
+
+
+@router.post("/{session_id}/segments/bulk-delete", status_code=200)
+async def delete_segments_bulk(
+    session_id: str,
+    payload: BulkDeleteSegmentsRequest,
+    db: DatabaseProviderInterface = Depends(get_db),
+):
+    doc = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    if not doc:
+        raise NotFoundException("Session", session_id)
+
+    segments = doc.get("transcription_segments", [])
+    to_delete = set(payload.segment_ids)
+    segments = [seg for seg in segments if seg.get("id") not in to_delete]
+    
+    # Re-assemble raw_transcription based on remaining segments
+    raw_text = " ".join(seg.get("text", "") for seg in segments).strip()
+
+    await db.sessions.update_one(
+        {"id": session_id},
+        {
+            "$set": {
+                "transcription_segments": segments,
+                "raw_transcription": raw_text,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
+    return {"message": "Segments deleted successfully"}
+
+
 # ---------------------------------------------------------------------------
 # Background Task Helpers
 # ---------------------------------------------------------------------------
@@ -305,9 +369,11 @@ async def _background_transcribe(
 ):
     async with _transcription_lock:
         try:
-            # Determine append mode
-            doc = await db.sessions.find_one({"id": session_id}, {"audio_file_id": 1})
-            is_append = bool(doc.get("audio_file_id")) if doc else False
+            # Determine append mode: check if there is any existing transcription
+            doc = await db.sessions.find_one({"id": session_id}, {"audio_file_id": 1, "raw_transcription": 1, "transcription_segments": 1})
+            has_existing = bool(doc.get("transcription_segments")) or bool(doc.get("raw_transcription")) if doc else False
+            is_append = has_existing
+
 
             # Calculate dynamic offset if chunk_offset is 0.0
             actual_offset = chunk_offset
@@ -602,9 +668,61 @@ async def upload_audio(
             
             # Convert immediately to OGG/Opus (deletes temp raw file on success)
             final_file_path = await convert_to_ogg(temp_file_path)
+            
+            # Extract metadata from OGG file using ffprobe
+            from app.utils.audio import get_audio_metadata
+            metadata_tags = get_audio_metadata(final_file_path)
+            logger.info("Probed metadata tags for %s: %s", upload_file.filename, metadata_tags)
+            
+            file_speaker = metadata_tags.get("speaker_id")
+            file_start_time = metadata_tags.get("real_start_time")
+            file_offset = metadata_tags.get("chunk_offset")
+            
+            resolved_speaker = speaker_id or file_speaker or "central"
+            resolved_offset = chunk_offset
+            
+            if resolved_offset == 0.0 and file_offset is not None:
+                try:
+                    resolved_offset = float(file_offset)
+                except ValueError:
+                    pass
+            
+            # Retrieve session doc to check if session_start_time is already set
+            doc = await db.sessions.find_one({"id": session_id}, {"session_start_time": 1})
+            session_start_str = session_start_time or (doc.get("session_start_time") if doc else None)
+            
+            # Calculate offset from start times if possible
+            if file_start_time and session_start_str and resolved_offset == 0.0:
+                try:
+                    fs_dt = datetime.fromisoformat(file_start_time.replace("Z", "+00:00"))
+                    ss_dt = datetime.fromisoformat(session_start_str.replace("Z", "+00:00"))
+                    resolved_offset = max(0.0, (fs_dt - ss_dt).total_seconds())
+                    logger.info("Calculated offset from real-world times: %ss", resolved_offset)
+                except Exception as offset_err:
+                    logger.warning("Failed to calculate offset from times: %s", offset_err)
+            
+            # If session doesn't have start time but file has, update session start time in DB
+            if not session_start_str and file_start_time:
+                session_start_str = file_start_time
+                await db.sessions.update_one(
+                    {"id": session_id},
+                    {"$set": {"session_start_time": file_start_time}}
+                )
+                logger.info("Initialized session_start_time to file's real_start_time: %s", file_start_time)
+            
+            session_start_dt_final = None
+            if session_start_str:
+                try:
+                    session_start_dt_final = datetime.fromisoformat(session_start_str.replace("Z", "+00:00"))
+                except ValueError:
+                    pass
+
             tasks_to_queue.append({
                 "filename": final_file_path.name,
-                "file_path": final_file_path
+                "file_path": final_file_path,
+                "speaker_id": resolved_speaker,
+                "chunk_offset": resolved_offset,
+                "session_start_dt": session_start_dt_final
             })
             
         # Queue background transcriptions
@@ -614,9 +732,9 @@ async def upload_audio(
                 session_id=session_id,
                 filename=task_info["filename"],
                 file_path=task_info["file_path"],
-                speaker_id=speaker_id,
-                chunk_offset=chunk_offset,
-                session_start_dt=session_start_dt,
+                speaker_id=task_info["speaker_id"],
+                chunk_offset=task_info["chunk_offset"],
+                session_start_dt=task_info["session_start_dt"],
                 db=db,
                 settings=settings,
                 target_language=app_settings.language or accept_language,
@@ -643,6 +761,69 @@ async def upload_audio(
             {"$set": {"status": SessionStatus.AWAITING_REVIEW.value, "updated_at": datetime.now(timezone.utc).isoformat()}},
         )
         raise HTTPException(status_code=500, detail=f"Upload failed: {exc}") from exc
+
+
+@router.post("/audio/convert-webrtc")
+async def convert_webrtc(
+    file: UploadFile = File(...),
+    speaker_id: Optional[str] = Form(None),
+    real_start_time: Optional[str] = Form(None),
+):
+    """
+    Helper to convert a raw browser WebRTC recording (WebM/WAV) to OGG/Opus with metadata.
+    Returns the converted file as a streaming download response.
+    """
+    suffix = Path(file.filename or "").suffix.lower()
+    if not suffix:
+        suffix = ".webm" # default browser format
+        
+    temp_raw_path = _UPLOAD_DIR / f"raw_webrtc_{datetime.now().strftime('%Y%m%d_%H%M%S')}{suffix}"
+    _UPLOAD_DIR.mkdir(exist_ok=True)
+    
+    try:
+        content = await file.read()
+        temp_raw_path.write_bytes(content)
+        
+        # Prepare metadata tags to embed
+        metadata = {}
+        if speaker_id:
+            metadata["speaker_id"] = speaker_id
+            metadata["speaker_name"] = speaker_id
+        if real_start_time:
+            metadata["real_start_time"] = real_start_time
+            
+        metadata["mode"] = "webrtc"
+        
+        # Convert and embed
+        converted_ogg_path = await convert_to_ogg(temp_raw_path, metadata=metadata)
+        
+        # Stream the file back to the browser
+        def iterfile():
+            with open(converted_ogg_path, mode="rb") as f:
+                yield from f
+            # Delete file after streaming
+            try:
+                converted_ogg_path.unlink()
+            except Exception as e:
+                logger.warning(f"Could not delete temp converted file: {e}")
+                
+        download_name = f"webrtc_{speaker_id or 'recording'}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.ogg"
+        
+        return StreamingResponse(
+            iterfile(),
+            media_type="audio/ogg",
+            headers={
+                "Content-Disposition": f"attachment; filename={download_name}",
+                "Access-Control-Expose-Headers": "Content-Disposition"
+            }
+        )
+    except Exception as e:
+        logger.exception("WebRTC conversion error: %s", e)
+        if temp_raw_path.exists():
+            try:
+                temp_raw_path.unlink()
+            except Exception: pass
+        raise HTTPException(status_code=500, detail=f"WebRTC audio conversion failed: {str(e)}")
 
 
 # ---------------------------------------------------------------------------

@@ -71,8 +71,26 @@ class DiscordBot {
         await interaction.deferReply();
 
         try {
-            const sessionData = await apiClient.getSession(sessionId);
-            const chunkDuration = sessionData?.chunk_duration_minutes || 20;
+            const isStandalone = !sessionId;
+            let resolvedSessionId = sessionId;
+            let chunkDuration = 20;
+
+            if (isStandalone) {
+                const now = new Date();
+                const pad = (num) => String(num).padStart(2, '0');
+                const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+                const timeStr = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+                resolvedSessionId = `podcast_${dateStr}_${timeStr}`;
+                chunkDuration = interaction.options.getInteger('duracao_chunk') || 20;
+                
+                const podcastDir = path.join(config.recordingsDir, resolvedSessionId);
+                if (!fs.existsSync(podcastDir)) {
+                    fs.mkdirSync(podcastDir, { recursive: true });
+                }
+            } else {
+                const sessionData = await apiClient.getSession(sessionId);
+                chunkDuration = sessionData?.chunk_duration_minutes || 20;
+            }
 
             const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
@@ -83,14 +101,22 @@ class DiscordBot {
             });
 
             connection.on(VoiceConnectionStatus.Ready, async () => {
-                console.log(`✅ Connection established for Session: ${sessionId}`);
+                console.log(`✅ Connection established. Session: ${resolvedSessionId} (Standalone: ${isStandalone})`);
+
+                const successDesc = isStandalone 
+                    ? t('join.success_desc_standalone', locale)
+                    : t('join.success_desc', locale, { sessionId: resolvedSessionId });
+                
+                const sessionIdFieldLabel = isStandalone 
+                    ? t('join.field_session_id_standalone', locale)
+                    : t('join.field_session_id', locale);
 
                 const embed = new EmbedBuilder()
                     .setTitle(t('join.success_title', locale))
-                    .setDescription(t('join.success_desc', locale, { sessionId }))
+                    .setDescription(successDesc)
                     .setColor(Colors.Green)
                     .addFields(
-                        { name: t('join.field_session_id', locale), value: sessionId, inline: true },
+                        { name: sessionIdFieldLabel, value: resolvedSessionId, inline: true },
                         { name: t('join.field_channel', locale), value: voiceChannel.name, inline: true },
                         { name: t('join.field_rotation', locale), value: t('join.field_rotation_value', locale, { minutes: chunkDuration }), inline: true }
                     )
@@ -109,7 +135,7 @@ class DiscordBot {
                 await interaction.editReply({ embeds: [embed], components: [row] });
 
                 const sessionStartTime = new Date().toISOString();
-                const pcmFile = path.join(config.tempDir, `temp_${sessionId}.pcm`);
+                const pcmFile = path.join(config.tempDir, `temp_${resolvedSessionId}.pcm`);
                 const outStream = fs.createWriteStream(pcmFile);
                 const centralStream = new PassThrough();
                 centralStream.pipe(outStream);
@@ -118,11 +144,12 @@ class DiscordBot {
                 const subscribedUsers = new Map();
 
                 receiver.speaking.on('start', (userId) => {
-                    audioManager.subscribeUser(receiver, userId, sessionId, subscribedUsers);
+                    audioManager.subscribeUser(receiver, userId, resolvedSessionId, subscribedUsers);
                 });
 
                 const session = {
-                    sessionId,
+                    sessionId: resolvedSessionId,
+                    isStandalone,
                     sessionStartTime,
                     pcmFile,
                     outStream,
@@ -193,12 +220,19 @@ class DiscordBot {
             filesToProcess.push({ file: oldPcmFile, stream: oldOutStream, userId: null });
 
             // Processes previous chunk in background
-            this.processChunk(currentSession.sessionId, filesToProcess, currentSession.sessionStartTime, chunkOffset);
+            this.processChunk(
+                currentSession.sessionId, 
+                filesToProcess, 
+                currentSession.sessionStartTime, 
+                chunkOffset, 
+                currentSession.isStandalone,
+                guildId
+            );
 
         }, intervalMs);
     }
 
-    async processChunk(sessionId, filesToProcess, sessionStartTime, chunkOffset = 0) {
+    async processChunk(sessionId, filesToProcess, sessionStartTime, chunkOffset = 0, isStandalone = false, guildId = null) {
         for (const item of filesToProcess) {
             item.stream.on('finish', async () => {
                 const timestamp = new Date().getTime();
@@ -214,10 +248,57 @@ class DiscordBot {
                         return;
                     }
 
-                    await audioManager.convertToOpus(item.file, oggFile);
+                    let speakerName = 'central';
+                    if (item.userId && guildId) {
+                        try {
+                            const guild = this.client.guilds.cache.get(guildId);
+                            const member = await guild?.members.fetch(item.userId);
+                            speakerName = member ? member.displayName : item.userId;
+                        } catch (e) {
+                            speakerName = item.userId;
+                        }
+                    } else if (item.userId) {
+                        speakerName = item.userId;
+                    }
+
+                    const metadata = {
+                        speaker_id: item.userId || 'central',
+                        speaker_name: speakerName,
+                        real_start_time: new Date(new Date(sessionStartTime).getTime() + chunkOffset * 1000).toISOString(),
+                        chunk_offset: chunkOffset,
+                        session_id: sessionId,
+                        mode: isStandalone ? 'standalone' : 'normal'
+                    };
+
+                    await audioManager.convertToOpus(item.file, oggFile, metadata);
                     
                     if (fs.existsSync(oggFile) && fs.statSync(oggFile).size > 100) {
-                        await apiClient.uploadAudio(sessionId, oggFile, item.userId, sessionStartTime, chunkOffset);
+                        if (isStandalone) {
+                            const safeSpeaker = speakerName.replace(/[^a-zA-Z0-9_-]/g, '_');
+                            const oggFileName = `chunk_${chunkOffset}_${safeSpeaker}.ogg`;
+                            const finalOggPath = path.join(config.recordingsDir, sessionId, oggFileName);
+                            
+                            fs.renameSync(oggFile, finalOggPath);
+                            console.log(`💾 [Standalone] Saved chunk to ${finalOggPath}`);
+
+                            const metadataPath = path.join(config.recordingsDir, sessionId, 'metadata.json');
+                            let catalog = { podcastId: sessionId, startTime: sessionStartTime, chunks: [] };
+                            if (fs.existsSync(metadataPath)) {
+                                try {
+                                    catalog = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+                                } catch (e) {}
+                            }
+                            catalog.chunks.push({
+                                fileName: oggFileName,
+                                speakerId: item.userId || 'central',
+                                speakerName: speakerName,
+                                chunkOffset: chunkOffset,
+                                realStartTime: metadata.real_start_time
+                            });
+                            fs.writeFileSync(metadataPath, JSON.stringify(catalog, null, 2), 'utf8');
+                        } else {
+                            await apiClient.uploadAudio(sessionId, oggFile, item.userId, sessionStartTime, chunkOffset);
+                        }
                     }
                     
                     audioManager.cleanup([item.file, oggFile]);
@@ -273,7 +354,7 @@ class DiscordBot {
         }
 
         const finalOffset = (session.chunkIndex - 1) * session.chunkDuration * 60;
-        this.processChunk(sessionId, lastFiles, sessionStartTime, finalOffset);
+        this.processChunk(sessionId, lastFiles, sessionStartTime, finalOffset, session.isStandalone, guildId);
 
         setTimeout(() => {
             if (connection) connection.destroy();
