@@ -99,6 +99,7 @@ O Flat-File interpreta localmente operadores essenciais para as rotas da aplica�
 * **`$ne` (Not Equal)**: Verifica não-igualdades de forma robusta.
 * **`$in`**: Verifica se uma propriedade pertence a uma lista de valores válidos.
 * **`$set` com caminhos pontuados**: Atualiza campos internos altamente aninhados sem subscrever outras propriedades do objeto raiz.
+* **`$push` com modificador `$each` e caminhos pontuados**: Adiciona itens a arrays internos de forma atômica (com suporte a múltiplos elementos), crucial para o acúmulo incremental de segmentos de transcrição.
 
 ### C. Engine de Agregação (`pipeline`)
 A engine suporta pipelines de agregação do MongoDB em memória, traduzindo as chamadas para operações otimizadas sobre listas nativas do Python:

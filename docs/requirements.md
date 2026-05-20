@@ -17,6 +17,10 @@ A funcionalidade do EchoBot foi mapeada nos seguintes requisitos fundamentais (E
 - **US009:** Como **Mestre**, desejo alimentar um "Glossário de Spelling" persistente. Ele fará o modelo de STT e o LLM aprenderem definitivamente como se grafa o panteão divino do meu cenário.
 - **US010:** Como **Mestre**, quero ter total visibilidade sobre os botões de "Regerar Resumo" e "Regerar Narração". Quero testar saídas ilimitadas usando processamento local sem o medo de gastar moedas e créditos.
 ## 4. O Ecossistema Compartilhado
-- **US011:** Como **Usuário**, exijo a fluidez de poder exportar a minha crônica pronta diretamente para formatos em PDF, blocos Markdown brutos, e via API silenciosa, direto para a minha Wiki do Notion.
-- **US012:** Como **Mestre**, exijo a organização limpa e hierárquica na interface, podendo agrupar dezenas de sessões aleatórias dentro de coleções canônicas de uma grande **Campanha (Crônica)**.
+- [x] **US011:** Como **Usuário**, exijo a fluidez de poder exportar a minha crônica pronta diretamente para formatos em PDF, blocos Markdown brutos, e via API silenciosa, direto para a minha Wiki do Notion.
+- [x] **US012:** Como **Mestre**, exijo a organização limpa e hierárquica na interface, podendo agrupar dezenas de sessões aleatórias dentro de coleções canônicas de uma grande **Campanha (Crônica)**.
+- [x] **US013:** Como **Mestre**, quero gravar minhas falas no navegador (via WebRTC) dentro do dashboard de campanha, sem depender do Discord Bot ativo, permitindo o download ou upload posterior na sessão.
+- [x] **US014:** Como **Mestre**, quero que o bot do Discord grave de forma standalone/independente (sem vincular a uma sessão ativa), salvando arquivos e metadados no disco local para posterior importação.
+- [x] **US015:** Como **Mestre**, quero deletar linhas de transcrição individuais ou em lote (bulk) para limpar ruídos ou quebras de imersão antes de gerar os roteiros.
+
 > Todas estas jornadas pautam o escopo do nosso [Roadmap](roadmap.md).

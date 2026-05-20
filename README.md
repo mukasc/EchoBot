@@ -84,8 +84,11 @@ graph TD
 ## ✨ Funcionalidades
 
 -   **Captura de Voz Multi-usuário**: Grava o áudio de cada participante separadamente para transcrições mais precisas.
+-   **Gravação via WebRTC (Navegador)**: Realize a captação de áudio diretamente do dashboard de campanha via microfone do browser, convertendo streams gravados para Ogg/Opus mono com metadados Vorbis de orador e início real integrados.
+-   **Modo Gravador de Podcast Discord (Standalone)**: Grave discussões ou canais de voz sem vincular a uma sessão ativa. O bot de voz salva os canais individuais na pasta local `/recordings` com catálogo descritor `metadata.json`.
 -   **Upload Manual em Lote**: Permissão para *bulk uploads* de múltiplos arquivos de áudio externos simultaneamente, com sanitização severa no servidor que converte silenciosamente todos os formatos brutos recebidos para Ogg/Opus antes do processamento.
 -   **Ajuste Global de Termos (Find & Replace Avançado)**: Correções de texto cirúrgicas em lote para nomes próprios e termos específicos de RPG (com suporte a Match Case e Whole Word) englobando Transcrição, Diário Técnico e Roteiro de uma só vez.
+-   **Edição e Deleção de Segmentos**: Remova trechos indesejados da transcrição com botões de exclusão de segmentos individuais e caixa de marcação para deleção em lote (bulk delete) via barra de ações flutuante.
 -   **Glossário de Spelling Ativo**: Treinamento estático e persistente por meio de injeção de contexto/prompt para guiar a transcrição e processamento correto de nomes próprios únicos e de fantasia do seu cenário.
 -   **Trilha Sonora Autônoma**: Biblioteca embutida misturada de modo harmônico e dinâmico no servidor com a narração de voz do TTS (com suporte ao download opcional do áudio isolado/Stem).
 -   **Carregamento Dinâmico de Modelos**: Consulta em tempo real aos provedores configurados (OpenAI, Gemini, Groq, OpenRouter) para listar apenas modelos ativos e válidos para suas chaves de API.
@@ -272,8 +275,8 @@ npm test
 
 Após o bot estar online e convidado para o seu servidor, utilize os comandos de barra:
 
--   `/entrar sessao_id:<ID_SESSÃO>`: O bot entra no seu canal de voz atual e inicia a captura vinculada à sessão especificada.
--   `/sair`: O bot encerra a gravação, desconecta-se e envia os áudios finais para o backend iniciar o processamento.
+-   `/entrar [sessao_id:<ID_SESSÃO>]`: O bot entra no seu canal de voz atual e inicia a captura. O parâmetro `sessao_id` é opcional: se fornecido, vincula a gravação à sessão do painel; se omitido, o bot opera no **Modo Gravador de Podcast Standalone** (salvando os áudios individuais na pasta local `/recordings` com timestamps reais em `metadata.json`).
+-   `/sair`: O bot encerra a gravação, desconecta-se e envia os áudios finais para o backend (ou finaliza o catálogo de gravação caso esteja em modo Standalone).
 
 ---
 

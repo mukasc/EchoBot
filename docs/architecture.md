@@ -133,3 +133,19 @@ sequenceDiagram
     FastAPI->>LLM: Consolida a transcrição global e envia
     LLM-->>FastAPI: Retorna Resumo (separando IC/OOC), Roteiro e Diário Técnico
 ```
+
+---
+
+## 6. Modos de Captação Alternativos
+
+Para cobrir cenários de jogo presencial, gravação de podcasts ou quando o bot do Discord não está ativo, implementamos fluxos alternativos de captação:
+
+### A. Gravação WebRTC via Navegador (Dashboard)
+* O mestre pode realizar gravações diretamente da interface web utilizando a API de mídia do navegador (WebRTC).
+* A mídia é capturada e despachada para o endpoint `/api/sessions/audio/convert-webrtc` do backend FastAPI, que converte o stream bruto (WebM/WAV) para Ogg/Opus mono (~64kbps) e injeta os metadados de orador (`speaker_id`) e horário real (`real_start_time`) nos metadados Vorbis do arquivo.
+* O arquivo convertido pode ser baixado ou importado diretamente para a transcrição da sessão vigente.
+
+### B. Modo Gravador de Podcast Discord (Standalone)
+* Ao iniciar a captura de voz no Discord sem vincular a uma sessão ativa (omitindo o parâmetro `sessao_id` no comando `/entrar`), o bot de voz entra em **Modo Standalone**.
+* O áudio individual de cada participante é gravado e salvo em diretórios estruturados sob `recordings/podcast_<id>/` junto a um arquivo `metadata.json` que registra dinamicamente o time real de início e a duração de cada faixa.
+* Isso viabiliza o arquivamento offline dos episódios de áudio e a importação posterior para o backend FastAPI.
