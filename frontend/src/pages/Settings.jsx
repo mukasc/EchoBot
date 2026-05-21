@@ -17,7 +17,8 @@ import {
   Layers,
   ShieldAlert,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  Cpu
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
@@ -74,6 +75,10 @@ const Settings = () => {
     llm_primary_enabled: true,
     notion_api_key: "",
     notion_page_id: "",
+    whisper_model: "medium",
+    whisper_device: "auto",
+    whisper_compute_type: "auto",
+    whisper_cpu_threads: 0,
     visual_theme: "dark_fantasy",
     language: "pt-BR"
   });
@@ -124,6 +129,10 @@ const Settings = () => {
         llm_primary_enabled: settings.llm_primary_enabled ?? true,
         notion_api_key: settings.notion_api_key || "",
         notion_page_id: settings.notion_page_id || "",
+        whisper_model: settings.whisper_model || "medium",
+        whisper_device: settings.whisper_device || "auto",
+        whisper_compute_type: settings.whisper_compute_type || "auto",
+        whisper_cpu_threads: settings.whisper_cpu_threads ?? 0,
         visual_theme: settings.visual_theme || "dark_fantasy",
         language: settings.language || i18n.language || "en-US"
       });
@@ -963,6 +972,118 @@ const Settings = () => {
                   {t('settings.notionHint')}
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Local Transcription Settings (Whisper) */}
+        <Card className="card-rpg mb-6 border-amber-500/30">
+          <CardHeader className="border-b border-border">
+            <CardTitle className="text-[var(--foreground)] font-serif flex items-center gap-2">
+              <Cpu className="w-5 h-5 text-amber-400" />
+              {t('settings.whisperTitle')}
+            </CardTitle>
+            <CardDescription className="text-[var(--muted-foreground)]">
+              {t('settings.whisperDesc')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Model Size */}
+              <div className="space-y-2">
+                <Label htmlFor="whisper-model" className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">
+                  {t('settings.whisperModelLabel')}
+                </Label>
+                <Select
+                  value={formData.whisper_model}
+                  onValueChange={(val) => setFormData({ ...formData, whisper_model: val })}
+                >
+                  <SelectTrigger id="whisper-model" className="input-dark">
+                    <SelectValue placeholder={t('settings.whisperModelPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1A1C23] border-border text-[var(--foreground)] shadow-xl z-[100]">
+                    <SelectItem value="tiny">tiny (~75MB) - {t('settings.whisperModelTiny')}</SelectItem>
+                    <SelectItem value="base">base (~145MB) - {t('settings.whisperModelBase')}</SelectItem>
+                    <SelectItem value="small">small (~460MB) - {t('settings.whisperModelSmall')}</SelectItem>
+                    <SelectItem value="medium">medium (~1.5GB) - {t('settings.whisperModelMedium')}</SelectItem>
+                    <SelectItem value="large-v3-turbo">large-v3-turbo (~1.6GB) - {t('settings.whisperModelLargeTurbo')}</SelectItem>
+                    <SelectItem value="large-v3">large-v3 (~3GB) - {t('settings.whisperModelLarge')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-[var(--muted-foreground)]">
+                  {t('settings.whisperModelHint')}
+                </p>
+              </div>
+
+              {/* Execution Device */}
+              <div className="space-y-2">
+                <Label htmlFor="whisper-device" className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">
+                  {t('settings.whisperDeviceLabel')}
+                </Label>
+                <Select
+                  value={formData.whisper_device}
+                  onValueChange={(val) => setFormData({ ...formData, whisper_device: val })}
+                >
+                  <SelectTrigger id="whisper-device" className="input-dark">
+                    <SelectValue placeholder={t('settings.whisperDevicePlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1A1C23] border-border text-[var(--foreground)] shadow-xl z-[100]">
+                    <SelectItem value="auto">auto - {t('settings.whisperDeviceAuto')}</SelectItem>
+                    <SelectItem value="cpu">cpu - {t('settings.whisperDeviceCpu')}</SelectItem>
+                    <SelectItem value="cuda">cuda - {t('settings.whisperDeviceCuda')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-[var(--muted-foreground)]">
+                  {t('settings.whisperDeviceHint')}
+                </p>
+              </div>
+
+              {/* Compute Type */}
+              <div className="space-y-2">
+                <Label htmlFor="whisper-compute-type" className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">
+                  {t('settings.whisperComputeTypeLabel')}
+                </Label>
+                <Select
+                  value={formData.whisper_compute_type}
+                  onValueChange={(val) => setFormData({ ...formData, whisper_compute_type: val })}
+                >
+                  <SelectTrigger id="whisper-compute-type" className="input-dark">
+                    <SelectValue placeholder={t('settings.whisperComputeTypePlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1A1C23] border-border text-[var(--foreground)] shadow-xl z-[100]">
+                    <SelectItem value="auto">auto - {t('settings.whisperComputeAuto')}</SelectItem>
+                    <SelectItem value="int8">int8 - {t('settings.whisperComputeInt8')}</SelectItem>
+                    <SelectItem value="int8_float16">int8_float16 - {t('settings.whisperComputeInt8Float16')}</SelectItem>
+                    <SelectItem value="float16">float16 - {t('settings.whisperComputeFloat16')}</SelectItem>
+                    <SelectItem value="float32">float32 - {t('settings.whisperComputeFloat32')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-[var(--muted-foreground)]">
+                  {t('settings.whisperComputeHint')}
+                </p>
+              </div>
+
+              {/* CPU Threads */}
+              <div className="space-y-2">
+                <Label htmlFor="whisper-cpu-threads" className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">
+                  {t('settings.whisperCpuThreadsLabel')}
+                </Label>
+                <Input
+                  id="whisper-cpu-threads"
+                  type="number"
+                  min="0"
+                  max="32"
+                  value={formData.whisper_cpu_threads}
+                  onChange={(e) => setFormData({ ...formData, whisper_cpu_threads: parseInt(e.target.value) || 0 })}
+                  className="input-dark text-sm"
+                  placeholder="0 (auto)"
+                />
+                <p className="text-[10px] text-[var(--muted-foreground)]">
+                  {t('settings.whisperCpuThreadsHint')}
+                </p>
+              </div>
+
             </div>
           </CardContent>
         </Card>

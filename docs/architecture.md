@@ -15,7 +15,7 @@ Este documento descreve as decisões arquiteturais fundamentais, o ecossistema d
 
 ## 2. Ecossistema de IA e Integrações
 
-* **STT (Speech-to-Text):** Híbrido e resiliente. Motor principal local com *Faster Whisper* para total privacidade e latência zero, apoiado por *Cloud Fallback* assíncrono inteligente (OpenAI Whisper / Deepgram).
+* **STT (Speech-to-Text):** Híbrido e resiliente. Motor principal local com *Faster Whisper* para total privacidade e latência zero. Suporta aceleração por hardware por meio de GPUs NVIDIA CUDA (como RTX 3060), com registro em tempo de execução das DLLs da NVIDIA instaladas via pip (`nvidia-cublas-cu12`, etc.) e integração de variável `PATH` no Windows. Possui suporte a failover automático para CPU e suporte a *Cloud Fallback* assíncrono inteligente (OpenAI Whisper).
 * **LLM (Orquestrador de Crônicas):** Motor multi-provedor (Gemini Flash, OpenAI GPT-4o, Anthropic Claude, Groq e OpenRouter) parametrizável em tempo real. Inclui mecanismos de failover automático caso a nuvem principal falhe.
 * **TTS (Text-to-Speech):** Motor nativo baseado em *Kokoro (ONNX)* executando localmente e gerando locuções realistas a custo computacional e financeiro zero. Integrações opcionais em nuvem com ElevenLabs e Deepgram disponíveis.
 

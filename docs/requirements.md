@@ -22,5 +22,6 @@ A funcionalidade do EchoBot foi mapeada nos seguintes requisitos fundamentais (E
 - [x] **US013:** Como **Mestre**, quero gravar minhas falas no navegador (via WebRTC) dentro do dashboard de campanha, sem depender do Discord Bot ativo, permitindo o download ou upload posterior na sessão.
 - [x] **US014:** Como **Mestre**, quero que o bot do Discord grave de forma standalone/independente (sem vincular a uma sessão ativa), salvando arquivos e metadados no disco local para posterior importação.
 - [x] **US015:** Como **Mestre**, quero deletar linhas de transcrição individuais ou em lote (bulk) para limpar ruídos ou quebras de imersão antes de gerar os roteiros.
+- [x] **US016:** Como **Mestre**, quero configurar o dispositivo e tipo de computação do Whisper local diretamente na interface gráfica, escolhendo rodar em CPU ou GPU (CUDA) para aproveitar a aceleração por hardware da minha placa de vídeo e transcrever de forma ultra-rápida.
 
 > Todas estas jornadas pautam o escopo do nosso [Roadmap](roadmap.md).

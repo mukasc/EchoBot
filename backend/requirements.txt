@@ -19,6 +19,11 @@ anthropic>=0.26.0
 faster-whisper>=1.0.0
 torch>=2.2.0
 
+# GPU acceleration (optional, for CUDA-enabled transcription on NVIDIA GPUs)
+# Required DLLs: cublas64_12.dll, cudnn64_*.dll
+nvidia-cublas-cu12>=12.4.0
+nvidia-cudnn-cu12>=9.1.0
+
 # HTTP (async)
 httpx>=0.27.0
 

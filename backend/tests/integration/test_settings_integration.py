@@ -77,3 +77,28 @@ class TestSettingsIntegration:
         data = response.json()
         assert len(data["llm_fallbacks"]) == 1
         assert data["llm_fallbacks"][0]["model"] == "gpt-4o"
+
+    def test_update_whisper_settings(self, client, mock_db):
+        """Test updating Whisper specific settings."""
+        payload = {
+            "whisper_model": "large-v3-turbo",
+            "whisper_device": "cuda",
+            "whisper_compute_type": "float16",
+            "whisper_cpu_threads": 4
+        }
+        
+        mock_db.settings.find_one.return_value = {
+            "id": "app_settings",
+            "whisper_model": "large-v3-turbo",
+            "whisper_device": "cuda",
+            "whisper_compute_type": "float16",
+            "whisper_cpu_threads": 4
+        }
+        
+        response = client.put("/api/settings/", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["whisper_model"] == "large-v3-turbo"
+        assert data["whisper_device"] == "cuda"
+        assert data["whisper_compute_type"] == "float16"
+        assert data["whisper_cpu_threads"] == 4

@@ -394,6 +394,7 @@ async def _background_transcribe(
 
             # Transcribe
             logger.info("Starting audio transcription for file: %s, session: %s, offset: %s", filename, session_id, actual_offset)
+            app_settings = await _get_app_settings(db)
             svc = TranscriptionService(settings)
             result = await svc.transcribe(
                 audio_content=audio_content,
@@ -401,6 +402,7 @@ async def _background_transcribe(
                 file_path=file_path,
                 target_language=target_language,
                 glossary=glossary,
+                app_settings=app_settings,
             )
             logger.info("Successfully transcribed file: %s, method: %s", filename, result.method)
 
@@ -995,6 +997,7 @@ async def _background_reprocess_all(
     """Sequential reprocessing of all files within the transcription lock."""
     async with _transcription_lock:
         try:
+            app_settings = await _get_app_settings(db)
             svc = TranscriptionService(settings)
             total_duration_sec = 0.0
             
@@ -1054,6 +1057,7 @@ async def _background_reprocess_all(
                     file_path=file_path,
                     target_language=target_language,
                     glossary=glossary,
+                    app_settings=app_settings,
                 )
                 
                 for seg in result.segments:

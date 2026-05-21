@@ -94,7 +94,7 @@ graph TD
 -   **Carregamento Dinâmico de Modelos**: Consulta em tempo real aos provedores configurados (OpenAI, Gemini, Groq, OpenRouter) para listar apenas modelos ativos e válidos para suas chaves de API.
 -   **Regeneração Seletiva Inteligente**: Possibilidade de regenerar apenas o Diário Técnico ou apenas o Roteiro de Revisão de forma isolada, evitando desperdício de chamadas e agilizando ajustes pontuais.
 -   **Timestamp Absoluto**: Registra o horário real de cada fala (ex: 14:32:15), facilitando a sincronização com a sessão.
--   **Transcrição Híbrida**: Prioriza o uso do **Faster Whisper (Local)** para economia, com fallback para APIs de cloud (OpenAI/Gemini).
+-   **Transcrição Híbrida com Aceleração CUDA**: Prioriza o uso do **Faster Whisper (Local)**, com suporte a aceleração por hardware (GPU NVIDIA CUDA) configurável diretamente na interface, carregamento automático de DLLs no Windows e fallback automático para CPU ou APIs de nuvem (OpenAI/Gemini).
 -   **Gestão de Campanhas**: Agrupamento lógico de sessões em Crônicas/Aventuras, com uma visão consolidada de todo o histórico.
 -   **Processamento Narrativo Inteligente**: Separa automaticamente falas *In-Character* (IC) de conversas *Out-of-Character* (OOC).
 -   **Diário Técnico Automático & Copiloto do Mestre**: Extração inteligente e profunda de NPCs, Itens, Locais e Eventos, Rastreamento Dinâmico de Quests persistentes (com máquina de estados via LLM alimentada pelo histórico de sessões) e registro de Interações Notáveis por jogador, tudo consolidado de forma unificada no **Diário Técnico Geral** da Campanha.

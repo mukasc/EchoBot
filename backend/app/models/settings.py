@@ -75,6 +75,12 @@ class AppSettings(BaseModel):
     notion_api_key: Optional[str] = None
     notion_page_id: Optional[str] = None
     
+    # Local Whisper Configuration
+    whisper_model: str = "medium"
+    whisper_device: str = "auto"
+    whisper_compute_type: str = "auto"
+    whisper_cpu_threads: int = 0
+    
     # Appearance
     visual_theme: VisualTheme = VisualTheme.DARK_FANTASY
     language: str = "pt-BR"
@@ -111,5 +117,9 @@ class AppSettingsUpdate(BaseModel):
     tts_provider: Optional[TTSProvider] = None
     notion_api_key: Optional[str] = None
     notion_page_id: Optional[str] = None
+    whisper_model: Optional[str] = None
+    whisper_device: Optional[str] = None
+    whisper_compute_type: Optional[str] = None
+    whisper_cpu_threads: Optional[int] = None
     visual_theme: Optional[VisualTheme] = None
     language: Optional[str] = None

@@ -27,6 +27,8 @@ Um monumento evolutivo às mecânicas de transcrição imersiva e entrega de pro
 - [x] Implantação da Licença Proprietária com documento rigoroso de atribuições de uso cruzado de libs (`NOTICE`).
 - [x] **Acesso Intuitivo de Regeração:** Implementação de processamento seletivo (escopo) e interface persuasiva para uso ilimitado de IA local (Kokoro).
 - [x] **Expansão Profunda do Diário Técnico:** Rastreamento de status de Quests (Ativa, Concluída, Falha, Abandonada) com máquina de estados via LLM alimentada pelo histórico de sessões, extração de interações notáveis por jogador e exportações integradas MD, PDF e Notion.
+- [x] **Aceleração por Hardware GPU (CUDA) no Whisper:** Suporte para rodar transcrição local acelerada via GPU NVIDIA (RTX 3060) no Windows/Linux, com registro automático de DLLs e fallback dinâmico para CPU.
+- [x] **Controles de Dispositivo Whisper na Interface:** Seleção interativa do dispositivo (`cpu`, `cuda`, `auto`) e do tipo de computação (`float16`, `int8`, etc.) na tela de configurações e internacionalização completa.
 
 **D. Portabilidade, Resiliência e RAG Semântico**
 - [x] **Banco de Dados Flat-File ("Zero-Config"):** Abstração de persistência dual compatível com MongoDB e arquivos JSON locais gravados atomicamente.

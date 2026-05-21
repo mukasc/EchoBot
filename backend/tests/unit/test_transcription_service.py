@@ -127,3 +127,95 @@ class TestTranscriptionService:
         assert len(result.segments) == 2
         assert result.segments[0].text == "Hello"
         assert result.method == "OpenAIWhisper"
+
+    @pytest.mark.asyncio
+    @patch("faster_whisper.WhisperModel")
+    async def test_get_local_model_reload_on_settings_change(self, mock_whisper_model):
+        """Test that the local model is reloaded when whisper settings change."""
+        from app.models.settings import AppSettings
+        
+        # Reset cls states
+        TranscriptionService._model_instance = None
+        TranscriptionService._current_whisper_model = None
+        TranscriptionService._current_whisper_device = None
+        TranscriptionService._current_whisper_compute_type = None
+        TranscriptionService._current_whisper_cpu_threads = None
+        
+        settings_1 = AppSettings(
+            whisper_model="tiny",  # Will be forced to "medium"
+            whisper_device="cpu",
+            whisper_compute_type="int8",
+            whisper_cpu_threads=2
+        )
+        
+        # First load
+        model_1 = TranscriptionService._get_local_model(settings_1)
+        assert model_1 is not None
+        mock_whisper_model.assert_called_with("medium", device="cpu", compute_type="int8", cpu_threads=2)
+        
+        # Second load with same settings - should not call constructor again
+        mock_whisper_model.reset_mock()
+        model_2 = TranscriptionService._get_local_model(settings_1)
+        assert model_2 is model_1
+        mock_whisper_model.assert_not_called()
+        
+        # Load with different settings (changing CPU threads to trigger reload) - should reload model
+        settings_2 = AppSettings(
+            whisper_model="tiny",
+            whisper_device="cpu",
+            whisper_compute_type="int8",
+            whisper_cpu_threads=4
+        )
+        model_3 = TranscriptionService._get_local_model(settings_2)
+        assert model_3 is not None
+        mock_whisper_model.assert_called_once_with("medium", device="cpu", compute_type="int8", cpu_threads=4)
+
+    @pytest.mark.asyncio
+    @patch("app.services.transcription.TranscriptionService._get_local_model")
+    @patch("fastapi.concurrency.run_in_threadpool")
+    async def test_transcribe_local_cuda_error_fallback_to_cpu(self, mock_run, mock_get_model, service):
+        """Test that if Whisper raises a CUDA error mid-transcription, it falls back to CPU."""
+        from app.models.settings import AppSettings
+        
+        TranscriptionService._cuda_available = True
+        mock_model_cuda = MagicMock()
+        mock_model_cpu = MagicMock()
+        
+        mock_model_cuda.transcribe.side_effect = Exception("Cuda/Cublas runtime error: cublas64_12.dll not found")
+        
+        mock_info = MagicMock(language="pt", language_probability=0.99)
+        mock_segment = MagicMock(text="Texto recuperado no CPU", start=0.0, end=1.0)
+        mock_model_cpu.transcribe.return_value = ([mock_segment], mock_info)
+        
+        mock_get_model.side_effect = [mock_model_cuda, mock_model_cpu]
+        
+        async def mock_run_impl(func, *args, **kwargs):
+            return func(*args, **kwargs)
+        mock_run.side_effect = mock_run_impl
+        
+        app_settings = AppSettings(whisper_device="cuda", whisper_compute_type="float16")
+        
+        result = await service._transcribe_local(
+            file_path=Path("dummy.wav"),
+            target_language="pt-BR",
+            app_settings=app_settings
+        )
+        
+        assert result.raw_text == "Texto recuperado no CPU"
+        assert result.method == "LocalWhisper"
+        assert TranscriptionService._cuda_available is False
+        assert mock_get_model.call_count == 2
+
+    @patch("ctranslate2.get_supported_compute_types")
+    def test_probe_cuda_exception_handling(self, mock_get_types, service):
+        """Test that _probe_cuda handles exceptions gracefully and sets available to False."""
+        TranscriptionService._cuda_probed = False
+        TranscriptionService._cuda_available = True
+        
+        mock_get_types.side_effect = RuntimeError("Failed to initialize CUDA context")
+        
+        available = TranscriptionService._probe_cuda()
+        
+        assert available is False
+        assert TranscriptionService._cuda_available is False
+        assert TranscriptionService._cuda_probed is True

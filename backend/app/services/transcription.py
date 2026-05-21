@@ -17,8 +17,8 @@ import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
-
 from app.config import Settings
+from app.models.settings import AppSettings
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,15 @@ class TranscriptionService:
     _model_instance = None  # Singleton model
     _model_lock = threading.Lock()  # Thread lock for initialization
     _local_sem: Optional[asyncio.Semaphore] = None  # Lazy-initialized semaphore
+    
+    _cuda_probed = False
+    _cuda_available = False
+
+    # Track current settings of the loaded model instance to detect changes
+    _current_whisper_model = None
+    _current_whisper_device = None
+    _current_whisper_compute_type = None
+    _current_whisper_cpu_threads = None
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -58,6 +67,7 @@ class TranscriptionService:
         file_path: Optional[Path] = None,
         target_language: str = "pt-BR",
         glossary: Optional[str] = None,
+        app_settings: Optional[AppSettings] = None,
     ) -> TranscriptionResult:
         """
         Transcribe audio using the best available method.
@@ -66,6 +76,7 @@ class TranscriptionService:
             audio_content: Raw audio bytes.
             filename: Original filename (used for MIME detection).
             file_path: Path on disk (required for local Whisper).
+            app_settings: Configured application settings.
 
         Returns:
             TranscriptionResult with raw text and optional timed segments.
@@ -78,7 +89,7 @@ class TranscriptionService:
         # 1. Try local Whisper first (free, offline)
         if file_path and file_path.exists():
             try:
-                return await self._transcribe_local(file_path, target_language, glossary)
+                return await self._transcribe_local(file_path, target_language, glossary, app_settings)
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Local Whisper failed: %s — falling back to cloud.", exc)
 
@@ -115,23 +126,169 @@ class TranscriptionService:
     _model_instance = None  # Singleton model
 
     @classmethod
-    def _get_local_model(cls):
+    def _register_nvidia_dlls(cls):
+        """Register NVIDIA DLL directories on Windows so ctranslate2 can find cublas/cudnn."""
+        import os
+        import sys
+        if sys.platform != "win32":
+            return
+        try:
+            import importlib.util
+            nvidia_spec = importlib.util.find_spec("nvidia")
+            if nvidia_spec is None or nvidia_spec.submodule_search_locations is None:
+                return
+            nvidia_base = list(nvidia_spec.submodule_search_locations)[0]
+            # Walk nvidia package subdirectories looking for bin/ folders with DLLs
+            for pkg_name in os.listdir(nvidia_base):
+                bin_dir = os.path.join(nvidia_base, pkg_name, "bin")
+                if os.path.isdir(bin_dir):
+                    os.add_dll_directory(bin_dir)
+                    os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
+                    logger.info("Registered NVIDIA DLL directory: %s", bin_dir)
+        except Exception as e:
+            logger.warning("Could not register NVIDIA DLL directories: %s", e)
+
+    @classmethod
+    def _probe_cuda(cls):
+        """One-time probe to check if CUDA is truly usable by ctranslate2/faster-whisper."""
+        if cls._cuda_probed:
+            return cls._cuda_available
+        cls._cuda_probed = True
+        # Register NVIDIA DLLs from pip packages (Windows-specific)
+        cls._register_nvidia_dlls()
+        try:
+            import ctranslate2
+            supported = ctranslate2.get_supported_compute_types("cuda")
+            if "float16" in supported or "int8" in supported:
+                logger.info("CUDA probe: ctranslate2 CUDA backend is available. Supported types: %s", supported)
+                cls._cuda_available = True
+            else:
+                logger.warning("CUDA probe: ctranslate2 reports no CUDA compute types available.")
+                cls._cuda_available = False
+        except Exception as e:
+            logger.warning("CUDA probe failed (%s). CUDA will not be used.", e)
+            cls._cuda_available = False
+        return cls._cuda_available
+
+    @classmethod
+    def _get_local_model(cls, app_settings: Optional[AppSettings] = None):
         from faster_whisper import WhisperModel
         
+        # Force model to "medium" as requested by the user
+        whisper_model = "medium"
+        whisper_device = app_settings.whisper_device if app_settings else "auto"
+        
+        # Probe CUDA availability (only runs once per process lifetime)
+        cuda_ok = cls._probe_cuda()
+        
+        # Override to CPU if CUDA is not available
+        if whisper_device in ["cuda", "auto"] and not cuda_ok:
+            if whisper_device == "cuda":
+                logger.warning("CUDA requested but not available. Forcing CPU mode.")
+            whisper_device = "cpu"
+            
+        whisper_compute_type = app_settings.whisper_compute_type if app_settings else "auto"
+        
+        # Force CPU compatible compute type if device is CPU
+        if whisper_device == "cpu" and whisper_compute_type in ["float16", "int8_float16"]:
+            whisper_compute_type = "int8"
+            
+        whisper_cpu_threads = app_settings.whisper_cpu_threads if app_settings else 0
+        
         with cls._model_lock:
-            if cls._model_instance is None:
-                try:
-                    import torch
-                    device = "cuda" if torch.cuda.is_available() else "cpu"
-                except Exception:
-                    device = "cpu"
+            # Check if settings changed
+            needs_reload = False
+            if cls._model_instance is not None:
+                if (
+                    cls._current_whisper_model != whisper_model or
+                    cls._current_whisper_device != whisper_device or
+                    cls._current_whisper_compute_type != whisper_compute_type or
+                    cls._current_whisper_cpu_threads != whisper_cpu_threads
+                ):
+                    logger.info("Whisper configuration changed. Reloading model...")
+                    needs_reload = True
+            else:
+                needs_reload = True
                 
-                compute_type = "float16" if device == "cuda" else "int8"
-                logger.info("Loading local Whisper model (medium) on %s …", device)
-                cls._model_instance = WhisperModel("medium", device=device, compute_type=compute_type)
+            if needs_reload:
+                if cls._model_instance is not None:
+                    # Clean up old instance
+                    logger.info("Unloading previous Whisper model (%s)...", cls._current_whisper_model)
+                    cls._model_instance = None
+                    import gc
+                    gc.collect()
+                    try:
+                        import torch
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                    except Exception:
+                        pass
+                
+                # Resolve parameters
+                resolved_device = whisper_device
+                if resolved_device == "auto":
+                    resolved_device = "cuda" if cuda_ok else "cpu"
+                
+                resolved_compute_type = whisper_compute_type if whisper_compute_type != "auto" else ("float16" if resolved_device == "cuda" else "int8")
+                
+                import os
+                resolved_threads = whisper_cpu_threads if whisper_cpu_threads > 0 else max(1, (os.cpu_count() or 4) // 2)
+                
+                logger.info(
+                    "Loading Whisper model '%s' (Device: %s, Compute: %s, Threads: %d) ...",
+                    whisper_model,
+                    resolved_device,
+                    resolved_compute_type,
+                    resolved_threads
+                )
+                
+                try:
+                    cls._model_instance = WhisperModel(
+                        whisper_model,
+                        device=resolved_device,
+                        compute_type=resolved_compute_type,
+                        cpu_threads=resolved_threads
+                    )
+                    # Cache current settings
+                    cls._current_whisper_model = whisper_model
+                    cls._current_whisper_device = whisper_device
+                    cls._current_whisper_compute_type = whisper_compute_type
+                    cls._current_whisper_cpu_threads = whisper_cpu_threads
+                except Exception as e:
+                    logger.error("Failed to load Whisper model '%s' on %s: %s", whisper_model, resolved_device, e)
+                    # Safe fallback to CPU if CUDA initialization fails
+                    if resolved_device == "cuda":
+                        logger.warning("Attempting safe fallback to CPU...")
+                        cls._cuda_available = False
+                        try:
+                            resolved_device = "cpu"
+                            resolved_compute_type = "int8"
+                            cls._model_instance = WhisperModel(
+                                whisper_model,
+                                device=resolved_device,
+                                compute_type=resolved_compute_type,
+                                cpu_threads=resolved_threads
+                            )
+                            # Cache CPU values since we fell back
+                            cls._current_whisper_model = whisper_model
+                            cls._current_whisper_device = "cpu"
+                            cls._current_whisper_compute_type = "int8"
+                            cls._current_whisper_cpu_threads = whisper_cpu_threads
+                        except Exception as fallback_err:
+                            logger.critical("Critical fallback error loading Whisper model on CPU: %s", fallback_err)
+                            raise fallback_err
+                    else:
+                        raise e
+                        
             return cls._model_instance
 
-    async def _transcribe_local(self, file_path: Path, target_language: str, glossary: Optional[str] = None) -> TranscriptionResult:
+    async def _transcribe_local(
+        self,
+        file_path: Path,
+        target_language: str,
+        glossary: Optional[str] = None,
+        app_settings: Optional[AppSettings] = None
+    ) -> TranscriptionResult:
         from fastapi.concurrency import run_in_threadpool
         
         if TranscriptionService._local_sem is None:
@@ -139,7 +296,7 @@ class TranscriptionService:
 
         async with self._local_sem:
             def _sync_transcribe():
-                model = self._get_local_model()
+                model = self._get_local_model(app_settings)
 
                 logger.info("Transcribing %s …", file_path)
                 
@@ -152,14 +309,49 @@ class TranscriptionService:
                 if glossary:
                     initial_prompt = f"{initial_prompt} UNIQUE CAMPAIGN TERMS: {glossary}"
 
-                segments_gen, info = model.transcribe(
-                    str(file_path),
-                    language=lang_code,
-                    beam_size=5,
-                    vad_filter=True,
-                    initial_prompt=initial_prompt, # Helps with RPG context
-                )
-                raw_segments = list(segments_gen)
+                try:
+                    segments_gen, info = model.transcribe(
+                        str(file_path),
+                        language=lang_code,
+                        beam_size=5,
+                        vad_filter=True,
+                        initial_prompt=initial_prompt, # Helps with RPG context
+                    )
+                    raw_segments = list(segments_gen)
+                except Exception as e:
+                    err_str = str(e)
+                    is_cuda_err = any(
+                        term in err_str.lower()
+                        for term in ["cublas", "cuda", "cudnn", "cublas64", "cudnn64"]
+                    )
+                    model_device = getattr(getattr(model, "model", None), "device", "")
+                    if is_cuda_err or model_device == "cuda":
+                        logger.warning(
+                            "Local Whisper CUDA execution failed during transcription: %s. Falling back to CPU...",
+                            e
+                        )
+                        # Mark CUDA as unavailable to prevent future attempts
+                        TranscriptionService._cuda_available = False
+                        
+                        from app.models.settings import AppSettings
+                        cpu_settings = AppSettings(
+                            whisper_model="medium",
+                            whisper_device="cpu",
+                            whisper_compute_type="int8",
+                            whisper_cpu_threads=app_settings.whisper_cpu_threads if app_settings else 4
+                        )
+                        model = self._get_local_model(cpu_settings)
+                        logger.info("Retrying transcription on CPU...")
+                        segments_gen, info = model.transcribe(
+                            str(file_path),
+                            language=lang_code,
+                            beam_size=5,
+                            vad_filter=True,
+                            initial_prompt=initial_prompt,
+                        )
+                        raw_segments = list(segments_gen)
+                    else:
+                        raise e
                 lang = info.language or "pt"
                 logger.info("Detected language: %s (prob=%.3f)", lang, info.language_probability)
 
